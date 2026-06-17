@@ -38,6 +38,9 @@
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
+    /* The hidden attribute must beat any author display rule (overlays use display:flex) */
+    [hidden] { display: none !important; }
+
     html, body {
       margin: 0;
       padding: 0;
