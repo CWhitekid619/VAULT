@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
-  <title>REEL</title>
+  <title>VAULT</title>
 
   <!-- PWA: Add to Home Screen -->
   <meta name="theme-color" content="#0c0c0e" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="REEL" />
+  <meta name="apple-mobile-web-app-title" content="VAULT" />
   <meta name="mobile-web-app-capable" content="yes" />
 
   <!-- Manifest embedded as data URI so everything stays in one file -->
-  <link rel="manifest" href='data:application/manifest+json,{"name":"REEL","short_name":"REEL","start_url":".","display":"standalone","background_color":"%230c0c0e","theme_color":"%230c0c0e","orientation":"portrait"}' />
+  <link rel="manifest" href='data:application/manifest+json,{"name":"VAULT","short_name":"VAULT","start_url":".","display":"standalone","background_color":"%230c0c0e","theme_color":"%230c0c0e","orientation":"portrait"}' />
 
   <style>
     :root {
@@ -82,6 +82,44 @@
       to   { opacity: 1; transform: translateY(0); }
     }
 
+    /* ---------- Cinematic ambiance (Design pass C) ---------- */
+    /* Per-tab "mood" glow — different corners of the app carry a different cinematic flavor */
+    body { --mood: rgba(232,179,57,.14); }
+    body[data-tab="log"]      { --mood: rgba(232,179,57,.15); }  /* warm gold  */
+    body[data-tab="lists"]    { --mood: rgba(168,120,255,.13); } /* violet     */
+    body[data-tab="discover"] { --mood: rgba(56,160,255,.14); }  /* cool blue  */
+    body[data-tab="ranking"]  { --mood: rgba(239,68,68,.14); }   /* red carpet */
+    body[data-tab="profile"]  { --mood: rgba(34,197,94,.12); }   /* green      */
+    body::before {                 /* soft cinematic spotlight at the top */
+      content: ""; position: fixed; left: 50%; top: -12%; transform: translateX(-50%);
+      width: 150%; height: 340px; z-index: 0; pointer-events: none;
+      background: radial-gradient(ellipse at top, var(--mood), transparent 70%);
+      transition: background .55s ease;
+    }
+    body::after {                  /* faint film grain over everything */
+      content: ""; position: fixed; inset: 0; z-index: 200; pointer-events: none; opacity: .04;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    .app { position: relative; z-index: 1; }
+
+    /* Cinematic brand wordmark with a clapperboard mark */
+    .brand { display: flex; align-items: center; gap: 9px; }
+    .brand-name {
+      font-size: 14px; font-weight: 800; letter-spacing: .34em; text-transform: uppercase;
+      background: linear-gradient(90deg, var(--accent), #f6d98a 60%, var(--accent));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .brand-mark { display: flex; }
+    .brand-mark svg { width: 19px; height: 19px; stroke: var(--accent); fill: none; stroke-width: 1.7; stroke-linejoin: round; }
+
+    /* Gold marker beside section titles */
+    .log-home-title, .drow-title { position: relative; padding-left: 11px; }
+    .log-home-title::before, .drow-title::before {
+      content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+      width: 3px; height: 13px; border-radius: 2px;
+      background: linear-gradient(var(--accent), #c8901f);
+    }
+
     /* ---------- View headers / placeholder content ---------- */
     .view-head { margin: 4px 0 20px; }
     .view-head h1 {
@@ -108,6 +146,152 @@
     }
     .placeholder svg { width: 40px; height: 40px; stroke: var(--text-mute); }
     .placeholder span { font-size: 14px; max-width: 240px; line-height: 1.5; }
+
+    /* ---------- Log home screen rows ---------- */
+    #log-home { margin-top: 4px; }
+    .log-home-row { margin-bottom: 22px; }
+    .log-home-title { font-size: 15px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 10px; color: var(--text); }
+    .hcard { flex: 0 0 auto; width: 82px; cursor: pointer; }
+    .hcard img, .hcard .hc-empty {
+      width: 82px; height: 123px; border-radius: 8px; object-fit: cover;
+      background: var(--surface-2); display: block;
+    }
+    .hcard .hc-empty { display: flex; align-items: center; justify-content: center; color: var(--text-mute); font-size: 9px; text-align: center; padding: 4px; }
+    .hcard-poster { position: relative; }
+    .hcard-title { font-size: 11px; font-weight: 600; margin-top: 6px; line-height: 1.2; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hcard-sub { font-size: 10px; color: var(--text-mute); margin-top: 2px; }
+    @keyframes hcard-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Big outlined rank numbers for Top Filme / Top Serien (A2) */
+    .hcard.ranked { width: 96px; }
+    .hcard.ranked .hcard-poster { padding-left: 14px; }
+    .hcard.ranked .hcard-rank {
+      position: absolute; left: -2px; bottom: -8px; z-index: 2;
+      font-size: 52px; font-weight: 800; line-height: .8;
+      color: var(--bg);
+      -webkit-text-stroke: 2px var(--accent);
+      text-stroke: 2px var(--accent);
+      letter-spacing: -.04em; pointer-events: none;
+      text-shadow: 0 2px 6px rgba(0,0,0,.6);
+    }
+
+    /* ---------- Series progress list ---------- */
+    .progress-list { display: flex; flex-direction: column; }
+    .prog-row {
+      display: flex; gap: 12px; align-items: flex-start;
+      cursor: pointer; padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .prog-row:last-child { border-bottom: none; }
+    .prog-thumb {
+      flex: 0 0 40px; width: 40px; height: 60px;
+      border-radius: 6px; object-fit: cover;
+    }
+    .prog-thumb-ph {
+      flex: 0 0 40px; width: 40px; height: 60px;
+      border-radius: 6px; background: var(--surface-2);
+    }
+    .prog-body { flex: 1; min-width: 0; padding-top: 1px; }
+    .prog-title {
+      font-size: 14px; font-weight: 700; letter-spacing: -.01em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+    .prog-sub { font-size: 12px; color: var(--text-mute); margin-bottom: 7px; }
+    .prog-bar-wrap { height: 3px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
+    .prog-bar { height: 100%; background: var(--accent); border-radius: 2px; transition: width .5s ease; }
+    .prog-counts { font-size: 11px; color: var(--text-mute); margin-top: 4px; }
+
+    /* ---------- Episode rating grid ---------- */
+    .ep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(36px, 1fr)); gap: 5px; margin-top: 10px; }
+    .ep-gc {
+      aspect-ratio: 1; border-radius: 6px;
+      background: var(--surface-2); border: none;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: var(--text-mute);
+      cursor: pointer; padding: 0; font-family: inherit;
+      transition: transform .12s ease, background .2s ease;
+    }
+    .ep-gc:active { transform: scale(.86); }
+    .ep-gc[data-b="great"]     { background: #22c55e; color: #0b2a12; }
+    .ep-gc[data-b="good"]      { background: #84cc16; color: #1a2700; }
+    .ep-gc[data-b="watchable"] { background: #e8b339; color: #1a1206; }
+    .ep-gc[data-b="meh"]       { background: #f97316; color: #1a0800; }
+    .ep-gc[data-b="bad"]       { background: #ef4444; color: #1a0000; }
+    .ep-legend { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 10px; }
+    .ep-legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-mute); }
+    .ep-legend-dot { width: 9px; height: 9px; border-radius: 3px; flex: 0 0 auto; }
+
+    /* ---------- Home hero: 3D coverflow carousel (B8) ---------- */
+    #log-hero {
+      position: relative; height: 250px;
+      margin: 4px -16px 24px; overflow: hidden;
+      perspective: 1100px;
+    }
+    .hero-stage { position: absolute; inset: 0; transform-style: preserve-3d; }
+    .hero-slide {
+      position: absolute; top: 28px; left: 50%;
+      width: 248px; height: 150px; margin-left: -124px;
+      border-radius: 14px; overflow: hidden; cursor: pointer;
+      background: var(--surface-2);
+      box-shadow: 0 14px 34px rgba(0,0,0,.55);
+      transition: transform .55s cubic-bezier(.22,.61,.36,1), opacity .55s ease;
+      will-change: transform, opacity;
+    }
+    .hero-backdrop {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    .hero-dim {
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom,
+        rgba(12,12,14,.05) 0%,
+        rgba(12,12,14,.25) 42%,
+        rgba(12,12,14,.9) 92%);
+    }
+    .hero-content {
+      position: absolute; bottom: 12px; left: 14px; right: 14px; z-index: 2;
+      opacity: 0; transition: opacity .5s ease;
+    }
+    .hero-slide.center .hero-content { opacity: 1; }
+    .hero-label {
+      font-size: 10px; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--accent); font-weight: 700; margin-bottom: 3px;
+    }
+    .hero-title {
+      font-size: 19px; font-weight: 800; letter-spacing: -.025em;
+      color: #fff; line-height: 1.1; margin-bottom: 3px;
+      text-shadow: 0 1px 12px rgba(0,0,0,.7);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .hero-meta { font-size: 11px; color: rgba(255,255,255,.65); }
+    @keyframes hero-sheen { 0% { transform: translateX(-130%); } 100% { transform: translateX(260%); } }
+    .hero-slide.center .hero-sheen {
+      position: absolute; inset: 0 auto 0 0; width: 45%; z-index: 1; pointer-events: none;
+      background: linear-gradient(to right, transparent, rgba(255,255,255,.07), transparent);
+      animation: hero-sheen 5.5s ease-in-out infinite;
+    }
+    .hero-arrow {
+      position: absolute; top: 50%; transform: translateY(-50%); z-index: 20;
+      width: 34px; height: 34px; border-radius: 50%;
+      background: rgba(12,12,14,.6); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+      -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+    }
+    .hero-arrow svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .hero-arrow.left { left: 8px; }
+    .hero-arrow.right { right: 8px; }
+    .hero-arrow:active { background: rgba(0,0,0,.85); }
+    .hero-dots {
+      position: absolute; bottom: 6px; left: 0; right: 0;
+      display: flex; gap: 5px; justify-content: center; z-index: 20;
+    }
+    .hero-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: rgba(255,255,255,.25);
+      transition: background .35s ease, transform .35s ease;
+    }
+    .hero-dot.active { background: var(--accent); transform: scale(1.3); }
 
     /* ---------- Brand (small, top of Log tab) ---------- */
     .brand {
@@ -251,6 +435,11 @@
     .result-status {
       font-size: 11px; color: var(--accent); margin-top: 4px; font-weight: 600;
     }
+    .result-overview {
+      font-size: 12px; color: var(--text-mute); margin-top: 5px; line-height: 1.4;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .result-rating { color: var(--accent); font-weight: 600; }
     .results-empty {
       text-align: center; color: var(--text-mute);
       font-size: 14px; padding: 36px 0;
@@ -367,6 +556,8 @@
     .seg.active { background: var(--surface-2); color: var(--text); }
 
     /* ---------- Ranking list ---------- */
+    .rank-filters { display: flex; gap: 8px; margin-bottom: 14px; }
+    .rank-filters .modal-select { flex: 1; margin-bottom: 0; }
     .rank-list { display: flex; flex-direction: column; }
     .zone-label {
       display: flex; align-items: center; justify-content: space-between;
@@ -436,13 +627,14 @@
     }
     .duel-close svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; }
 
-    .duel-cards { flex: 1; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+    .duel-cards { flex: 1; display: flex; flex-direction: row; gap: 10px; min-height: 0; align-items: center; }
     .duel-card {
-      position: relative; flex: 1; min-height: 0;
+      position: relative; flex: 1;
       display: flex; flex-direction: column; justify-content: flex-end;
       border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
       background: var(--surface-2); cursor: pointer; padding: 0;
       font-family: inherit;
+      aspect-ratio: 2/3; max-height: 100%;
     }
     .duel-card:active { border-color: var(--accent); }
     .duel-poster {
@@ -451,15 +643,15 @@
     }
     .duel-name {
       position: relative; z-index: 1;
-      width: 100%; box-sizing: border-box; padding: 16px 16px 14px;
+      width: 100%; box-sizing: border-box; padding: 10px 10px 10px;
       background: linear-gradient(to top, rgba(0,0,0,.92) 30%, rgba(0,0,0,0));
       color: #fff; text-align: left;
-      font-size: 18px; font-weight: 700; line-height: 1.2;
+      font-size: 14px; font-weight: 700; line-height: 1.25;
     }
     .duel-vs {
       text-align: center; color: var(--text-mute);
       font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
-      flex: 0 0 auto;
+      flex: 0 0 auto; align-self: center;
     }
     .duel-skip {
       flex: 0 0 auto; margin-top: 14px;
@@ -531,6 +723,18 @@
       font-family: inherit; font-size: 15px; font-weight: 700;
     }
     .detail-log-btn:active { filter: brightness(.92); }
+    .detail-log-btn.watched { background: var(--surface-2); color: var(--text-mute); }
+    .detail-actions-2 { padding-top: 8px; }
+    .detail-sec-btn {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 11px; border-radius: 12px; cursor: pointer;
+      background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+      font-family: inherit; font-size: 14px; font-weight: 600;
+    }
+    .detail-sec-btn svg { width: 18px; height: 18px; stroke: var(--text); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .detail-sec-btn:active { filter: brightness(1.15); }
+    .detail-sec-btn.active { border-color: var(--accent); color: var(--accent); }
+    .detail-sec-btn.active svg { stroke: var(--accent); fill: var(--accent); }
     .detail-trailer-btn {
       flex: 0 0 auto; display: flex; align-items: center; justify-content: center; gap: 8px;
       padding: 13px 16px; border-radius: 12px; cursor: pointer;
@@ -690,6 +894,51 @@
     .filter-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
     .filter-row label { font-size: 15px; color: var(--text-dim); flex: 0 0 auto; }
     .filter-row .modal-select { width: 58%; margin-bottom: 0; }
+    .filter-row .filter-range { flex: 1; display: flex; align-items: center; gap: 5px; }
+    .filter-row .filter-range .modal-select { flex: 1; width: auto; margin-bottom: 0; }
+    .fr-sep { color: var(--text-mute); font-size: 13px; flex: 0 0 auto; }
+
+    /* Discover top: search row + Würfeln button beside it (A4) */
+    .disc-top-row { display: flex; gap: 10px; align-items: stretch; }
+    .disc-top-row .search-bar { flex: 1; margin-bottom: 0; }
+    .wuerfel-btn-sm {
+      flex: 0 0 auto; display: flex; align-items: center; gap: 6px;
+      padding: 0 14px; border-radius: 12px; cursor: pointer;
+      background: var(--accent); color: #1a1206; border: none;
+      font-family: inherit; font-size: 14px; font-weight: 700;
+    }
+    .wuerfel-btn-sm svg { width: 17px; height: 17px; stroke: #1a1206; fill: none; stroke-width: 1.7; }
+    .wuerfel-btn-sm:active { filter: brightness(.92); }
+
+    /* Discover filter bar (A3) */
+    .disc-filter-bar { margin-top: 12px; }
+    .dfb-row { display: flex; gap: 8px; align-items: stretch; }
+    .dfb-row .modal-select { flex: 1; margin-bottom: 0; }
+    .dfb-toggle {
+      flex: 0 0 auto; width: 46px; border-radius: 10px; cursor: pointer;
+      background: var(--surface-2); border: 1px solid var(--border); color: var(--text-dim);
+      font-size: 20px; line-height: 1; font-weight: 700;
+    }
+    .dfb-toggle.on { color: var(--accent); border-color: var(--accent); }
+    .dfb-advanced { margin-top: 12px; }
+    .df-apply {
+      width: 100%; margin-top: 12px; padding: 12px; border-radius: 12px; cursor: pointer;
+      background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+      font-family: inherit; font-size: 14px; font-weight: 700;
+    }
+    .df-apply:active { filter: brightness(1.15); }
+
+    /* Watchlist quick-button on Discover cards (A1) */
+    .card-wl-btn {
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      width: 100%; margin-top: 6px; padding: 6px 4px; border-radius: 8px;
+      background: var(--surface-2); border: 1px solid var(--border); color: var(--text-dim);
+      font-family: inherit; font-size: 11px; font-weight: 600; cursor: pointer;
+    }
+    .card-wl-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+    .card-wl-btn.active { color: var(--accent); border-color: var(--accent); }
+    .card-wl-btn.active svg { fill: var(--accent); stroke: var(--accent); }
+    .grid-item .card-wl-btn { margin-top: 5px; }
 
     .wuerfel-status { font-size: 13px; color: var(--text-mute); text-align: center; padding: 6px 0; min-height: 0; }
     .wuerfel-result {
@@ -786,6 +1035,15 @@
     }
     .tag-x { border: none; background: none; cursor: pointer; padding: 0; display: flex; color: var(--text-mute); }
     .tag-x svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; }
+    .tag-add-row { display: flex; gap: 8px; align-items: stretch; margin-bottom: 12px; }
+    .tag-add-row .modal-select { flex: 1; margin-bottom: 0; }
+    .tag-new-btn {
+      flex: 0 0 auto; width: 46px; border-radius: 10px; cursor: pointer;
+      background: var(--surface-2); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .tag-new-btn svg { width: 18px; height: 18px; stroke: var(--accent); fill: none; stroke-width: 2; stroke-linecap: round; }
+    .tag-new-btn:active { background: var(--surface); }
     .note-input {
       width: 100%; box-sizing: border-box; resize: vertical; min-height: 70px;
       background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
@@ -830,12 +1088,15 @@
     .grid-badge.ghost { background: rgba(0,0,0,.7); color: var(--text); border: 1px solid var(--border); }
   </style>
 </head>
-<body>
+<body data-tab="log">
   <div class="app">
 
     <!-- ============ TAB 1: LOG (default) ============ -->
     <section class="view active" id="view-log" data-view="log">
-      <div class="brand">REEL</div>
+      <div class="brand">
+        <span class="brand-mark"><svg viewBox="0 0 24 24"><path d="M3 8h18v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 8l2.5-4 4 1.6L7 9.6M9.5 5.6L13.5 4 16 8M13.5 5.6L17.5 4 20 8"/></svg></span>
+        <span class="brand-name">VAULT</span>
+      </div>
 
       <div class="search-bar">
         <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
@@ -849,9 +1110,19 @@
 
       <div id="log-results" class="results"></div>
 
-      <div id="log-hint" class="placeholder">
-        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-        <span>Tippe los — schon ein paar Buchstaben reichen.</span>
+      <div id="log-home">
+        <div id="log-hero" hidden></div>
+        <div id="lh-progress" class="log-home-row" hidden>
+          <div class="log-home-title">Serien in Arbeit</div>
+          <div id="lh-progress-list" class="progress-list"></div>
+        </div>
+        <div id="lh-recent" class="log-home-row" hidden></div>
+        <div id="lh-movies" class="log-home-row" hidden></div>
+        <div id="lh-series" class="log-home-row" hidden></div>
+        <div id="log-hint" class="placeholder">
+          <svg viewBox="0 0 24 24"><path d="M3 8h18v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 8l2.5-4 4 1.6L7 9.6M9.5 5.6L13.5 4 16 8M13.5 5.6L17.5 4 20 8"/></svg>
+          <span>Tippe los — schon ein paar Buchstaben reichen.</span>
+        </div>
       </div>
     </section>
 
@@ -894,18 +1165,71 @@
     <!-- ============ TAB 3: ENTDECKEN ============ -->
     <section class="view" id="view-discover" data-view="discover">
 
-      <div class="search-bar">
-        <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-        <input id="disc-search" type="search" inputmode="search" autocomplete="off"
-               autocorrect="off" spellcheck="false" enterkeyhint="search"
-               placeholder="Alles durchsuchen …" aria-label="Suche" />
-        <button id="disc-clear" class="search-clear" type="button" aria-label="Leeren" hidden>
-          <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      <!-- Search row: search bar + Würfeln button beside it (A4) -->
+      <div class="disc-top-row">
+        <div class="search-bar">
+          <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+          <input id="disc-search" type="search" inputmode="search" autocomplete="off"
+                 autocorrect="off" spellcheck="false" enterkeyhint="search"
+                 placeholder="Alles durchsuchen …" aria-label="Suche" />
+          <button id="disc-clear" class="search-clear" type="button" aria-label="Leeren" hidden>
+            <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+          </button>
+        </div>
+        <button id="disc-wuerfel-btn" class="wuerfel-btn-sm" type="button">
+          <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.3"/><circle cx="15" cy="15" r="1.3"/><circle cx="15" cy="9" r="1.3"/><circle cx="9" cy="15" r="1.3"/></svg>
+          Würfeln
         </button>
+      </div>
+
+      <!-- Filter / browse bar (A3) -->
+      <div id="disc-filter-bar" class="disc-filter-bar">
+        <div class="dfb-row">
+          <select id="df-media" class="modal-select">
+            <option value="movie">Film</option>
+            <option value="tv">Serie</option>
+          </select>
+          <select id="df-genre" class="modal-select"><option value="">Genre: Alle</option></select>
+          <button id="df-toggle" class="dfb-toggle" type="button" aria-label="Mehr Filter">⋯</button>
+        </div>
+        <div id="df-advanced" class="dfb-advanced" hidden>
+          <div class="filter-row">
+            <label>Dauer</label>
+            <span class="filter-range">
+              <select id="df-rt-min" class="modal-select"><option value="0">Egal</option><option value="60">60+</option><option value="80">80+</option><option value="90">90+</option><option value="100">100+</option><option value="120">120+</option></select>
+              <span class="fr-sep">–</span>
+              <select id="df-rt-max" class="modal-select"><option value="0">Egal</option><option value="80">80</option><option value="100">100</option><option value="120">120</option><option value="150">150</option><option value="200">200</option></select>
+              <span class="fr-sep" style="font-size:11px">Min.</span>
+            </span>
+          </div>
+          <div class="filter-row">
+            <label>Jahr</label>
+            <span class="filter-range">
+              <select id="df-yr-min" class="modal-select"><option value="">Egal</option><option value="1970">1970</option><option value="1980">1980</option><option value="1990">1990</option><option value="2000">2000</option><option value="2010">2010</option><option value="2015">2015</option><option value="2020">2020</option><option value="2023">2023</option></select>
+              <span class="fr-sep">–</span>
+              <select id="df-yr-max" class="modal-select"><option value="">Egal</option><option value="1989">1989</option><option value="1999">1999</option><option value="2009">2009</option><option value="2019">2019</option><option value="2022">2022</option><option value="2024">2024</option><option value="2025">2025</option></select>
+            </span>
+          </div>
+          <div class="filter-row">
+            <label>Min. Bewertung</label>
+            <select id="df-rating" class="modal-select"><option value="0">Egal</option><option value="6">ab 6,0</option><option value="7">ab 7,0</option><option value="8">ab 8,0</option></select>
+          </div>
+        </div>
+        <button id="df-apply" class="df-apply" type="button">Anzeigen</button>
       </div>
 
       <!-- Search results (only while typing) -->
       <div id="disc-results" class="results" hidden></div>
+
+      <!-- Filtered browse grid (A3) -->
+      <div id="disc-filtered" hidden>
+        <button id="df-back" class="list-back" type="button">
+          <svg viewBox="0 0 24 24"><polyline points="15 5 8 12 15 19"/></svg>
+          Entdecken
+        </button>
+        <div id="df-grid" class="poster-grid"></div>
+        <button id="df-more" class="new-list-btn" type="button" hidden>Mehr laden</button>
+      </div>
 
       <!-- Curated browse content -->
       <div id="disc-browse">
@@ -948,6 +1272,11 @@
         <button class="seg" type="button" data-media="tv">Serien</button>
       </div>
 
+      <div class="rank-filters">
+        <select id="rank-genre" class="modal-select"><option value="">Alle Genres</option></select>
+        <select id="rank-tag" class="modal-select"><option value="">Alle Tags</option></select>
+      </div>
+
       <button id="duel-start" class="duel-start" type="button">
         <svg viewBox="0 0 24 24"><polyline points="8 7 4 11 8 15"/><polyline points="16 9 20 13 16 17"/><line x1="5" y1="11" x2="19" y2="13"/></svg>
         Duell starten
@@ -970,9 +1299,9 @@
 
   <!-- ============ BOTTOM NAVIGATION ============ -->
   <nav class="nav" id="nav">
-    <button class="nav-btn active" data-target="log" aria-label="Eintragen">
-      <svg viewBox="0 0 24 24"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></svg>
-      <span class="nav-label">Log</span>
+    <button class="nav-btn active" data-target="log" aria-label="Home">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span class="nav-label">Home</span>
     </button>
     <button class="nav-btn" data-target="lists" aria-label="Listen">
       <svg viewBox="0 0 24 24"><line x1="8" y1="7" x2="20" y2="7"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="8" y1="17" x2="20" y2="17"/><circle cx="4" cy="7" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="17" r="1"/></svg>
@@ -1006,14 +1335,22 @@
 
       <button id="sheet-details" class="sheet-details" type="button">Details ansehen</button>
 
-      <div class="sheet-section-label">Wie war's?</div>
-      <div id="sheet-buckets" class="bucket-list"></div>
+      <!-- Step 1: choose action -->
+      <div id="sheet-step1">
+        <button id="sheet-watched-btn" class="sheet-btn-primary" type="button">Watched</button>
+        <button id="sheet-watchlist-btn" class="sheet-btn-ghost" type="button">
+          <svg viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></svg>
+          Watchlist
+        </button>
+        <button id="sheet-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
+      </div>
 
-      <button id="sheet-listadd" class="sheet-btn-ghost" type="button">
-        <svg viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></svg>
-        Auf eine Liste
-      </button>
-      <button id="sheet-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
+      <!-- Step 2: rating buckets (shown after pressing Watched) -->
+      <div id="sheet-step2" hidden>
+        <div class="sheet-section-label">Wie war's?</div>
+        <div id="sheet-buckets" class="bucket-list"></div>
+        <button id="sheet-cancel2" class="sheet-btn-cancel" type="button">Abbrechen</button>
+      </div>
     </div>
   </div>
 
@@ -1067,7 +1404,11 @@
       <div class="sheet-handle"></div>
       <div class="sheet-section-label">Name der Liste</div>
       <input id="newlist-input" class="modal-input" type="text" maxlength="40"
-             placeholder="z. B. Mit Ilona schauen" autocomplete="off" />
+             placeholder="z. B. Date Night" autocomplete="off" />
+      <button id="newlist-permanent" class="rewatch-toggle" type="button" style="margin:4px 0 14px">
+        <span class="ep-check"></span>
+        <span>Ewige Liste <span style="color:var(--text-mute);font-weight:400">— Titel bleiben auch nach „Watched"</span></span>
+      </button>
       <button id="newlist-create" class="sheet-btn-primary" type="button">Erstellen</button>
       <button id="newlist-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
     </div>
@@ -1126,6 +1467,107 @@
     </div>
   </div>
 
+  <!-- ============ DISCOVER WÜRFEL (TMDB random) ============ -->
+  <div id="dw-backdrop" class="sheet-backdrop" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Würfeln">
+      <div class="sheet-handle"></div>
+      <div class="sheet-section-label">Zufalls-Würfel</div>
+
+      <div class="filter-row">
+        <label>Typ</label>
+        <select id="dw-media" class="modal-select">
+          <option value="movie">Film</option>
+          <option value="tv">Serie</option>
+        </select>
+      </div>
+      <div class="filter-row">
+        <label>Laufzeit</label>
+        <span class="filter-range">
+          <select id="dw-runtime-min" class="modal-select">
+            <option value="0">Egal</option>
+            <option value="60">60+</option>
+            <option value="80">80+</option>
+            <option value="90">90+</option>
+            <option value="100">100+</option>
+            <option value="120">120+</option>
+          </select>
+          <span class="fr-sep">–</span>
+          <select id="dw-runtime-max" class="modal-select">
+            <option value="0">Egal</option>
+            <option value="80">80</option>
+            <option value="100">100</option>
+            <option value="120">120</option>
+            <option value="150">150</option>
+            <option value="200">200</option>
+          </select>
+          <span class="fr-sep" style="font-size:11px">Min.</span>
+        </span>
+      </div>
+      <div class="filter-row">
+        <label>Jahr</label>
+        <span class="filter-range">
+          <select id="dw-year-min" class="modal-select">
+            <option value="">Egal</option>
+            <option value="1970">1970</option>
+            <option value="1980">1980</option>
+            <option value="1990">1990</option>
+            <option value="2000">2000</option>
+            <option value="2005">2005</option>
+            <option value="2010">2010</option>
+            <option value="2015">2015</option>
+            <option value="2018">2018</option>
+            <option value="2020">2020</option>
+            <option value="2023">2023</option>
+          </select>
+          <span class="fr-sep">–</span>
+          <select id="dw-year-max" class="modal-select">
+            <option value="">Egal</option>
+            <option value="1989">1989</option>
+            <option value="1999">1999</option>
+            <option value="2009">2009</option>
+            <option value="2014">2014</option>
+            <option value="2019">2019</option>
+            <option value="2021">2021</option>
+            <option value="2022">2022</option>
+            <option value="2023">2023</option>
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+          </select>
+        </span>
+      </div>
+      <div class="filter-row">
+        <label>Bewertung</label>
+        <select id="dw-rating" class="modal-select">
+          <option value="0">Egal</option>
+          <option value="6">ab 6,0</option>
+          <option value="7">ab 7,0</option>
+          <option value="8">ab 8,0</option>
+        </select>
+      </div>
+      <div class="filter-row">
+        <label>Genre</label>
+        <select id="dw-genre" class="modal-select"><option value="">Alle</option></select>
+      </div>
+
+      <div id="dw-status" class="wuerfel-status"></div>
+      <div id="dw-result" class="wuerfel-result" hidden></div>
+
+      <button id="dw-roll" class="sheet-btn-primary" type="button">Würfeln</button>
+      <button id="dw-cancel" class="sheet-btn-cancel" type="button">Schließen</button>
+    </div>
+  </div>
+
+  <!-- ============ EPISODE RATING SHEET ============ -->
+  <div id="ep-rate-backdrop" class="sheet-backdrop" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Episode bewerten">
+      <div class="sheet-handle"></div>
+      <div class="sheet-section-label" id="ep-rate-title">Episode bewerten</div>
+      <div class="bucket-list" id="ep-rate-buckets"></div>
+      <button id="ep-rate-remove" class="sheet-btn-cancel" type="button" hidden>Bewertung entfernen</button>
+      <button id="ep-rate-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
+    </div>
+  </div>
+
   <!-- ============ TOAST ============ -->
   <div id="toast" class="toast" hidden></div>
 
@@ -1139,6 +1581,7 @@
     function switchTab(target) {
       views.forEach(v => v.classList.toggle("active", v.dataset.view === target));
       navButtons.forEach(b => b.classList.toggle("active", b.dataset.target === target));
+      document.body.dataset.tab = target;   // drives the per-tab cinematic mood glow (C)
       // Reset scroll to top of the newly shown view
       const active = document.querySelector(".view.active");
       if (active) active.scrollTop = 0;
@@ -1146,9 +1589,12 @@
       if (target === "log") {
         const input = document.getElementById("log-search");
         if (input) setTimeout(() => input.focus(), 60);
+        if (!searchInput.value.trim()) renderLogHome();
       }
-      // Rebuild the leaderboard each time it is opened
-      if (target === "ranking" && typeof renderRanking === "function") renderRanking();
+      // Rebuild the leaderboard each time it is opened (with filter dropdowns)
+      if (target === "ranking" && typeof renderRanking === "function") {
+        populateRankFilters().then(renderRanking);
+      }
       // Lists tab always returns to the overview
       if (target === "lists" && typeof showListsOverview === "function") showListsOverview();
       // Discover loads its curated content once
@@ -1172,22 +1618,49 @@
     // db.watchlist[key] = titles the user wants to watch
     const DB_KEY = "reel.db.v1";
 
+    // Tag database — seeded defaults; user can add more (B1)
+    const DEFAULT_TAGS = ["Christlich", "Marvel", "Star Wars", "Herr der Ringe", "Disney", "Pixar", "Anime", "Klassiker"];
+
+    // One-time migration: fold the old `christian` boolean into the tag system (A5)
+    function migrateTags(d) {
+      if (!d.tagDefs) d.tagDefs = DEFAULT_TAGS.slice();
+      let touched = false;
+      for (const key in d.meta) {
+        const m = d.meta[key];
+        if (m && m.christian) {
+          m.tags = m.tags || [];
+          if (!m.tags.includes("Christlich")) m.tags.push("Christlich");
+          delete m.christian;
+          touched = true;
+        }
+      }
+      // ensure every used tag is also a known def
+      for (const key in d.meta) {
+        (d.meta[key].tags || []).forEach(t => { if (!d.tagDefs.includes(t)) { d.tagDefs.push(t); touched = true; } });
+      }
+      return touched;
+    }
+
     function loadDB() {
       try {
         const raw = localStorage.getItem(DB_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
-          return {
+          const out = {
             items: parsed.items || {},
             watchlist: parsed.watchlist || {},
             lists: parsed.lists || {},
             listSeq: parsed.listSeq || 0,
             progress: parsed.progress || {},
-            meta: parsed.meta || {}
+            meta: parsed.meta || {},
+            epRatings: parsed.epRatings || {},
+            tagDefs: parsed.tagDefs || null
           };
+          migrateTags(out);
+          return out;
         }
       } catch (e) { /* corrupted store — start fresh */ }
-      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {} };
+      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice() };
     }
     let db = loadDB();
     function saveDB() {
@@ -1241,7 +1714,8 @@
         enriched: false,
         tags: [],
         note: "",
-        rewatch: false
+        rewatch: false,
+        loggedAt: Date.now()
       };
     }
 
@@ -1249,7 +1723,7 @@
     const searchInput = document.getElementById("log-search");
     const clearBtn    = document.getElementById("log-clear");
     const resultsEl   = document.getElementById("log-results");
-    const hintEl      = document.getElementById("log-hint");
+    const hintEl      = document.getElementById("log-home");
 
     let searchTimer = null;
     let searchAbort = null;
@@ -1289,7 +1763,7 @@
       if (Array.isArray(items)) lastItems = items;
       resultsEl.innerHTML = "";
 
-      if (items === null) { hintEl.hidden = false; return; }
+      if (items === null) { hintEl.hidden = false; renderLogHome(); return; }
       hintEl.hidden = true;
 
       if (items === "error") {
@@ -1343,7 +1817,28 @@
       sub.appendChild(k);
       const year = yearOf(r);
       if (year) { const y = document.createElement("span"); y.textContent = year; sub.appendChild(y); }
+      if (r.vote_average > 0) {
+        const rv = document.createElement("span");
+        rv.className = "result-rating";
+        rv.textContent = "★ " + r.vote_average.toFixed(1).replace(".", ",");
+        sub.appendChild(rv);
+      }
+      // show runtime if we already enriched this item
+      const dbRec = db.items[key] || db.watchlist[key];
+      if (dbRec && dbRec.runtime) {
+        const rt = document.createElement("span");
+        rt.textContent = fmtRuntime(dbRec.runtime);
+        sub.appendChild(rt);
+      }
       body.appendChild(sub);
+
+      // one-line overview (already in TMDB search response)
+      if (r.overview) {
+        const ov = document.createElement("div");
+        ov.className = "result-overview";
+        ov.textContent = r.overview;
+        body.appendChild(ov);
+      }
 
       if (db.items[key]) {
         const st = document.createElement("div");
@@ -1369,6 +1864,305 @@
       if (searchInput.value.trim() && Array.isArray(lastItems)) renderResults(lastItems);
     }
 
+    // ---------- Log home screen (shown when search is empty) ----------
+    function buildHomeRow(hostId, title, items, ranked) {
+      const host = document.getElementById(hostId);
+      if (!host) return;
+      if (!items.length) { host.hidden = true; return; }
+      host.hidden = false;
+      host.innerHTML = '<div class="log-home-title">' + title + '</div>';
+      const scroll = document.createElement("div");
+      scroll.className = "hscroll";
+      const frag = document.createDocumentFragment();
+      items.forEach((it, i) => {
+        const card = document.createElement("div");
+        card.className = "hcard" + (ranked ? " ranked" : "");
+        card.style.animation = "hcard-in .28s ease both";
+        card.style.animationDelay = (i * 38) + "ms";
+        const posterWrap = document.createElement("div"); posterWrap.className = "hcard-poster";
+        if (it.poster) {
+          const img = document.createElement("img");
+          img.loading = "lazy"; img.src = IMG_BASE + "w185" + it.poster; img.alt = it.title;
+          posterWrap.appendChild(img);
+        } else {
+          const e = document.createElement("div"); e.className = "hc-empty"; e.textContent = it.title;
+          posterWrap.appendChild(e);
+        }
+        // big outlined rank number, bottom-left, overlapping the poster (A2)
+        if (ranked) {
+          const rk = document.createElement("div"); rk.className = "hcard-rank"; rk.textContent = (i + 1);
+          posterWrap.appendChild(rk);
+        }
+        card.appendChild(posterWrap);
+        const t = document.createElement("div"); t.className = "hcard-title"; t.textContent = it.title;
+        const s = document.createElement("div"); s.className = "hcard-sub";
+        s.textContent = it.year || (it.mediaType === "tv" ? "Serie" : "Film");
+        card.appendChild(t); card.appendChild(s);
+        card.addEventListener("click", () => openDetail(it.mediaType, it.id));
+        frag.appendChild(card);
+      });
+      scroll.appendChild(frag);
+      host.appendChild(scroll);
+    }
+
+    // ---------- Series in-progress section ----------
+    const seriesTotalCache = {}; // tvKey -> totalEps (session cache, no API re-fetch per session)
+
+    function buildProgressSection() {
+      const host = document.getElementById("lh-progress");
+      const list = document.getElementById("lh-progress-list");
+      if (!host || !list) return;
+
+      const inProgress = Object.keys(db.progress)
+        .filter(k => {
+          const p = db.progress[k]; const it = db.items[k];
+          return it && it.mediaType === "tv" && p && Object.keys(p.eps).length > 0;
+        })
+        .map(k => ({ key: k, it: db.items[k], p: db.progress[k] }))
+        .sort((a, b) => (b.it.loggedAt || 0) - (a.it.loggedAt || 0))
+        .slice(0, 6);
+
+      if (!inProgress.length) { host.hidden = true; return; }
+      host.hidden = false;
+      list.innerHTML = "";
+
+      inProgress.forEach(({ key, it, p }) => {
+        const watched = Object.keys(p.eps).length;
+        const last = lastWatched(key);
+        const total = seriesTotalCache[key] || null;
+
+        const row = document.createElement("div");
+        row.className = "prog-row";
+
+        if (it.poster) {
+          const img = document.createElement("img");
+          img.className = "prog-thumb"; img.src = IMG_BASE + "w92" + it.poster; img.alt = "";
+          row.appendChild(img);
+        } else {
+          const ph = document.createElement("div"); ph.className = "prog-thumb-ph";
+          row.appendChild(ph);
+        }
+
+        const body = document.createElement("div"); body.className = "prog-body";
+
+        const titleEl = document.createElement("div"); titleEl.className = "prog-title";
+        titleEl.textContent = it.title;
+
+        const sub = document.createElement("div"); sub.className = "prog-sub";
+        const barWrap = document.createElement("div"); barWrap.className = "prog-bar-wrap";
+        const bar = document.createElement("div"); bar.className = "prog-bar";
+        const counts = document.createElement("div"); counts.className = "prog-counts";
+
+        function updateRow(tot) {
+          const subParts = [];
+          if (last) subParts.push("S" + String(last.s).padStart(2, "0") + "E" + String(last.e).padStart(2, "0"));
+          if (tot !== null) {
+            const left = tot - watched;
+            subParts.push(left > 0 ? left + " übrig" : "Fertig!");
+          }
+          sub.textContent = subParts.join(" · ");
+          bar.style.width = tot ? Math.min(100, Math.round(watched / tot * 100)) + "%" : "0%";
+          counts.textContent = tot !== null ? watched + " / " + tot + " Episoden" : watched + " gesehen";
+        }
+        updateRow(total);
+        barWrap.appendChild(bar);
+        body.appendChild(titleEl); body.appendChild(sub);
+        body.appendChild(barWrap); body.appendChild(counts);
+        row.appendChild(body);
+        row.addEventListener("click", () => openDetail("tv", parseInt(key.split(":")[1], 10)));
+        list.appendChild(row);
+
+        if (total === null) {
+          const id = parseInt(key.split(":")[1], 10);
+          fetch("https://api.themoviedb.org/3/tv/" + id + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+              if (!data) return;
+              const tot = totalEpisodes(data);
+              if (!tot) return;
+              seriesTotalCache[key] = tot;
+              updateRow(tot);
+            })
+            .catch(() => {});
+        }
+      });
+    }
+
+    // ---------- Home hero: 3D coverflow carousel (B8) ----------
+    let heroItemCount = -1;
+    let heroBuildPending = false;
+    let heroTimer = null;
+    let heroIndex = 0;
+    let heroSlides = [];
+    let heroDots = [];
+
+    function maybeRebuildHero() {
+      const count = Object.keys(db.items).length;
+      if (count === heroItemCount || heroBuildPending) return;
+      heroItemCount = count;
+      heroBuildPending = true;
+      buildHero().finally(() => { heroBuildPending = false; });
+    }
+
+    // Place each slide in 3D space relative to the active index (coverflow look)
+    function layoutHero() {
+      const n = heroSlides.length;
+      heroSlides.forEach((slide, i) => {
+        const off = i - heroIndex;
+        const abs = Math.abs(off);
+        const tx = off * 116;                 // horizontal spread
+        const ry = Math.max(-45, Math.min(45, off * -30)); // tilt of side panels
+        const tz = off === 0 ? 0 : -130;      // push neighbours back
+        const sc = off === 0 ? 1 : 0.84;
+        slide.style.transform =
+          "translateX(" + tx + "px) translateZ(" + tz + "px) rotateY(" + ry + "deg) scale(" + sc + ")";
+        slide.style.zIndex = String(100 - abs);
+        slide.style.opacity = abs > 2 ? "0" : (off === 0 ? "1" : "0.5");
+        slide.style.pointerEvents = abs > 2 ? "none" : "auto";
+        slide.classList.toggle("center", off === 0);
+      });
+      heroDots.forEach((d, i) => d.classList.toggle("active", i === heroIndex));
+    }
+
+    function heroStep(dir) {
+      const n = heroSlides.length;
+      if (n < 2) return;
+      heroIndex = (heroIndex + dir + n) % n;
+      layoutHero();
+    }
+    function heroResetTimer() {
+      if (heroTimer) clearInterval(heroTimer);
+      if (heroSlides.length > 1) heroTimer = setInterval(() => heroStep(1), 5000);
+    }
+
+    async function buildHero() {
+      const heroEl = document.getElementById("log-hero");
+      if (!heroEl) return;
+
+      const all = Object.values(db.items);
+      if (!all.length) { heroEl.hidden = true; return; }
+
+      const sortedMovies = all.filter(it => it.mediaType === "movie")
+        .sort((a, b) => (b.score || 0) - (a.score || 0));
+      const sortedTv = all.filter(it => it.mediaType === "tv")
+        .sort((a, b) => (b.score || 0) - (a.score || 0));
+      const sortedRecent = all.slice().sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0));
+
+      const candidates = [];
+      const usedIds = new Set();
+      const tryAdd = (it, label) => {
+        if (!it || usedIds.has(it.id)) return;
+        usedIds.add(it.id);
+        candidates.push({ it, label });
+      };
+      tryAdd(sortedMovies[0], "Dein #1 Film");
+      tryAdd(sortedTv[0], "Deine #1 Serie");
+      tryAdd(sortedMovies[1], "Dein #2 Film");
+      tryAdd(sortedRecent[0], "Zuletzt gesehen");
+      tryAdd(sortedTv[1], "Deine #2 Serie");
+      tryAdd(sortedMovies[2], "Dein #3 Film");
+
+      if (!candidates.length) { heroEl.hidden = true; return; }
+
+      // Fetch film backdrops in parallel (B8: imagery must match each title)
+      const slides = await Promise.all(candidates.map(async ({ it, label }) => {
+        try {
+          const res = await fetch(
+            "https://api.themoviedb.org/3/" + it.mediaType + "/" + it.id +
+            "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG
+          );
+          const d = res.ok ? await res.json() : {};
+          return { it, label, backdrop: d.backdrop_path || null };
+        } catch (_) { return { it, label, backdrop: null }; }
+      }));
+
+      if (heroTimer) { clearInterval(heroTimer); heroTimer = null; }
+      heroSlides = []; heroDots = []; heroIndex = 0;
+      heroEl.innerHTML = "";
+
+      const stage = document.createElement("div"); stage.className = "hero-stage";
+      const dotsEl = document.createElement("div"); dotsEl.className = "hero-dots";
+
+      slides.forEach(({ it, label, backdrop }) => {
+        const slide = document.createElement("div");
+        slide.className = "hero-slide";
+
+        if (backdrop) {
+          const img = document.createElement("img");
+          img.className = "hero-backdrop"; img.src = IMG_BASE + "w780" + backdrop; img.alt = "";
+          slide.appendChild(img);
+        } else if (it.poster) {
+          const img = document.createElement("img");
+          img.className = "hero-backdrop"; img.src = IMG_BASE + "w342" + it.poster; img.alt = "";
+          img.style.filter = "blur(10px)"; img.style.transform = "scale(1.12)";
+          slide.appendChild(img);
+        }
+
+        const dim = document.createElement("div"); dim.className = "hero-dim"; slide.appendChild(dim);
+        const sheen = document.createElement("div"); sheen.className = "hero-sheen"; slide.appendChild(sheen);
+
+        const content = document.createElement("div"); content.className = "hero-content";
+        const lbl = document.createElement("div"); lbl.className = "hero-label"; lbl.textContent = label;
+        const ttl = document.createElement("div"); ttl.className = "hero-title"; ttl.textContent = it.title;
+        const meta = document.createElement("div"); meta.className = "hero-meta";
+        const bits = [];
+        if (it.year) bits.push(it.year);
+        bits.push(it.mediaType === "tv" ? "Serie" : "Film");
+        if (it.rating > 0) bits.push("★ " + it.rating.toFixed(1).replace(".", ","));
+        meta.textContent = bits.join(" · ");
+        content.appendChild(lbl); content.appendChild(ttl); content.appendChild(meta);
+        slide.appendChild(content);
+        slide.addEventListener("click", () => {
+          const idx = heroSlides.indexOf(slide);
+          if (idx === heroIndex) openDetail(it.mediaType, it.id);   // tap centre → open
+          else { heroIndex = idx; layoutHero(); heroResetTimer(); } // tap side → bring to centre
+        });
+        stage.appendChild(slide);
+        heroSlides.push(slide);
+
+        const dot = document.createElement("div"); dot.className = "hero-dot";
+        dotsEl.appendChild(dot); heroDots.push(dot);
+      });
+
+      heroEl.appendChild(stage);
+
+      // left / right arrows (B8)
+      const mkArrow = (dir, cls, pts) => {
+        const a = document.createElement("button");
+        a.className = "hero-arrow " + cls; a.type = "button";
+        a.setAttribute("aria-label", dir < 0 ? "Zurück" : "Weiter");
+        a.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="' + pts + '"/></svg>';
+        a.addEventListener("click", e => { e.stopPropagation(); heroStep(dir); heroResetTimer(); });
+        return a;
+      };
+      heroEl.appendChild(mkArrow(-1, "left", "15 5 8 12 15 19"));
+      heroEl.appendChild(mkArrow(1, "right", "9 5 16 12 9 19"));
+      heroEl.appendChild(dotsEl);
+      heroEl.hidden = false;
+
+      layoutHero();
+      heroResetTimer();
+    }
+
+    function renderLogHome() {
+      const all = Object.values(db.items);
+      const hint = document.getElementById("log-hint");
+      if (hint) hint.hidden = all.length > 0;
+
+      maybeRebuildHero();
+      buildProgressSection();
+
+      const recent = all.slice().sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0)).slice(0, 10);
+      const topMovies = all.filter(it => it.mediaType === "movie")
+        .sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10);
+      const topSeries = all.filter(it => it.mediaType === "tv")
+        .sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10);
+
+      buildHomeRow("lh-recent", "Zuletzt gesehen", recent, false);
+      buildHomeRow("lh-movies", "Top Filme", topMovies, true);
+      buildHomeRow("lh-series", "Top Serien", topSeries, true);
+    }
+
     // ---------- Action sheet (bucket / watchlist) ----------
     const backdrop     = document.getElementById("sheet-backdrop");
     const sheetPoster  = document.getElementById("sheet-poster");
@@ -1391,6 +2185,15 @@
         sheetPoster.style.visibility = "hidden";
       }
 
+      // always start at step 1 (action choice)
+      document.getElementById("sheet-step1").hidden = false;
+      document.getElementById("sheet-step2").hidden = true;
+
+      backdrop.hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+
+    function showSheetStep2(r) {
       const existing = db.items[keyOf(r.media_type, r.id)];
       bucketListEl.innerHTML = "";
       BUCKETS.forEach((b, i) => {
@@ -1401,9 +2204,8 @@
         el.addEventListener("click", () => logItem(r, b.id));
         bucketListEl.appendChild(el);
       });
-
-      backdrop.hidden = false;
-      document.body.style.overflow = "hidden";
+      document.getElementById("sheet-step1").hidden = true;
+      document.getElementById("sheet-step2").hidden = false;
     }
 
     function closeSheet() {
@@ -1417,9 +2219,16 @@
       const rec = db.items[key] || recordFrom(r, bucket);
       rec.bucket = bucket;
       rec.score = BUCKET_BASE[bucket];  // explicit re-placement resets the score to that zone
+      rec.loggedAt = Date.now();
       db.items[key] = rec;
-      if (db.watchlist[key]) delete db.watchlist[key];
+      // auto-remove from Watchlist and non-permanent custom lists (B6).
+      // "Ewige Listen" (permanent) keep their titles forever.
+      delete db.watchlist[key];
+      for (const id in db.lists) {
+        if (!db.lists[id].permanent && db.lists[id].items && db.lists[id].items[key]) delete db.lists[id].items[key];
+      }
       saveDB();
+      heroItemCount = -1; // force hero rebuild on next Home visit
       closeSheet();
       showToast("Eingetragen: " + bucketLabel(bucket));
       refreshResults();
@@ -1445,18 +2254,60 @@
       searchInput.focus();
     });
     document.getElementById("sheet-cancel").addEventListener("click", closeSheet);
-    document.getElementById("sheet-listadd").addEventListener("click", () => {
-      if (sheetItem) { const r = sheetItem; closeSheet(); openListPicker(r); }
+    document.getElementById("sheet-cancel2").addEventListener("click", closeSheet);
+    document.getElementById("sheet-watched-btn").addEventListener("click", () => {
+      if (sheetItem) showSheetStep2(sheetItem);
+    });
+    document.getElementById("sheet-watchlist-btn").addEventListener("click", () => {
+      if (!sheetItem) return;
+      const r = sheetItem;
+      db.watchlist[keyOf(r.media_type, r.id)] = recordFrom(r, null);
+      saveDB();
+      closeSheet();
+      showToast("Auf Watchlist gespeichert");
+      refreshResults();
+      refreshDetailStatus();
+      // optional: also add to a custom list
+      if (Object.keys(db.lists).length > 0) openListPicker(r);
     });
     backdrop.addEventListener("click", e => { if (e.target === backdrop) closeSheet(); });
 
     // ---------- Ranking / leaderboard ----------
     const rankToggle = document.getElementById("rank-toggle");
     const rankListEl = document.getElementById("rank-list");
+    const rankGenreSel = document.getElementById("rank-genre");
+    const rankTagSel   = document.getElementById("rank-tag");
     let rankMedia = "movie";
 
-    function renderRanking() {
+    // Populate the genre + tag filter dropdowns from what the user has actually logged (B2)
+    async function populateRankFilters() {
+      await ensureGenres();
       const items = Object.values(db.items).filter(it => it.mediaType === rankMedia);
+      // genres present in this media set
+      const gids = new Set();
+      items.forEach(it => (it.genreIds || []).forEach(g => gids.add(g)));
+      const prevG = rankGenreSel.value;
+      rankGenreSel.innerHTML = '<option value="">Alle Genres</option>' +
+        [...gids].map(id => ({ id, name: (genreMapById && genreMapById[id]) || null }))
+          .filter(g => g.name)
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map(g => '<option value="' + g.id + '">' + esc(g.name) + "</option>").join("");
+      if ([...rankGenreSel.options].some(o => o.value === prevG)) rankGenreSel.value = prevG;
+      // tags present on this media set
+      const tags = new Set();
+      items.forEach(it => (getMeta(keyOf(it.mediaType, it.id)).tags || []).forEach(t => tags.add(t)));
+      const prevT = rankTagSel.value;
+      rankTagSel.innerHTML = '<option value="">Alle Tags</option>' +
+        [...tags].sort((a, b) => a.localeCompare(b)).map(t => '<option value="' + esc(t) + '">' + esc(t) + "</option>").join("");
+      if ([...rankTagSel.options].some(o => o.value === prevT)) rankTagSel.value = prevT;
+    }
+
+    function renderRanking() {
+      const genreFilter = rankGenreSel.value ? parseInt(rankGenreSel.value, 10) : null;
+      const tagFilter   = rankTagSel.value || null;
+      let items = Object.values(db.items).filter(it => it.mediaType === rankMedia);
+      if (genreFilter) items = items.filter(it => (it.genreIds || []).includes(genreFilter));
+      if (tagFilter)   items = items.filter(it => (getMeta(keyOf(it.mediaType, it.id)).tags || []).includes(tagFilter));
       items.forEach(ensureScore);
       // One continuous leaderboard, sorted by Elo score (high → low)
       items.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
@@ -1468,9 +2319,13 @@
       if (items.length === 0) {
         const empty = document.createElement("div");
         empty.className = "results-empty";
-        empty.textContent = rankMedia === "movie"
-          ? "Noch keine Filme eingetragen."
-          : "Noch keine Serien eingetragen.";
+        if (genreFilter || tagFilter) {
+          empty.textContent = "Keine Treffer für diesen Filter.";
+        } else {
+          empty.textContent = rankMedia === "movie"
+            ? "Noch keine Filme eingetragen."
+            : "Noch keine Serien eingetragen.";
+        }
         rankListEl.appendChild(empty);
         return;
       }
@@ -1536,14 +2391,18 @@
       if (!btn) return;
       rankMedia = btn.dataset.media;
       rankToggle.querySelectorAll(".seg").forEach(s => s.classList.toggle("active", s === btn));
-      renderRanking();
+      rankGenreSel.value = ""; rankTagSel.value = "";
+      populateRankFilters().then(renderRanking);
     });
+    rankGenreSel.addEventListener("change", renderRanking);
+    rankTagSel.addEventListener("change", renderRanking);
 
     // ---------- Duel mode (Elo) ----------
-    const duelEl   = document.getElementById("duel");
+    const duelEl    = document.getElementById("duel");
     const duelCardA = document.getElementById("duel-a");
     const duelCardB = document.getElementById("duel-b");
     let duelPair = null;
+    let duelSeenPairs = new Set(); // canonical "smallerId|largerId" — resets per session
 
     function duelItems() {
       const arr = Object.values(db.items).filter(it => it.mediaType === rankMedia);
@@ -1551,24 +2410,27 @@
       return arr;
     }
 
-    // Prefer pairs that are close in rank (often across a zone boundary),
-    // so a win can nudge a title into the neighbouring bucket.
-    function pickPair(prevSig) {
+    function pairSig(a, b) {
+      return a.id < b.id ? a.id + "|" + b.id : b.id + "|" + a.id;
+    }
+
+    // Prefer adjacent / near-adjacent pairs in the ranking (most useful for refinement).
+    // Returns null when all relevant pairs within gap 1-3 have been seen → duel is done.
+    function pickPair() {
       const arr = duelItems();
       if (arr.length < 2) return null;
       arr.sort((a, b) => b.score - a.score);
-      for (let tries = 0; tries < 14; tries++) {
-        const i = Math.floor(Math.random() * (arr.length - 1));
-        const gap = (Math.random() < 0.3 && i + 2 < arr.length) ? 2 : 1;
-        const a = arr[i];
-        const b = arr[i + gap] || arr[i + 1];
-        if (!a || !b || a === b) continue;
-        const sig = a.id + "|" + b.id;
-        const rev = b.id + "|" + a.id;
-        if (prevSig && (sig === prevSig || rev === prevSig)) continue;
-        return [a, b];
+
+      for (let gap = 1; gap <= Math.min(3, arr.length - 1); gap++) {
+        // collect all unseen candidates at this gap distance, then pick one at random
+        const candidates = [];
+        for (let i = 0; i < arr.length - gap; i++) {
+          const sig = pairSig(arr[i], arr[i + gap]);
+          if (!duelSeenPairs.has(sig)) candidates.push([arr[i], arr[i + gap]]);
+        }
+        if (candidates.length) return candidates[Math.floor(Math.random() * candidates.length)];
       }
-      return [arr[0], arr[1]];
+      return null; // all relevant pairs exhausted
     }
 
     function fillDuelCard(card, it) {
@@ -1581,11 +2443,13 @@
 
     function showDuelPair(pair) {
       duelPair = pair;
+      duelSeenPairs.add(pairSig(pair[0], pair[1])); // mark as seen as soon as it's shown
       fillDuelCard(duelCardA, pair[0]);
       fillDuelCard(duelCardB, pair[1]);
     }
 
     function openDuel() {
+      duelSeenPairs = new Set(); // fresh session
       const pair = pickPair();
       if (!pair) { showToast("Mindestens 2 Titel nötig"); return; }
       showDuelPair(pair);
@@ -1593,11 +2457,12 @@
       document.body.style.overflow = "hidden";
     }
 
-    function closeDuel() {
+    function closeDuel(msg) {
       duelEl.hidden = true;
       duelPair = null;
       document.body.style.overflow = "";
-      renderRanking(); // reflect the new order
+      renderRanking();
+      if (msg) showToast(msg);
     }
 
     function applyElo(winner, loser) {
@@ -1612,17 +2477,15 @@
       const loser = winner === duelPair[0] ? duelPair[1] : duelPair[0];
       applyElo(winner, loser);
       saveDB();
-      const sig = winner.id + "|" + loser.id;
-      const next = pickPair(sig);
-      if (next) showDuelPair(next); else closeDuel();
+      const next = pickPair();
+      if (next) showDuelPair(next); else closeDuel("Duell abgeschlossen!");
     }
 
     document.getElementById("duel-start").addEventListener("click", openDuel);
-    document.getElementById("duel-close").addEventListener("click", closeDuel);
+    document.getElementById("duel-close").addEventListener("click", () => closeDuel());
     document.getElementById("duel-skip").addEventListener("click", () => {
-      const sig = duelPair ? (duelPair[0].id + "|" + duelPair[1].id) : null;
-      const next = pickPair(sig);
-      if (next) showDuelPair(next);
+      const next = pickPair();
+      if (next) showDuelPair(next); else closeDuel("Duell abgeschlossen!");
     });
     duelCardA.addEventListener("click", () => chooseWinner(duelPair[0]));
     duelCardB.addEventListener("click", () => chooseWinner(duelPair[1]));
@@ -1668,12 +2531,16 @@
           } catch (e) { /* keep empty */ }
         }
         let videos = (data.videos && data.videos.results) || [];
-        if (!videos.some(v => v.site === "YouTube")) {
-          try {
-            const r3 = await fetch(base + "/videos?api_key=" + TMDB_KEY + "&language=en-US");
-            if (r3.ok) { const d3 = await r3.json(); if (reqId !== detailReqId) return; videos = (d3.results || []); }
-          } catch (e) { /* keep */ }
-        }
+        // Always pull English videos too — the user wants English trailers (A7)
+        try {
+          const r3 = await fetch(base + "/videos?api_key=" + TMDB_KEY + "&language=en-US");
+          if (r3.ok) {
+            const d3 = await r3.json();
+            if (reqId !== detailReqId) return;
+            const seen = new Set(videos.map(v => v.key));
+            (d3.results || []).forEach(v => { if (!seen.has(v.key)) { videos.push(v); seen.add(v.key); } });
+          }
+        } catch (e) { /* keep */ }
 
         renderDetail(data, mediaType, videos);
       } catch (e) {
@@ -1725,10 +2592,23 @@
       html += "</div></div></div>";
 
       // ---- actions ----
-      const trailer = videos.find(v => v.site === "YouTube" && v.type === "Trailer") || videos.find(v => v.site === "YouTube");
+      // Prefer an English-language YouTube trailer (A7); fall back gracefully
+      const ytEn  = videos.filter(v => v.site === "YouTube" && v.iso_639_1 === "en");
+      const ytAny = videos.filter(v => v.site === "YouTube");
+      const trailer =
+        ytEn.find(v => v.type === "Trailer") || ytEn.find(v => v.type === "Teaser") || ytEn[0] ||
+        ytAny.find(v => v.type === "Trailer") || ytAny[0];
       html += '<div class="detail-actions">';
-      html += '<button class="detail-log-btn" id="detail-log">Eintragen</button>';
+      html += '<button class="detail-log-btn" id="detail-log" type="button">Watch</button>';
       if (trailer) html += '<a class="detail-trailer-btn" target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=' + esc(trailer.key) + '"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Trailer</a>';
+      html += "</div>";
+      // secondary actions: Watchlist (toggle) + Listen (custom lists)  — B4 / B5
+      html += '<div class="detail-actions detail-actions-2">';
+      html += '<button class="detail-sec-btn" id="detail-watchlist" type="button">' +
+        '<svg id="detail-wl-icon" viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></svg>' +
+        '<span id="detail-wl-label">Watchlist</span></button>';
+      html += '<button class="detail-sec-btn" id="detail-lists" type="button">' +
+        '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Listen</button>';
       html += "</div>";
 
       // ---- already logged status ----
@@ -1736,6 +2616,9 @@
 
       // ---- series progress (tv only) ----
       if (isTv) html += '<div id="detail-progress"></div>';
+
+      // ---- per-episode ratings grid (tv only) ----
+      if (isTv) html += '<div id="detail-ep-ratings"></div>';
 
       // ---- personal notes / tags / rewatch ----
       html += '<div id="detail-personal"></div>';
@@ -1755,9 +2638,11 @@
         const dir = crew.filter(c => c.job === "Director");
         if (dir.length) html += '<p class="detail-crew">Regie: <strong>' + dir.map(crewLink).join(", ") + "</strong></p>";
       }
-      // ---- box office (movies) ----
+      // ---- budget + box office (movies) ----  A6
       if (!isTv) {
+        const bud = fmtMoney(data.budget);
         const rev = fmtMoney(data.revenue);
+        if (bud) html += '<p class="detail-revenue">Produktionsbudget: <strong>' + esc(bud) + "</strong></p>";
         if (rev) html += '<p class="detail-revenue">Einspielergebnis: <strong>' + esc(rev) + "</strong></p>";
       }
       html += "</div>";
@@ -1812,25 +2697,67 @@
       detailEl.scrollTop = 0;
 
       // wire up dynamic bits
-      document.getElementById("detail-log").addEventListener("click", () => openSheet(r));
+      document.getElementById("detail-log").addEventListener("click", () => {
+        const key = keyOf(mediaType, data.id);
+        if (db.items[key]) {            // already watched → un-watch (B3 toggle)
+          unwatchItem(key);
+          showToast("Nicht mehr als gesehen markiert");
+          refreshDetailStatus();
+          refreshResults();
+        } else {
+          openSheet(r);                 // not watched → pick rating
+        }
+      });
+      document.getElementById("detail-watchlist").addEventListener("click", () => {
+        const key = keyOf(mediaType, data.id);
+        if (db.watchlist[key]) { delete db.watchlist[key]; saveDB(); showToast("Von Watchlist entfernt"); }
+        else { db.watchlist[key] = recordFrom(r, null); saveDB(); showToast("Auf Watchlist gespeichert"); }
+        refreshDetailStatus();
+        refreshResults();
+      });
+      document.getElementById("detail-lists").addEventListener("click", () => openListPicker(r, true));
       const simWrap = document.getElementById("detail-similar");
       if (simWrap) simWrap.addEventListener("click", e => {
         const card = e.target.closest(".sim");
         if (card) openDetail(card.dataset.media, parseInt(card.dataset.id, 10));
       });
       if (isTv) renderProgress(data);
+      if (isTv) renderEpRatings(data);
       renderPersonal(mediaType, data.id);
       refreshDetailStatus();
     }
 
+    function unwatchItem(key) {
+      // remove the watched record but keep meta (notes/tags) and episode progress
+      delete db.items[key];
+      heroItemCount = -1;
+      saveDB();
+    }
+
     function refreshDetailStatus() {
       if (!detailCtx) return;
-      const el = document.getElementById("detail-status");
-      if (!el) return;
       const key = keyOf(detailCtx.mediaType, detailCtx.id);
-      el.className = "detail-status";
-      if (db.items[key]) el.textContent = "Eingetragen · " + bucketLabel(deriveBucket(ensureScore(db.items[key])));
-      else el.textContent = membershipLabel(key) || "";
+      const el = document.getElementById("detail-status");
+      if (el) {
+        el.className = "detail-status";
+        if (db.items[key]) el.textContent = "Eingetragen · " + bucketLabel(deriveBucket(ensureScore(db.items[key])));
+        else el.textContent = membershipLabel(key) || "";
+      }
+      // Watch / Watched toggle button (B3)
+      const logBtn = document.getElementById("detail-log");
+      if (logBtn) {
+        const watched = !!db.items[key];
+        logBtn.textContent = watched ? "Watched" : "Watch";
+        logBtn.classList.toggle("watched", watched);
+      }
+      // Watchlist bookmark state (B4)
+      const wlBtn = document.getElementById("detail-watchlist");
+      if (wlBtn) {
+        const on = !!db.watchlist[key];
+        wlBtn.classList.toggle("active", on);
+        const lab = document.getElementById("detail-wl-label");
+        if (lab) lab.textContent = on ? "Auf Watchlist" : "Watchlist";
+      }
     }
 
     document.getElementById("detail-back").addEventListener("click", closeDetail);
@@ -1930,10 +2857,18 @@
       return { note: (m && m.note) || "", tags: (m && m.tags) || [], rewatch: !!(m && m.rewatch), flagged: !!(m && m.flagged) };
     }
     function saveMeta(key, meta) {
-      // drop empty meta to keep storage tidy
       if (!meta.note && (!meta.tags || !meta.tags.length) && !meta.rewatch && !meta.flagged) delete db.meta[key];
       else db.meta[key] = { note: meta.note || "", tags: meta.tags || [], rewatch: !!meta.rewatch, flagged: !!meta.flagged };
       saveDB();
+    }
+
+    // ---------- Tag database (B1) ----------
+    function tagDefs() { return (db.tagDefs || (db.tagDefs = DEFAULT_TAGS.slice())); }
+    function addTagDef(name) {
+      const n = name.trim();
+      if (!n) return "";
+      if (!tagDefs().includes(n)) { tagDefs().push(n); saveDB(); }
+      return n;
     }
 
     let personalNoteTimer = null;
@@ -1946,50 +2881,31 @@
 
       host.innerHTML =
         '<div class="detail-section"><h3>Meine Notizen &amp; Tags</h3>' +
-        '<button id="pers-rewatch" class="rewatch-toggle" type="button">' +
-          '<span class="ep-check"></span><span>Schon gesehen (Rewatch)</span></button>' +
-        '<button id="pers-flag" class="rewatch-toggle" type="button">' +
-          '<span class="ep-check"></span><span>Enthält Nacktheit / Sex (selbst markiert)</span></button>' +
         '<div id="pers-tags" class="tag-list"></div>' +
+        '<div class="tag-add-row">' +
+          '<select id="pers-tag-select" class="modal-select"></select>' +
+          '<button id="pers-tag-new" class="tag-new-btn" type="button" aria-label="Neuen Tag anlegen">' +
+            '<svg viewBox="0 0 24 24"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></svg></button>' +
+        '</div>' +
         '<input id="pers-tag-input" class="modal-input" type="text" maxlength="30" ' +
-          'placeholder="Tag hinzufügen, Enter" autocomplete="off" />' +
+          'placeholder="Neuer Tag, Enter" autocomplete="off" hidden />' +
         '<textarea id="pers-note" class="note-input" rows="3" ' +
-          'placeholder="Notiz … (Mikrofon-Taste der Tastatur nutzbar)"></textarea>' +
+          'placeholder="Notiz …"></textarea>' +
         '</div>';
 
-      // rewatch toggle
-      const rewatchBtn = document.getElementById("pers-rewatch");
-      const setRewatchUI = on => {
-        rewatchBtn.classList.toggle("on", on);
-        rewatchBtn.querySelector(".ep-check").innerHTML = on
-          ? '<svg viewBox="0 0 24 24"><polyline points="5 12 10 17 19 7"/></svg>' : "";
-      };
-      setRewatchUI(meta.rewatch);
-      rewatchBtn.addEventListener("click", () => {
-        const cur = getMeta(key);
-        cur.rewatch = !cur.rewatch;
-        saveMeta(key, cur);
-        setRewatchUI(cur.rewatch);
-      });
-
-      // nudity / sex self-flag
-      const flagBtn = document.getElementById("pers-flag");
-      const setFlagUI = on => {
-        flagBtn.classList.toggle("on", on);
-        flagBtn.querySelector(".ep-check").innerHTML = on
-          ? '<svg viewBox="0 0 24 24"><polyline points="5 12 10 17 19 7"/></svg>' : "";
-      };
-      setFlagUI(meta.flagged);
-      flagBtn.addEventListener("click", () => {
-        const cur = getMeta(key);
-        cur.flagged = !cur.flagged;
-        saveMeta(key, cur);
-        setFlagUI(cur.flagged);
-      });
-
-      // tags
-      const tagsEl = document.getElementById("pers-tags");
+      // ----- tags: chips + pick-from-database dropdown + add-new (B1) -----
+      const tagsEl   = document.getElementById("pers-tags");
+      const tagSelect = document.getElementById("pers-tag-select");
+      const tagNewBtn = document.getElementById("pers-tag-new");
       const tagInput = document.getElementById("pers-tag-input");
+
+      function fillTagSelect() {
+        const cur = getMeta(key);
+        const avail = tagDefs().slice().sort((a, b) => a.localeCompare(b)).filter(t => !cur.tags.includes(t));
+        tagSelect.innerHTML = '<option value="">＋ Tag wählen …</option>' +
+          avail.map(t => '<option value="' + esc(t) + '">' + esc(t) + "</option>").join("");
+        tagSelect.disabled = avail.length === 0;
+      }
       function renderTags() {
         const cur = getMeta(key);
         tagsEl.innerHTML = "";
@@ -2003,22 +2919,37 @@
             const c = getMeta(key);
             c.tags = c.tags.filter(g => g !== tag);
             saveMeta(key, c);
-            renderTags();
+            renderTags(); fillTagSelect();
           });
           chip.appendChild(t); chip.appendChild(x);
           tagsEl.appendChild(chip);
         });
       }
-      renderTags();
-      function addTag() {
-        const val = tagInput.value.trim();
-        if (!val) return;
+      function addTagToTitle(tag) {
+        if (!tag) return;
         const cur = getMeta(key);
-        if (!cur.tags.includes(val)) { cur.tags.push(val); saveMeta(key, cur); renderTags(); }
-        tagInput.value = "";
+        if (!cur.tags.includes(tag)) { cur.tags.push(tag); saveMeta(key, cur); }
+        renderTags(); fillTagSelect();
       }
-      tagInput.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addTag(); } });
-      tagInput.addEventListener("blur", addTag);
+      renderTags(); fillTagSelect();
+
+      tagSelect.addEventListener("change", () => {
+        if (tagSelect.value) addTagToTitle(tagSelect.value);
+      });
+      tagNewBtn.addEventListener("click", () => {
+        tagInput.hidden = !tagInput.hidden;
+        if (!tagInput.hidden) tagInput.focus();
+      });
+      function commitNewTag() {
+        const val = tagInput.value.trim();
+        tagInput.value = "";
+        tagInput.hidden = true;
+        if (!val) return;
+        const name = addTagDef(val);   // save to the tag database
+        addTagToTitle(name);           // and apply to this title
+      }
+      tagInput.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); commitNewTag(); } });
+      tagInput.addEventListener("blur", commitNewTag);
 
       // note (debounced auto-save)
       const noteEl = document.getElementById("pers-note");
@@ -2189,13 +3120,24 @@
         const nm  = document.createElement("span"); nm.className = "ep-name"; nm.textContent = e.name || ("Episode " + e.n);
 
         row.appendChild(box); row.appendChild(num); row.appendChild(nm);
-        row.addEventListener("click", () => {
-          const now = !isEpWatched(tvId, season, e.n);
-          toggleEp(tvId, season, e.n, now);
+
+        const refreshRow = (now) => {
           row.classList.toggle("done", now);
           box.innerHTML = now ? '<svg viewBox="0 0 24 24"><polyline points="5 12 10 17 19 7"/></svg>' : "";
           updateProgSummary(data, tvId);
           head.textContent = episodes.every(x => isEpWatched(tvId, season, x.n)) ? "Ganze Staffel abwählen" : "Ganze Staffel als gesehen";
+        };
+        // Checkbox toggles watched on/off (the un-watch path)
+        box.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          const now = !isEpWatched(tvId, season, e.n);
+          toggleEp(tvId, season, e.n, now);
+          refreshRow(now);
+        });
+        // Tapping the row marks it watched (if needed) and jumps straight to rating (B7)
+        row.addEventListener("click", () => {
+          if (!isEpWatched(tvId, season, e.n)) { toggleEp(tvId, season, e.n, true); refreshRow(true); }
+          openEpRateSheet(tvId, season, e.n, null, () => refreshRow(true));
         });
         frag.appendChild(row);
       });
@@ -2239,10 +3181,10 @@
       const map = listItemsMap(listId);
       if (map[key]) { delete map[key]; saveDB(); }
     }
-    function createList(name) {
+    function createList(name, permanent) {
       db.listSeq = (db.listSeq || 0) + 1;
       const id = "list" + db.listSeq;
-      db.lists[id] = { id, name, items: {} };
+      db.lists[id] = { id, name, items: {}, permanent: !!permanent };
       saveDB();
       return id;
     }
@@ -2378,11 +3320,14 @@
     const pickerLists    = document.getElementById("picker-lists");
     let pendingPickItem  = null;
 
-    function openListPicker(r) {
+    let pickerCustomOnly = false;
+    function openListPicker(r, customOnly) {
       pendingPickItem = r;
+      pickerCustomOnly = !!customOnly;
       const key = keyOf(r.media_type, r.id);
       pickerLists.innerHTML = "";
       for (const list of allLists()) {
+        if (pickerCustomOnly && list.id === WATCHLIST_ID) continue; // Watchlist has its own button
         const inList = !!list.items[key];
         const btn = document.createElement("button");
         btn.className = "picker-item" + (inList ? " done" : "");
@@ -2416,9 +3361,20 @@
     const newlistInput    = document.getElementById("newlist-input");
     let newlistMode = "overview"; // "overview" | "pick"
 
+    const newlistPermBtn = document.getElementById("newlist-permanent");
+    let newlistPermanent = false;
+    function setNewlistPermUI() {
+      newlistPermBtn.classList.toggle("on", newlistPermanent);
+      newlistPermBtn.querySelector(".ep-check").innerHTML = newlistPermanent
+        ? '<svg viewBox="0 0 24 24"><polyline points="5 12 10 17 19 7"/></svg>' : "";
+    }
+    newlistPermBtn.addEventListener("click", () => { newlistPermanent = !newlistPermanent; setNewlistPermUI(); });
+
     function openNewList(mode) {
       newlistMode = mode;
       newlistInput.value = "";
+      newlistPermanent = false;
+      setNewlistPermUI();
       newlistBackdrop.hidden = false;
       document.body.style.overflow = "hidden";
       setTimeout(() => newlistInput.focus(), 60);
@@ -2430,7 +3386,7 @@
     function submitNewList() {
       const name = newlistInput.value.trim();
       if (!name) { showToast("Bitte einen Namen eingeben"); return; }
-      const id = createList(name);
+      const id = createList(name, newlistPermanent);
       closeNewList();
       if (newlistMode === "pick" && pendingPickItem) {
         addToList(id, pendingPickItem);
@@ -2583,6 +3539,271 @@
     wuerfelBackdrop.addEventListener("click", e => { if (e.target === wuerfelBackdrop) closeWuerfel(); });
 
     // ====================================================================
+    //  EPISODE RATINGS  (per-episode bucket ratings for TV series)
+    // ====================================================================
+    const BUCKET_COLORS = { great: "#22c55e", good: "#84cc16", watchable: "#e8b339", meh: "#f97316", bad: "#ef4444" };
+
+    function getEpRating(tvId, s, e) {
+      const r = db.epRatings[tvId];
+      return r ? (r[epKey(s, e)] || null) : null;
+    }
+    function setEpRating(tvId, s, e, bucket) {
+      if (!db.epRatings[tvId]) db.epRatings[tvId] = {};
+      if (bucket === null) delete db.epRatings[tvId][epKey(s, e)];
+      else db.epRatings[tvId][epKey(s, e)] = bucket;
+      if (bucket === null && Object.keys(db.epRatings[tvId]).length === 0) delete db.epRatings[tvId];
+      saveDB();
+    }
+
+    // mini rating sheet
+    let epRateCtx = null;
+    const epRateBackdrop = document.getElementById("ep-rate-backdrop");
+    const epRateTitleEl  = document.getElementById("ep-rate-title");
+    const epRateBucketsEl = document.getElementById("ep-rate-buckets");
+
+    function openEpRateSheet(tvId, s, e, cell, onChange) {
+      epRateCtx = { tvId, s, e, cell, onChange: onChange || null };
+      epRateTitleEl.textContent =
+        "S" + String(s).padStart(2, "0") + "E" + String(e).padStart(2, "0") + " bewerten";
+      const current = getEpRating(tvId, s, e);
+      epRateBucketsEl.innerHTML = "";
+      BUCKETS.forEach((b, i) => {
+        const btn = document.createElement("button");
+        btn.className = "bucket" + (b.id === current ? " selected" : "");
+        btn.type = "button";
+        btn.innerHTML = '<span class="bucket-rank">' + (i + 1) + "</span><span>" + b.label + "</span>";
+        btn.addEventListener("click", () => {
+          setEpRating(tvId, s, e, b.id);
+          if (!isEpWatched(tvId, s, e)) toggleEp(tvId, s, e, true); // rating implies watched
+          applyEpCell(cell, b.id);
+          if (epRateCtx && epRateCtx.onChange) epRateCtx.onChange();
+          closeEpRateSheet();
+        });
+        epRateBucketsEl.appendChild(btn);
+      });
+      document.getElementById("ep-rate-remove").hidden = !current;
+      epRateBackdrop.hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeEpRateSheet() {
+      epRateBackdrop.hidden = true;
+      epRateCtx = null;
+      document.body.style.overflow = "";
+    }
+
+    function applyEpCell(cell, bucket) {
+      if (!cell) return;   // called from the Fortschritt list, where there is no grid cell
+      if (bucket) { cell.dataset.b = bucket; cell.title = bucketLabel(bucket); }
+      else { delete cell.dataset.b; cell.removeAttribute("title"); }
+    }
+
+    document.getElementById("ep-rate-remove").addEventListener("click", () => {
+      if (!epRateCtx) return;
+      setEpRating(epRateCtx.tvId, epRateCtx.s, epRateCtx.e, null);
+      applyEpCell(epRateCtx.cell, null);
+      if (epRateCtx.onChange) epRateCtx.onChange();
+      closeEpRateSheet();
+    });
+    document.getElementById("ep-rate-cancel").addEventListener("click", closeEpRateSheet);
+    epRateBackdrop.addEventListener("click", e => { if (e.target === epRateBackdrop) closeEpRateSheet(); });
+
+    // grid rendering
+    let epGridSeason = 1;
+
+    function renderEpRatings(data) {
+      const host = document.getElementById("detail-ep-ratings");
+      if (!host) return;
+      const tvId = keyOf("tv", data.id);
+      const seasons = realSeasons(data);
+      if (!seasons.length) { host.innerHTML = ""; return; }
+
+      epGridSeason = seasons[0].season_number;
+      const last = lastWatched(tvId);
+      if (last && seasons.some(s => s.season_number === last.s)) epGridSeason = last.s;
+
+      const legend = BUCKETS.map(b =>
+        '<div class="ep-legend-item">' +
+        '<div class="ep-legend-dot" style="background:' + BUCKET_COLORS[b.id] + '"></div>' +
+        b.label + "</div>"
+      ).join("");
+
+      host.innerHTML =
+        '<div class="detail-section"><h3>Episodenbewertungen</h3>' +
+        '<div class="season-chips" id="epg-seasons"></div>' +
+        '<div id="epg-grid"></div>' +
+        '<div class="ep-legend">' + legend + "</div></div>";
+
+      const chipWrap = document.getElementById("epg-seasons");
+      seasons.forEach(s => {
+        const c = document.createElement("button");
+        c.className = "chip" + (s.season_number === epGridSeason ? " active" : "");
+        c.type = "button";
+        c.textContent = "S" + s.season_number;
+        c.addEventListener("click", () => {
+          epGridSeason = s.season_number;
+          chipWrap.querySelectorAll(".chip").forEach(x => x.classList.toggle("active", x === c));
+          loadEpGrid(data, tvId, s.season_number);
+        });
+        chipWrap.appendChild(c);
+      });
+
+      loadEpGrid(data, tvId, epGridSeason);
+    }
+
+    async function loadEpGrid(data, tvId, season) {
+      const gridEl = document.getElementById("epg-grid");
+      if (!gridEl) return;
+
+      const cacheKey = data.id + ":" + season;
+      let episodes = seasonCache[cacheKey];
+      if (!episodes) {
+        gridEl.innerHTML = '<div class="ep-loading">Lädt …</div>';
+        try {
+          const res = await fetch("https://api.themoviedb.org/3/tv/" + data.id + "/season/" + season
+            + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
+          if (!res.ok) throw new Error();
+          const d = await res.json();
+          episodes = (d.episodes || []).map(ep => ({ n: ep.episode_number, name: ep.name }));
+          seasonCache[cacheKey] = episodes;
+        } catch (_) { gridEl.innerHTML = '<div class="ep-loading">Konnte nicht laden.</div>'; return; }
+      }
+      if (epGridSeason !== season) return;
+
+      gridEl.innerHTML = "";
+      const grid = document.createElement("div"); grid.className = "ep-grid";
+      episodes.forEach(ep => {
+        const cell = document.createElement("button");
+        cell.className = "ep-gc"; cell.type = "button"; cell.textContent = ep.n;
+        const rating = getEpRating(tvId, season, ep.n);
+        if (rating) { cell.dataset.b = rating; cell.title = bucketLabel(rating); }
+        else { cell.title = ep.name || ("Episode " + ep.n); }
+        cell.addEventListener("click", () => openEpRateSheet(tvId, season, ep.n, cell));
+        grid.appendChild(cell);
+      });
+      gridEl.appendChild(grid);
+    }
+
+    // ====================================================================
+    //  DISCOVER WÜRFEL  (random title from TMDB Discover API)
+    // ====================================================================
+    const dwBackdrop = document.getElementById("dw-backdrop");
+    const dwStatus   = document.getElementById("dw-status");
+    const dwResult   = document.getElementById("dw-result");
+
+    async function openDiscWuerfel() {
+      dwResult.hidden = true;
+      dwResult.innerHTML = "";
+      dwStatus.textContent = "";
+      dwBackdrop.hidden = false;
+      document.body.style.overflow = "hidden";
+      // populate genres once
+      await ensureGenres();
+      const sel = document.getElementById("dw-genre");
+      if (sel.options.length <= 1 && genreMapById) {
+        Object.entries(genreMapById)
+          .sort((a, b) => a[1].localeCompare(b[1]))
+          .forEach(([id, name]) => {
+            const o = document.createElement("option"); o.value = id; o.textContent = name; sel.appendChild(o);
+          });
+      }
+    }
+
+    function closeDiscWuerfel() {
+      dwBackdrop.hidden = true;
+      document.body.style.overflow = "";
+    }
+
+    async function rollDiscWuerfel() {
+      const mediaType  = document.getElementById("dw-media").value;
+      const minRt      = parseInt(document.getElementById("dw-runtime-min").value, 10) || 0;
+      const maxRt      = parseInt(document.getElementById("dw-runtime-max").value, 10) || 0;
+      const yearMin    = document.getElementById("dw-year-min").value;
+      const yearMax    = document.getElementById("dw-year-max").value;
+      const minRating  = parseFloat(document.getElementById("dw-rating").value) || 0;
+      const genreId    = document.getElementById("dw-genre").value;
+      const rollBtn    = document.getElementById("dw-roll");
+
+      dwResult.hidden = true;
+      dwResult.innerHTML = "";
+      dwStatus.textContent = "Suche …";
+      rollBtn.disabled = true;
+
+      const dateGteParam = mediaType === "tv" ? "first_air_date.gte" : "primary_release_date.gte";
+      const dateLteParam = mediaType === "tv" ? "first_air_date.lte" : "primary_release_date.lte";
+
+      let base = "https://api.themoviedb.org/3/discover/" + mediaType
+        + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG
+        + "&include_adult=false&sort_by=popularity.desc&vote_count.gte=30";
+      if (minRating > 0) base += "&vote_average.gte=" + minRating;
+      if (minRt > 0)     base += "&with_runtime.gte=" + minRt;
+      if (maxRt > 0)     base += "&with_runtime.lte=" + maxRt;
+      if (yearMin)       base += "&" + dateGteParam + "=" + yearMin + "-01-01";
+      if (yearMax)       base += "&" + dateLteParam + "=" + yearMax + "-12-31";
+      if (genreId)       base += "&with_genres=" + genreId;
+
+      try {
+        const r1 = await fetch(base + "&page=1");
+        if (!r1.ok) throw new Error();
+        const d1 = await r1.json();
+        const totalPages = Math.min(d1.total_pages || 1, 100);
+
+        let pool;
+        if (totalPages <= 1) {
+          pool = (d1.results || []).filter(it => it.poster_path);
+        } else {
+          const page = Math.floor(Math.random() * totalPages) + 1;
+          if (page === 1) {
+            pool = (d1.results || []).filter(it => it.poster_path);
+          } else {
+            const r2 = await fetch(base + "&page=" + page);
+            if (!r2.ok) throw new Error();
+            const d2 = await r2.json();
+            pool = (d2.results || []).filter(it => it.poster_path);
+          }
+        }
+
+        rollBtn.disabled = false;
+        if (!pool.length) { dwStatus.textContent = "Kein Titel gefunden."; return; }
+        dwStatus.textContent = (totalPages * 20) + "+ Treffer";
+
+        const it   = pool[Math.floor(Math.random() * pool.length)];
+        const t    = mediaType === "tv" ? (it.name || it.original_name) : (it.title || it.original_title);
+        const yr   = (it.release_date || it.first_air_date || "").slice(0, 4);
+        const rtng = it.vote_average ? it.vote_average.toFixed(1).replace(".", ",") : null;
+
+        dwResult.innerHTML = "";
+        if (it.poster_path) {
+          const img = document.createElement("img"); img.src = IMG_BASE + "w185" + it.poster_path; img.alt = "";
+          dwResult.appendChild(img);
+        } else {
+          const e = document.createElement("div"); e.className = "wr-empty"; e.textContent = "Kein Bild";
+          dwResult.appendChild(e);
+        }
+        const body = document.createElement("div"); body.className = "wr-body";
+        const titleEl = document.createElement("div"); titleEl.className = "wr-title"; titleEl.textContent = t || "";
+        const subEl   = document.createElement("div"); subEl.className = "wr-sub";
+        const bits = [mediaType === "tv" ? "Serie" : "Film"];
+        if (yr) bits.push(yr);
+        if (rtng) bits.push("★ " + rtng);
+        subEl.textContent = bits.join(" · ");
+        const openEl = document.createElement("div"); openEl.className = "wr-open"; openEl.textContent = "Details ansehen →";
+        body.appendChild(titleEl); body.appendChild(subEl); body.appendChild(openEl);
+        dwResult.appendChild(body);
+        dwResult.hidden = false;
+        dwResult.onclick = () => { closeDiscWuerfel(); openDetail(mediaType, it.id); };
+      } catch (e) {
+        rollBtn.disabled = false;
+        dwStatus.textContent = "Fehler. Internet prüfen?";
+      }
+    }
+
+    document.getElementById("disc-wuerfel-btn").addEventListener("click", openDiscWuerfel);
+    document.getElementById("dw-roll").addEventListener("click", rollDiscWuerfel);
+    document.getElementById("dw-cancel").addEventListener("click", closeDiscWuerfel);
+    dwBackdrop.addEventListener("click", e => { if (e.target === dwBackdrop) closeDiscWuerfel(); });
+
+    // ====================================================================
     //  DISCOVER  (curated rows, genre browse, general search)
     // ====================================================================
     const discSearch     = document.getElementById("disc-search");
@@ -2607,6 +3828,37 @@
       discInited = true;
       buildGenreChips();
       buildRows();
+      fillDfGenres();
+    }
+
+    // Quick "+ Watchlist" toggle button for Discover cards (A1).
+    // Lets the user pile titles onto the Watchlist without opening a detail page.
+    function makeWatchlistBtn(item, mediaType) {
+      const key = keyOf(mediaType, item.id);
+      const btn = document.createElement("button");
+      btn.className = "card-wl-btn";
+      btn.type = "button";
+      const bookmark = '<svg viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></svg>';
+      const setUI = () => {
+        const on = !!db.watchlist[key];
+        btn.classList.toggle("active", on);
+        btn.innerHTML = bookmark + "<span>" + (on ? "Watchlist ✓" : "Watchlist") + "</span>";
+      };
+      setUI();
+      btn.addEventListener("click", e => {
+        e.stopPropagation();              // don't open the detail page
+        if (db.watchlist[key]) { delete db.watchlist[key]; saveDB(); showToast("Von Watchlist entfernt"); }
+        else {
+          db.watchlist[key] = recordFrom({
+            media_type: mediaType, id: item.id, title: item.title, name: item.name,
+            poster_path: item.poster_path, release_date: item.release_date,
+            first_air_date: item.first_air_date, vote_average: item.vote_average, genre_ids: item.genre_ids
+          }, null);
+          saveDB(); showToast("Auf Watchlist");
+        }
+        setUI();
+      });
+      return btn;
     }
 
     function discPosterCard(item, mediaType) {
@@ -2627,6 +3879,7 @@
       const s = document.createElement("div"); s.className = "pcard-sub";
       s.textContent = (mediaType === "tv" ? "Serie" : "Film") + (year ? " · " + year : "");
       card.appendChild(t); card.appendChild(s);
+      card.appendChild(makeWatchlistBtn(item, mediaType));
       card.addEventListener("click", () => openDetail(mediaType, item.id));
       return card;
     }
@@ -2689,8 +3942,11 @@
       if (!q) { showDiscBrowse(); return; }
       discTimer = setTimeout(() => runDiscSearch(q), 280);
     }
-    function showDiscBrowse() { discResults.hidden = true; discResults.innerHTML = ""; discGenreView.hidden = true; discBrowse.hidden = false; }
-    function showDiscResults() { discBrowse.hidden = true; discGenreView.hidden = true; discResults.hidden = false; }
+    const discFilterBar = document.getElementById("disc-filter-bar");
+    const discFiltered  = document.getElementById("disc-filtered");
+    function showDiscBrowse() { discResults.hidden = true; discResults.innerHTML = ""; discGenreView.hidden = true; discFiltered.hidden = true; discFilterBar.hidden = false; discBrowse.hidden = false; }
+    function showDiscResults() { discBrowse.hidden = true; discGenreView.hidden = true; discFiltered.hidden = true; discFilterBar.hidden = true; discResults.hidden = false; }
+    function showDiscFiltered() { discBrowse.hidden = true; discGenreView.hidden = true; discResults.hidden = true; discFilterBar.hidden = false; discFiltered.hidden = false; }
 
     async function runDiscSearch(q) {
       if (discAbort) discAbort.abort();
@@ -2733,7 +3989,7 @@
       gb = { id, name, sort: discGenreSort.value, page: 0, totalPages: 1 };
       document.getElementById("disc-genre-name").textContent = name;
       discGenreGrid.innerHTML = "";
-      discBrowse.hidden = true; discResults.hidden = true; discGenreView.hidden = false;
+      discBrowse.hidden = true; discResults.hidden = true; discFiltered.hidden = true; discFilterBar.hidden = true; discGenreView.hidden = false;
       discGenreView.scrollTop = 0;
       loadGenrePage();
     }
@@ -2759,6 +4015,7 @@
           const cell = document.createElement("div"); cell.className = "grid-item";
           const img = document.createElement("img"); img.loading = "lazy"; img.src = IMG_BASE + "w185" + it.poster_path; img.alt = it.title || "";
           cell.appendChild(img);
+          cell.appendChild(makeWatchlistBtn(it, "movie"));
           cell.addEventListener("click", () => openDetail("movie", it.id));
           frag.appendChild(cell);
         });
@@ -2772,6 +4029,98 @@
     discGenreSort.addEventListener("change", () => { if (gb.id) openGenreBrowse(gb.id, gb.name); });
     discGenreMore.addEventListener("click", loadGenrePage);
     document.getElementById("disc-genre-back").addEventListener("click", showDiscBrowse);
+
+    // ---------- Filter browse (A3) ----------
+    const dfMedia  = document.getElementById("df-media");
+    const dfGenre  = document.getElementById("df-genre");
+    const dfToggle = document.getElementById("df-toggle");
+    const dfAdvanced = document.getElementById("df-advanced");
+    const dfGrid   = document.getElementById("df-grid");
+    const dfMore   = document.getElementById("df-more");
+    let fb = { page: 0, totalPages: 1, url: "", media: "movie" };
+    let dfGenresFilled = "";
+
+    async function fillDfGenres() {
+      const media = dfMedia.value;
+      if (dfGenresFilled === media) return;
+      try {
+        const res = await fetch("https://api.themoviedb.org/3/genre/" + media + "/list?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
+        if (!res.ok) return;
+        const d = await res.json();
+        const prev = dfGenre.value;
+        dfGenre.innerHTML = '<option value="">Genre: Alle</option>' +
+          (d.genres || []).map(g => '<option value="' + g.id + '">' + esc(g.name) + "</option>").join("");
+        if ([...dfGenre.options].some(o => o.value === prev)) dfGenre.value = prev;
+        dfGenresFilled = media;
+      } catch (e) { /* ignore */ }
+    }
+
+    function buildFilterUrl() {
+      const media = dfMedia.value;
+      const minRt = parseInt(document.getElementById("df-rt-min").value, 10) || 0;
+      const maxRt = parseInt(document.getElementById("df-rt-max").value, 10) || 0;
+      const yrMin = document.getElementById("df-yr-min").value;
+      const yrMax = document.getElementById("df-yr-max").value;
+      const minRating = parseFloat(document.getElementById("df-rating").value) || 0;
+      const genreId = dfGenre.value;
+      const dateGte = media === "tv" ? "first_air_date.gte" : "primary_release_date.gte";
+      const dateLte = media === "tv" ? "first_air_date.lte" : "primary_release_date.lte";
+      let url = "https://api.themoviedb.org/3/discover/" + media + "?api_key=" + TMDB_KEY
+        + "&language=" + TMDB_LANG + "&include_adult=false&sort_by=popularity.desc&vote_count.gte=30";
+      if (minRating > 0) url += "&vote_average.gte=" + minRating;
+      if (minRt > 0) url += "&with_runtime.gte=" + minRt;
+      if (maxRt > 0) url += "&with_runtime.lte=" + maxRt;
+      if (yrMin) url += "&" + dateGte + "=" + yrMin + "-01-01";
+      if (yrMax) url += "&" + dateLte + "=" + yrMax + "-12-31";
+      if (genreId) url += "&with_genres=" + genreId;
+      return { url, media };
+    }
+
+    function applyFilterBrowse() {
+      const { url, media } = buildFilterUrl();
+      fb = { page: 0, totalPages: 1, url, media };
+      dfGrid.innerHTML = "";
+      showDiscFiltered();
+      discFiltered.scrollTop = 0;
+      loadFilterPage();
+    }
+
+    async function loadFilterPage() {
+      fb.page += 1;
+      dfMore.hidden = true;
+      if (fb.page === 1) dfGrid.innerHTML = '<div class="grid-empty">Lädt …</div>';
+      try {
+        const res = await fetch(fb.url + "&page=" + fb.page);
+        if (!res.ok) throw new Error();
+        const d = await res.json();
+        fb.totalPages = Math.min(d.total_pages || 1, 500);
+        if (fb.page === 1) dfGrid.innerHTML = "";
+        const items = (d.results || []).filter(it => it.poster_path);
+        if (fb.page === 1 && !items.length) { dfGrid.innerHTML = '<div class="grid-empty">Nichts gefunden.</div>'; return; }
+        const frag = document.createDocumentFragment();
+        items.forEach(it => {
+          const cell = document.createElement("div"); cell.className = "grid-item";
+          const img = document.createElement("img"); img.loading = "lazy"; img.src = IMG_BASE + "w185" + it.poster_path; img.alt = "";
+          cell.appendChild(img);
+          cell.appendChild(makeWatchlistBtn(it, fb.media));
+          cell.addEventListener("click", () => openDetail(fb.media, it.id));
+          frag.appendChild(cell);
+        });
+        dfGrid.appendChild(frag);
+        dfMore.hidden = fb.page >= fb.totalPages;
+      } catch (e) {
+        if (fb.page === 1) dfGrid.innerHTML = '<div class="grid-empty">Konnte nicht laden.</div>';
+      }
+    }
+
+    dfMedia.addEventListener("change", fillDfGenres);
+    dfToggle.addEventListener("click", () => {
+      dfAdvanced.hidden = !dfAdvanced.hidden;
+      dfToggle.classList.toggle("on", !dfAdvanced.hidden);
+    });
+    document.getElementById("df-apply").addEventListener("click", applyFilterBrowse);
+    document.getElementById("df-back").addEventListener("click", showDiscBrowse);
+    dfMore.addEventListener("click", loadFilterPage);
 
     // ====================================================================
     //  PROFILE  (stats)
@@ -2830,10 +4179,11 @@
       if (changed) saveDB();
     })();
 
-    // Cursor ready on first paint
+    // Cursor ready on first paint; populate log home screen
+    renderLogHome();
     searchInput.focus();
 
-    window.REEL = { TMDB_KEY, TMDB_LANG, TMDB_REGION, db };
+    window.VAULT = { TMDB_KEY, TMDB_LANG, TMDB_REGION, db };
   </script>
 </body>
 </html>
