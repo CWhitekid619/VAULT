@@ -56,6 +56,7 @@
       display: flex;
       flex-direction: column;
       min-height: 100dvh;
+      overflow-x: hidden;      /* 2c: no sideways swipe / page shift */
     }
 
     /* ---------- App shell ---------- */
@@ -70,6 +71,7 @@
       display: none;
       flex: 1;
       overflow-y: auto;
+      overflow-x: hidden;      /* 2c: vertical scroll only */
       -webkit-overflow-scrolling: touch;
       padding: calc(var(--safe-top) + var(--pad)) var(--pad)
                calc(var(--nav-h) + var(--safe-bottom) + var(--pad)) var(--pad);
@@ -166,7 +168,7 @@
     .hcard.ranked { width: 96px; }
     .hcard.ranked .hcard-poster { padding-left: 14px; }
     .hcard.ranked .hcard-rank {
-      position: absolute; left: -2px; bottom: -8px; z-index: 2;
+      position: absolute; left: -2px; bottom: 4px; z-index: 2;   /* P5: sit on the poster, not over the title */
       font-size: 52px; font-weight: 800; line-height: .8;
       color: var(--bg);
       -webkit-text-stroke: 2px var(--accent);
@@ -744,6 +746,7 @@
     .detail-trailer-btn svg { width: 16px; height: 16px; fill: var(--text); }
 
     .detail-status { padding: 12px 16px 0; font-size: 13px; font-weight: 600; color: var(--accent); }
+    .detail-status.ratable { cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 
     .detail-section { padding: 22px 16px 0; }
     .detail-section h3 {
@@ -891,16 +894,15 @@
     .sheet-btn-primary:active { filter: brightness(.92); }
     .sheet-btn-primary:disabled { opacity: .4; cursor: default; }
 
-    .filter-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
-    .filter-row label { font-size: 15px; color: var(--text-dim); flex: 0 0 auto; }
-    .filter-row .modal-select { width: 58%; margin-bottom: 0; }
-    .filter-row .filter-range { flex: 1; display: flex; align-items: center; gap: 5px; }
-    .filter-row .filter-range .modal-select { flex: 1; width: auto; margin-bottom: 0; }
-    .fr-sep { color: var(--text-mute); font-size: 13px; flex: 0 0 auto; }
+    /* 2b: uniform labeled filter fields */
+    .filter-field { display: flex; flex-direction: column; gap: 6px; }
+    .filter-field > label { font-size: 13px; font-weight: 600; color: var(--text-dim); }
+    .filter-field .modal-select { width: 100%; margin-bottom: 0; }
+    .filter-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
     /* Discover top: search row + Würfeln button beside it (A4) */
     .disc-top-row { display: flex; gap: 10px; align-items: stretch; }
-    .disc-top-row .search-bar { flex: 1; margin-bottom: 0; }
+    .disc-top-row .search-bar { flex: 1; margin: 0; }   /* 2a: match the Würfeln button height */
     .wuerfel-btn-sm {
       flex: 0 0 auto; display: flex; align-items: center; gap: 6px;
       padding: 0 14px; border-radius: 12px; cursor: pointer;
@@ -912,15 +914,15 @@
 
     /* Discover filter bar (A3) */
     .disc-filter-bar { margin-top: 12px; }
-    .dfb-row { display: flex; gap: 8px; align-items: stretch; }
-    .dfb-row .modal-select { flex: 1; margin-bottom: 0; }
+    .dfb-row { display: flex; gap: 8px; align-items: flex-end; }
+    .dfb-row .filter-field { flex: 1; }
     .dfb-toggle {
-      flex: 0 0 auto; width: 46px; border-radius: 10px; cursor: pointer;
+      flex: 0 0 auto; width: 48px; height: 48px; border-radius: 10px; cursor: pointer;
       background: var(--surface-2); border: 1px solid var(--border); color: var(--text-dim);
       font-size: 20px; line-height: 1; font-weight: 700;
     }
     .dfb-toggle.on { color: var(--accent); border-color: var(--accent); }
-    .dfb-advanced { margin-top: 12px; }
+    .dfb-advanced { margin-top: 12px; display: flex; flex-direction: column; gap: 12px; }
     .df-apply {
       width: 100%; margin-top: 12px; padding: 12px; border-radius: 12px; cursor: pointer;
       background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
@@ -929,16 +931,26 @@
     .df-apply:active { filter: brightness(1.15); }
 
     /* Watchlist quick-button on Discover cards (A1) */
-    .card-wl-btn {
-      display: flex; align-items: center; justify-content: center; gap: 5px;
-      width: 100%; margin-top: 6px; padding: 6px 4px; border-radius: 8px;
-      background: var(--surface-2); border: 1px solid var(--border); color: var(--text-dim);
-      font-family: inherit; font-size: 11px; font-weight: 600; cursor: pointer;
+    /* Two action buttons overlapping the bottom edge of a poster card (P1) */
+    .card-actions {
+      position: absolute; left: 8px; right: 8px; bottom: -14px;
+      display: flex; gap: 6px; z-index: 2;
     }
-    .card-wl-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 1.8; }
-    .card-wl-btn.active { color: var(--accent); border-color: var(--accent); }
-    .card-wl-btn.active svg { fill: var(--accent); stroke: var(--accent); }
-    .grid-item .card-wl-btn { margin-top: 5px; }
+    .card-act {
+      flex: 1; height: 30px; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; border: 1px solid var(--border);
+      background: var(--surface-2); color: var(--text-dim); cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,.4);
+    }
+    .card-act:active { filter: brightness(.9); }
+    .card-act svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .card-act.wl.active { color: var(--accent); border-color: var(--accent); }
+    .card-act.wl.active svg { fill: var(--accent); stroke: var(--accent); }
+    .card-act.watch.active { color: #fff; background: var(--accent); border-color: var(--accent); }
+    .card-act.watch.active svg { stroke: #fff; }
+    /* Reserve room below grid posters so the overhanging buttons don't hit the next row */
+    .grid-item:has(.card-actions) { margin-bottom: 16px; }
 
     .wuerfel-status { font-size: 13px; color: var(--text-mute); text-align: center; padding: 6px 0; min-height: 0; }
     .wuerfel-result {
@@ -974,12 +986,13 @@
     .drow-title { font-size: 16px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 12px; }
     .drow .hscroll { gap: 12px; }
     .pcard { flex: 0 0 auto; width: 108px; cursor: pointer; }
+    .pcard-poster { position: relative; }
     .pcard img, .pcard .pc-empty {
       width: 108px; height: 162px; border-radius: 8px; object-fit: cover;
       background: var(--surface-2); display: block;
     }
     .pcard .pc-empty { display: flex; align-items: center; justify-content: center; color: var(--text-mute); font-size: 10px; text-align: center; padding: 6px; }
-    .pcard-title { font-size: 12px; font-weight: 600; margin-top: 7px; line-height: 1.25; }
+    .pcard-title { font-size: 12px; font-weight: 600; margin-top: 22px; line-height: 1.25; }
     .pcard-sub { font-size: 11px; color: var(--text-mute); margin-top: 2px; }
     .drow-skeleton { display: flex; gap: 12px; }
     .drow-skeleton .sk { width: 108px; height: 162px; border-radius: 8px; background: var(--surface); flex: 0 0 auto; }
@@ -1117,6 +1130,7 @@
           <div id="lh-progress-list" class="progress-list"></div>
         </div>
         <div id="lh-recent" class="log-home-row" hidden></div>
+        <div id="lh-watchlist" class="log-home-row" hidden></div>
         <div id="lh-movies" class="log-home-row" hidden></div>
         <div id="lh-series" class="log-home-row" hidden></div>
         <div id="log-hint" class="placeholder">
@@ -1185,37 +1199,39 @@
       <!-- Filter / browse bar (A3) -->
       <div id="disc-filter-bar" class="disc-filter-bar">
         <div class="dfb-row">
-          <select id="df-media" class="modal-select">
-            <option value="movie">Film</option>
-            <option value="tv">Serie</option>
-          </select>
-          <select id="df-genre" class="modal-select"><option value="">Genre: Alle</option></select>
+          <div class="filter-field">
+            <label for="df-media">Typ</label>
+            <select id="df-media" class="modal-select">
+              <option value="movie">Film</option>
+              <option value="tv">Serie</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label for="df-genre">Genre</label>
+            <select id="df-genre" class="modal-select"><option value="">Alle</option></select>
+          </div>
           <button id="df-toggle" class="dfb-toggle" type="button" aria-label="Mehr Filter">⋯</button>
         </div>
         <div id="df-advanced" class="dfb-advanced" hidden>
-          <div class="filter-row">
-            <label>Dauer</label>
-            <span class="filter-range">
-              <select id="df-rt-min" class="modal-select"><option value="0">Egal</option><option value="60">60+</option><option value="80">80+</option><option value="90">90+</option><option value="100">100+</option><option value="120">120+</option></select>
-              <span class="fr-sep">–</span>
-              <select id="df-rt-max" class="modal-select"><option value="0">Egal</option><option value="80">80</option><option value="100">100</option><option value="120">120</option><option value="150">150</option><option value="200">200</option></select>
-              <span class="fr-sep" style="font-size:11px">Min.</span>
-            </span>
+          <div class="filter-field">
+            <label>Dauer (Min.)</label>
+            <div class="filter-pair">
+              <select id="df-rt-min" class="modal-select" aria-label="Dauer ab"><option value="0">ab: Egal</option><option value="60">ab 60</option><option value="80">ab 80</option><option value="90">ab 90</option><option value="100">ab 100</option><option value="120">ab 120</option></select>
+              <select id="df-rt-max" class="modal-select" aria-label="Dauer bis"><option value="0">bis: Egal</option><option value="80">bis 80</option><option value="100">bis 100</option><option value="120">bis 120</option><option value="150">bis 150</option><option value="200">bis 200</option></select>
+            </div>
           </div>
-          <div class="filter-row">
+          <div class="filter-field">
             <label>Jahr</label>
-            <span class="filter-range">
-              <select id="df-yr-min" class="modal-select"><option value="">Egal</option><option value="1970">1970</option><option value="1980">1980</option><option value="1990">1990</option><option value="2000">2000</option><option value="2010">2010</option><option value="2015">2015</option><option value="2020">2020</option><option value="2023">2023</option></select>
-              <span class="fr-sep">–</span>
-              <select id="df-yr-max" class="modal-select"><option value="">Egal</option><option value="1989">1989</option><option value="1999">1999</option><option value="2009">2009</option><option value="2019">2019</option><option value="2022">2022</option><option value="2024">2024</option><option value="2025">2025</option></select>
-            </span>
+            <div class="filter-pair">
+              <select id="df-yr-min" class="modal-select" aria-label="Jahr von"><option value="">von: Egal</option><option value="1970">ab 1970</option><option value="1980">ab 1980</option><option value="1990">ab 1990</option><option value="2000">ab 2000</option><option value="2010">ab 2010</option><option value="2015">ab 2015</option><option value="2020">ab 2020</option><option value="2023">ab 2023</option></select>
+              <select id="df-yr-max" class="modal-select" aria-label="Jahr bis"><option value="">bis: Egal</option><option value="1989">bis 1989</option><option value="1999">bis 1999</option><option value="2009">bis 2009</option><option value="2019">bis 2019</option><option value="2022">bis 2022</option><option value="2024">bis 2024</option><option value="2025">bis 2025</option></select>
+            </div>
           </div>
-          <div class="filter-row">
-            <label>Min. Bewertung</label>
+          <div class="filter-field">
+            <label for="df-rating">Min. Bewertung</label>
             <select id="df-rating" class="modal-select"><option value="0">Egal</option><option value="6">ab 6,0</option><option value="7">ab 7,0</option><option value="8">ab 8,0</option></select>
           </div>
         </div>
-        <button id="df-apply" class="df-apply" type="button">Anzeigen</button>
       </div>
 
       <!-- Search results (only while typing) -->
@@ -1607,6 +1623,28 @@
       btn.addEventListener("click", () => switchTab(btn.dataset.target));
     });
 
+    // ---------- Back-button navigation for the detail overlay (2d) ----------
+    // Opening a title/person parks a history entry so the device/browser Back
+    // button closes the overlay and returns to the current tab — instead of
+    // leaving the app and stranding the user on a now-broken screen.
+    let detailBackEntry = false;        // a history entry is currently parked for the overlay
+    let closingDetailFromPop = false;   // guards against re-consuming the entry
+
+    function armDetailBack() {
+      if (detailBackEntry) return;      // same overlay session (e.g. tapping a similar title)
+      detailBackEntry = true;
+      history.pushState({ vaultOverlay: "detail" }, "");
+    }
+
+    window.addEventListener("popstate", () => {
+      const d = document.getElementById("detail");
+      if (d && !d.hidden) {             // Back pressed while the overlay is open → close it
+        closingDetailFromPop = true;
+        closeDetail();
+        closingDetailFromPop = false;
+      }
+    });
+
     // ---------- App config (used by later rounds) ----------
     const TMDB_KEY = "7e472657d5d0e5f9f172f875de39c096";
     const TMDB_LANG = "de-DE";
@@ -1708,6 +1746,7 @@
         year: yearOf(r),
         poster: r.poster_path || null,
         bucket: bucket,
+        unranked: false,        // true = watched but not yet placed in the ranking (P3)
         genreIds: r.genre_ids || (r.genres ? r.genres.map(g => g.id) : []),
         rating: typeof r.vote_average === "number" ? r.vote_average : 0,
         runtime: (typeof r.runtime === "number") ? r.runtime : null,
@@ -1843,7 +1882,7 @@
       if (db.items[key]) {
         const st = document.createElement("div");
         st.className = "result-status";
-        st.textContent = "Eingetragen · " + bucketLabel(deriveBucket(ensureScore(db.items[key])));
+        st.textContent = "Eingetragen · " + (db.items[key].unranked ? "Ungerankt" : bucketLabel(deriveBucket(ensureScore(db.items[key]))));
         body.appendChild(st);
       } else {
         const where = membershipLabel(key);
@@ -2042,9 +2081,9 @@
       const all = Object.values(db.items);
       if (!all.length) { heroEl.hidden = true; return; }
 
-      const sortedMovies = all.filter(it => it.mediaType === "movie")
+      const sortedMovies = all.filter(it => it.mediaType === "movie" && !it.unranked)
         .sort((a, b) => (b.score || 0) - (a.score || 0));
-      const sortedTv = all.filter(it => it.mediaType === "tv")
+      const sortedTv = all.filter(it => it.mediaType === "tv" && !it.unranked)
         .sort((a, b) => (b.score || 0) - (a.score || 0));
       const sortedRecent = all.slice().sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0));
 
@@ -2153,12 +2192,17 @@
       buildProgressSection();
 
       const recent = all.slice().sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0)).slice(0, 10);
-      const topMovies = all.filter(it => it.mediaType === "movie")
+      const topMovies = all.filter(it => it.mediaType === "movie" && !it.unranked)
         .sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10);
-      const topSeries = all.filter(it => it.mediaType === "tv")
+      const topSeries = all.filter(it => it.mediaType === "tv" && !it.unranked)
         .sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10);
 
+      // P4: titles currently on the Watchlist (newest first). Hidden when empty.
+      const watchlist = Object.values(db.watchlist)
+        .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0));
+
       buildHomeRow("lh-recent", "Zuletzt gesehen", recent, false);
+      buildHomeRow("lh-watchlist", "Meine Watchlist", watchlist, false);
       buildHomeRow("lh-movies", "Top Filme", topMovies, true);
       buildHomeRow("lh-series", "Top Serien", topSeries, true);
     }
@@ -2218,6 +2262,7 @@
       const key = keyOf(r.media_type, r.id);
       const rec = db.items[key] || recordFrom(r, bucket);
       rec.bucket = bucket;
+      rec.unranked = false;             // explicit rating places the title (P3)
       rec.score = BUCKET_BASE[bucket];  // explicit re-placement resets the score to that zone
       rec.loggedAt = Date.now();
       db.items[key] = rec;
@@ -2231,6 +2276,28 @@
       heroItemCount = -1; // force hero rebuild on next Home visit
       closeSheet();
       showToast("Eingetragen: " + bucketLabel(bucket));
+      refreshResults();
+      refreshDetailStatus();
+    }
+
+    // Quick "Watch" action (P3): mark as watched immediately, no rating popup.
+    // The title enters the ranking as "Ungerankt" and finds its place via duels.
+    function logWatched(r) {
+      const key = keyOf(r.media_type, r.id);
+      if (db.items[key]) { showToast("Schon als gesehen markiert"); return; }
+      const rec = recordFrom(r, null);
+      rec.unranked = true;
+      rec.score = 1400;            // neutral seed for duel matching; not shown as a rank
+      rec.loggedAt = Date.now();
+      db.items[key] = rec;
+      // same cleanup as logItem: leave the watchlist / non-permanent lists
+      delete db.watchlist[key];
+      for (const id in db.lists) {
+        if (!db.lists[id].permanent && db.lists[id].items && db.lists[id].items[key]) delete db.lists[id].items[key];
+      }
+      saveDB();
+      heroItemCount = -1;
+      showToast("Als gesehen markiert · Ungerankt");
       refreshResults();
       refreshDetailStatus();
     }
@@ -2309,11 +2376,9 @@
       if (genreFilter) items = items.filter(it => (it.genreIds || []).includes(genreFilter));
       if (tagFilter)   items = items.filter(it => (getMeta(keyOf(it.mediaType, it.id)).tags || []).includes(tagFilter));
       items.forEach(ensureScore);
-      // One continuous leaderboard, sorted by Elo score (high → low)
-      items.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
 
       const duelBtn = document.getElementById("duel-start");
-      if (duelBtn) duelBtn.disabled = items.length < 2;
+      if (duelBtn) duelBtn.disabled = duelItems().length < 2;
 
       rankListEl.innerHTML = "";
       if (items.length === 0) {
@@ -2330,34 +2395,21 @@
         return;
       }
 
-      // Pre-count titles per derived zone for the zone labels
-      const counts = {};
-      items.forEach(it => { const z = deriveBucket(it.score); counts[z] = (counts[z] || 0) + 1; });
+      // Placed titles form the Elo leaderboard; "Ungerankt" titles sit at the bottom (P3)
+      const ranked   = items.filter(it => !it.unranked).sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
+      const unranked = items.filter(it =>  it.unranked).sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0));
 
       const frag = document.createDocumentFragment();
-      let rank = 0;
-      let lastZone = null;
 
-      for (const it of items) {
-        const zone = deriveBucket(it.score);
-        if (zone !== lastZone) {
-          lastZone = zone;
-          const lbl = document.createElement("div");
-          lbl.className = "zone-label";
-          const name = document.createElement("span"); name.textContent = bucketLabel(zone);
-          const count = document.createElement("span"); count.className = "zone-count"; count.textContent = counts[zone];
-          lbl.appendChild(name); lbl.appendChild(count);
-          frag.appendChild(lbl);
-        }
-
-        rank++;
+      // Builds one leaderboard row; `num` is the rank label ("1", "2", … or "–" for unranked)
+      const addRow = (it, num) => {
         const row = document.createElement("div");
         row.className = "rank-row";
 
-        const num = document.createElement("div");
-        num.className = "rank-num";
-        num.textContent = rank;
-        row.appendChild(num);
+        const n = document.createElement("div");
+        n.className = "rank-num";
+        n.textContent = num;
+        row.appendChild(n);
 
         if (it.poster) {
           const img = document.createElement("img");
@@ -2382,7 +2434,36 @@
 
         row.addEventListener("click", () => openDetail(it.mediaType, it.id));
         frag.appendChild(row);
+      };
+
+      const addZoneLabel = (text, n) => {
+        const lbl = document.createElement("div");
+        lbl.className = "zone-label";
+        const name = document.createElement("span"); name.textContent = text;
+        const count = document.createElement("span"); count.className = "zone-count"; count.textContent = n;
+        lbl.appendChild(name); lbl.appendChild(count);
+        frag.appendChild(lbl);
+      };
+
+      // Pre-count titles per derived zone for the zone labels (ranked only)
+      const counts = {};
+      ranked.forEach(it => { const z = deriveBucket(it.score); counts[z] = (counts[z] || 0) + 1; });
+
+      let rank = 0;
+      let lastZone = null;
+      for (const it of ranked) {
+        const zone = deriveBucket(it.score);
+        if (zone !== lastZone) { lastZone = zone; addZoneLabel(bucketLabel(zone), counts[zone]); }
+        rank++;
+        addRow(it, rank);
       }
+
+      // "Ungerankt" section at the very bottom
+      if (unranked.length) {
+        addZoneLabel("Ungerankt", unranked.length);
+        unranked.forEach(it => addRow(it, "–"));
+      }
+
       rankListEl.appendChild(frag);
     }
 
@@ -2414,13 +2495,37 @@
       return a.id < b.id ? a.id + "|" + b.id : b.id + "|" + a.id;
     }
 
-    // Prefer adjacent / near-adjacent pairs in the ranking (most useful for refinement).
-    // Returns null when all relevant pairs within gap 1-3 have been seen → duel is done.
+    // Pair selection (P7). Priority 1: place "Ungerankt" titles — they need a
+    // comparison the most. Each unranked title is matched against a ranked title
+    // near the middle of the list (a meaningful first split), or against another
+    // unranked title when none are ranked yet. Priority 2: refine the existing
+    // leaderboard via adjacent / near-adjacent pairs.
+    // Returns null when all relevant pairs have been seen → duel is done.
     function pickPair() {
       const arr = duelItems();
       if (arr.length < 2) return null;
       arr.sort((a, b) => b.score - a.score);
 
+      // --- Priority 1: get unranked titles into a duel ---
+      const unranked = arr.filter(it => it.unranked);
+      if (unranked.length) {
+        const ranked = arr.filter(it => !it.unranked);
+        for (const u of unranked) {
+          // opponents: prefer ranked titles, ordered from the median outward;
+          // fall back to other unranked titles if nothing is ranked yet
+          const pool = ranked.length ? ranked : arr.filter(it => it !== u);
+          if (!pool.length) continue;
+          const medianScore = pool[Math.floor(pool.length / 2)].score;
+          const ordered = pool.slice().sort(
+            (a, b) => Math.abs(a.score - medianScore) - Math.abs(b.score - medianScore));
+          for (const opp of ordered) {
+            if (opp === u) continue;
+            if (!duelSeenPairs.has(pairSig(u, opp))) return [u, opp];
+          }
+        }
+      }
+
+      // --- Priority 2: refine the ranked leaderboard ---
       for (let gap = 1; gap <= Math.min(3, arr.length - 1); gap++) {
         // collect all unseen candidates at this gap distance, then pick one at random
         const candidates = [];
@@ -2475,6 +2580,9 @@
     function chooseWinner(winner) {
       if (!duelPair) return;
       const loser = winner === duelPair[0] ? duelPair[1] : duelPair[0];
+      // A duel result places both titles: they leave the "Ungerankt" zone (P3)
+      winner.unranked = false;
+      loser.unranked = false;
       applyElo(winner, loser);
       saveDB();
       const next = pickPair();
@@ -2509,6 +2617,7 @@
 
     async function openDetail(mediaType, id) {
       detailEl.hidden = false;
+      armDetailBack();                  // 2d: Back button returns to the current tab
       detailEl.scrollTop = 0;
       document.body.style.overflow = "hidden";
       detailBody.innerHTML = '<div class="detail-loading">Lädt …</div>';
@@ -2554,6 +2663,10 @@
       detailCtx = null;
       document.body.style.overflow = "";
       detailBody.innerHTML = "";
+      if (detailBackEntry) {            // 2d: keep history in sync
+        detailBackEntry = false;
+        if (!closingDetailFromPop) history.back();  // consume the parked entry
+      }
     }
 
     function renderDetail(data, mediaType, videos) {
@@ -2568,7 +2681,8 @@
         media_type: mediaType, id: data.id,
         title: data.title, name: data.name,
         poster_path: data.poster_path,
-        release_date: data.release_date, first_air_date: data.first_air_date
+        release_date: data.release_date, first_air_date: data.first_air_date,
+        vote_average: data.vote_average, genres: data.genres, runtime: data.runtime
       };
       detailCtx = { mediaType, id: data.id, r };
 
@@ -2705,8 +2819,13 @@
           refreshDetailStatus();
           refreshResults();
         } else {
-          openSheet(r);                 // not watched → pick rating
+          logWatched(r);                // not watched → mark watched immediately as "Ungerankt" (P3)
         }
+      });
+      // Tap the status line of an unranked title to rate it later (P3 optional rating)
+      const statusEl = document.getElementById("detail-status");
+      if (statusEl) statusEl.addEventListener("click", () => {
+        if (db.items[keyOf(mediaType, data.id)]) { openSheet(r); showSheetStep2(r); }
       });
       document.getElementById("detail-watchlist").addEventListener("click", () => {
         const key = keyOf(mediaType, data.id);
@@ -2740,8 +2859,9 @@
       const el = document.getElementById("detail-status");
       if (el) {
         el.className = "detail-status";
-        if (db.items[key]) el.textContent = "Eingetragen · " + bucketLabel(deriveBucket(ensureScore(db.items[key])));
+        if (db.items[key]) el.textContent = "Eingetragen · " + (db.items[key].unranked ? "Ungerankt · tippen zum Bewerten" : bucketLabel(deriveBucket(ensureScore(db.items[key]))));
         else el.textContent = membershipLabel(key) || "";
+        el.classList.toggle("ratable", !!(db.items[key] && db.items[key].unranked));
       }
       // Watch / Watched toggle button (B3)
       const logBtn = document.getElementById("detail-log");
@@ -2774,6 +2894,7 @@
     // ---------- Person page (reuses the detail overlay) ----------
     async function openPerson(personId, name) {
       detailEl.hidden = false;
+      armDetailBack();                  // 2d: Back button returns to the current tab
       detailEl.scrollTop = 0;
       document.body.style.overflow = "hidden";
       detailCtx = null; // no logging context on a person page
@@ -2986,6 +3107,22 @@
       saveDB();
     }
 
+    // P6: starting a series (marking any episode watched) puts it into the ranking
+    // as "Ungerankt" — no rating required. Fires at most once; later un-watching
+    // episodes leaves the series in the ranking (mirrors how films behave).
+    function ensureSeriesWatched(data) {
+      if (!data) return;
+      const key = keyOf("tv", data.id);
+      if (db.items[key]) return;        // already watched / ranked
+      logWatched({
+        media_type: "tv", id: data.id,
+        title: data.title, name: data.name,
+        poster_path: data.poster_path,
+        first_air_date: data.first_air_date,
+        vote_average: data.vote_average, genres: data.genres
+      });
+    }
+
     // seasons we count (skip specials = season 0)
     function realSeasons(data) {
       return (data.seasons || []).filter(s => s.season_number >= 1 && s.episode_count > 0);
@@ -3099,6 +3236,7 @@
       head.addEventListener("click", () => {
         const target = !allWatched;
         episodes.forEach(e => toggleEp(tvId, season, e.n, target));
+        if (target) ensureSeriesWatched(data);   // P6: enters ranking as Ungerankt
         updateProgSummary(data, tvId);
         loadSeason(data, tvId, season);
       });
@@ -3132,12 +3270,14 @@
           ev.stopPropagation();
           const now = !isEpWatched(tvId, season, e.n);
           toggleEp(tvId, season, e.n, now);
+          if (now) ensureSeriesWatched(data);     // P6: enters ranking as Ungerankt
           refreshRow(now);
         });
         // Tapping the row marks it watched (if needed) and jumps straight to rating (B7)
         row.addEventListener("click", () => {
           if (!isEpWatched(tvId, season, e.n)) { toggleEp(tvId, season, e.n, true); refreshRow(true); }
-          openEpRateSheet(tvId, season, e.n, null, () => refreshRow(true));
+          ensureSeriesWatched(data);              // P6: enters ranking as Ungerankt (rating stays optional)
+          openEpRateSheet(tvId, season, e.n, null, () => refreshRow(true), data);
         });
         frag.appendChild(row);
       });
@@ -3561,8 +3701,8 @@
     const epRateTitleEl  = document.getElementById("ep-rate-title");
     const epRateBucketsEl = document.getElementById("ep-rate-buckets");
 
-    function openEpRateSheet(tvId, s, e, cell, onChange) {
-      epRateCtx = { tvId, s, e, cell, onChange: onChange || null };
+    function openEpRateSheet(tvId, s, e, cell, onChange, data) {
+      epRateCtx = { tvId, s, e, cell, onChange: onChange || null, data: data || null };
       epRateTitleEl.textContent =
         "S" + String(s).padStart(2, "0") + "E" + String(e).padStart(2, "0") + " bewerten";
       const current = getEpRating(tvId, s, e);
@@ -3575,6 +3715,7 @@
         btn.addEventListener("click", () => {
           setEpRating(tvId, s, e, b.id);
           if (!isEpWatched(tvId, s, e)) toggleEp(tvId, s, e, true); // rating implies watched
+          ensureSeriesWatched(epRateCtx && epRateCtx.data);          // P6: series enters ranking as Ungerankt
           applyEpCell(cell, b.id);
           if (epRateCtx && epRateCtx.onChange) epRateCtx.onChange();
           closeEpRateSheet();
@@ -3678,7 +3819,7 @@
         const rating = getEpRating(tvId, season, ep.n);
         if (rating) { cell.dataset.b = rating; cell.title = bucketLabel(rating); }
         else { cell.title = ep.name || ("Episode " + ep.n); }
-        cell.addEventListener("click", () => openEpRateSheet(tvId, season, ep.n, cell));
+        cell.addEventListener("click", () => openEpRateSheet(tvId, season, ep.n, cell, undefined, data));
         grid.appendChild(cell);
       });
       gridEl.appendChild(grid);
@@ -3831,34 +3972,62 @@
       fillDfGenres();
     }
 
-    // Quick "+ Watchlist" toggle button for Discover cards (A1).
-    // Lets the user pile titles onto the Watchlist without opening a detail page.
-    function makeWatchlistBtn(item, mediaType) {
-      const key = keyOf(mediaType, item.id);
-      const btn = document.createElement("button");
-      btn.className = "card-wl-btn";
-      btn.type = "button";
-      const bookmark = '<svg viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></svg>';
-      const setUI = () => {
-        const on = !!db.watchlist[key];
-        btn.classList.toggle("active", on);
-        btn.innerHTML = bookmark + "<span>" + (on ? "Watchlist ✓" : "Watchlist") + "</span>";
+    // Build a sheet/record-shaped object from a TMDB browse item (P1).
+    function itemToR(item, mediaType) {
+      return {
+        media_type: mediaType, id: item.id, title: item.title, name: item.name,
+        poster_path: item.poster_path, release_date: item.release_date,
+        first_air_date: item.first_air_date, vote_average: item.vote_average, genre_ids: item.genre_ids
       };
-      setUI();
-      btn.addEventListener("click", e => {
+    }
+
+    // Two action buttons that overlap the bottom edge of a poster card (P1):
+    // "+ Watchlist" toggle and a "Watch" quick-action (immediate, unranked — see P3).
+    // Lets the user act on a title without opening the detail page; card height
+    // stays constant because the buttons are absolutely positioned.
+    function makeCardActions(item, mediaType) {
+      const key = keyOf(mediaType, item.id);
+      const wrap = document.createElement("div");
+      wrap.className = "card-actions";
+
+      const bookmark = '<svg viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></svg>';
+      const eye      = '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+      const check    = '<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>';
+
+      const wl = document.createElement("button");
+      wl.className = "card-act wl"; wl.type = "button"; wl.setAttribute("aria-label", "Watchlist");
+      const watch = document.createElement("button");
+      watch.className = "card-act watch"; watch.type = "button"; watch.setAttribute("aria-label", "Als gesehen markieren");
+
+      const setWl = () => {
+        const on = !!db.watchlist[key];
+        wl.classList.toggle("active", on);
+        wl.title = on ? "Auf Watchlist" : "Zur Watchlist";
+        wl.innerHTML = bookmark;
+      };
+      const setWatch = () => {
+        const on = !!db.items[key];
+        watch.classList.toggle("active", on);
+        watch.title = on ? "Gesehen" : "Als gesehen markieren";
+        watch.innerHTML = on ? check : eye;
+      };
+      setWl(); setWatch();
+
+      wl.addEventListener("click", e => {
         e.stopPropagation();              // don't open the detail page
         if (db.watchlist[key]) { delete db.watchlist[key]; saveDB(); showToast("Von Watchlist entfernt"); }
-        else {
-          db.watchlist[key] = recordFrom({
-            media_type: mediaType, id: item.id, title: item.title, name: item.name,
-            poster_path: item.poster_path, release_date: item.release_date,
-            first_air_date: item.first_air_date, vote_average: item.vote_average, genre_ids: item.genre_ids
-          }, null);
-          saveDB(); showToast("Auf Watchlist");
-        }
-        setUI();
+        else { db.watchlist[key] = recordFrom(itemToR(item, mediaType), null); saveDB(); showToast("Auf Watchlist"); }
+        setWl();
       });
-      return btn;
+      watch.addEventListener("click", e => {
+        e.stopPropagation();
+        if (db.items[key]) { showToast("Schon als gesehen markiert"); return; }
+        logWatched(itemToR(item, mediaType));  // immediate, no popup → "Ungerankt"
+        setWatch(); setWl();                   // logWatched also clears the watchlist entry
+      });
+
+      wrap.appendChild(wl); wrap.appendChild(watch);
+      return wrap;
     }
 
     function discPosterCard(item, mediaType) {
@@ -3867,19 +4036,21 @@
       const title = mediaType === "tv" ? (item.name || item.original_name) : (item.title || item.original_title);
       const date  = mediaType === "tv" ? item.first_air_date : item.release_date;
       const year  = date ? date.slice(0, 4) : "";
+      const poster = document.createElement("div"); poster.className = "pcard-poster";
       if (item.poster_path) {
         const img = document.createElement("img");
         img.loading = "lazy"; img.src = IMG_BASE + "w185" + item.poster_path; img.alt = title || "";
-        card.appendChild(img);
+        poster.appendChild(img);
       } else {
         const e = document.createElement("div"); e.className = "pc-empty"; e.textContent = title || "";
-        card.appendChild(e);
+        poster.appendChild(e);
       }
+      poster.appendChild(makeCardActions(item, mediaType));
+      card.appendChild(poster);
       const t = document.createElement("div"); t.className = "pcard-title"; t.textContent = title || "";
       const s = document.createElement("div"); s.className = "pcard-sub";
       s.textContent = (mediaType === "tv" ? "Serie" : "Film") + (year ? " · " + year : "");
       card.appendChild(t); card.appendChild(s);
-      card.appendChild(makeWatchlistBtn(item, mediaType));
       card.addEventListener("click", () => openDetail(mediaType, item.id));
       return card;
     }
@@ -4015,7 +4186,7 @@
           const cell = document.createElement("div"); cell.className = "grid-item";
           const img = document.createElement("img"); img.loading = "lazy"; img.src = IMG_BASE + "w185" + it.poster_path; img.alt = it.title || "";
           cell.appendChild(img);
-          cell.appendChild(makeWatchlistBtn(it, "movie"));
+          cell.appendChild(makeCardActions(it, "movie"));
           cell.addEventListener("click", () => openDetail("movie", it.id));
           frag.appendChild(cell);
         });
@@ -4048,7 +4219,7 @@
         if (!res.ok) return;
         const d = await res.json();
         const prev = dfGenre.value;
-        dfGenre.innerHTML = '<option value="">Genre: Alle</option>' +
+        dfGenre.innerHTML = '<option value="">Alle</option>' +
           (d.genres || []).map(g => '<option value="' + g.id + '">' + esc(g.name) + "</option>").join("");
         if ([...dfGenre.options].some(o => o.value === prev)) dfGenre.value = prev;
         dfGenresFilled = media;
@@ -4102,7 +4273,7 @@
           const cell = document.createElement("div"); cell.className = "grid-item";
           const img = document.createElement("img"); img.loading = "lazy"; img.src = IMG_BASE + "w185" + it.poster_path; img.alt = "";
           cell.appendChild(img);
-          cell.appendChild(makeWatchlistBtn(it, fb.media));
+          cell.appendChild(makeCardActions(it, fb.media));
           cell.addEventListener("click", () => openDetail(fb.media, it.id));
           frag.appendChild(cell);
         });
@@ -4113,12 +4284,19 @@
       }
     }
 
-    dfMedia.addEventListener("change", fillDfGenres);
+    // N2: live filtering — any filter change updates the grid (debounced), no button
+    let dfTimer = null;
+    function scheduleFilter() {
+      clearTimeout(dfTimer);
+      dfTimer = setTimeout(applyFilterBrowse, 400);
+    }
+    ["df-genre", "df-rt-min", "df-rt-max", "df-yr-min", "df-yr-max", "df-rating"]
+      .forEach(id => document.getElementById(id).addEventListener("change", scheduleFilter));
+    dfMedia.addEventListener("change", async () => { await fillDfGenres(); scheduleFilter(); });
     dfToggle.addEventListener("click", () => {
       dfAdvanced.hidden = !dfAdvanced.hidden;
       dfToggle.classList.toggle("on", !dfAdvanced.hidden);
     });
-    document.getElementById("df-apply").addEventListener("click", applyFilterBrowse);
     document.getElementById("df-back").addEventListener("click", showDiscBrowse);
     dfMore.addEventListener("click", loadFilterPage);
 
