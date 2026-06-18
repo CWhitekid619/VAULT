@@ -153,6 +153,31 @@
     #log-home { margin-top: 4px; }
     .log-home-row { margin-bottom: 22px; }
     .log-home-title { font-size: 15px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 10px; color: var(--text); }
+
+    /* N5: Home reorder (edit mode) */
+    #lh-edit-bar { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+    .lh-edit-btn {
+      display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px;
+      background: var(--surface-2); border: 1px solid var(--border); color: var(--text-dim);
+      font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .lh-edit-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .lh-edit-btn.on { color: var(--accent); border-color: var(--accent); }
+    #lh-reorder { margin-bottom: 22px; display: flex; flex-direction: column; gap: 8px; }
+    .reorder-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 10px 12px; border-radius: 12px;
+      background: var(--surface-2); border: 1px solid var(--border);
+    }
+    .reorder-name { font-size: 14px; font-weight: 600; color: var(--text); }
+    .reorder-ctrls { display: flex; gap: 6px; flex: 0 0 auto; }
+    .reorder-arrow {
+      width: 34px; height: 34px; border-radius: 9px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    }
+    .reorder-arrow svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .reorder-arrow:disabled { opacity: .3; cursor: default; }
     .hcard { flex: 0 0 auto; width: 82px; cursor: pointer; }
     .hcard img, .hcard .hc-empty {
       width: 82px; height: 123px; border-radius: 8px; object-fit: cover;
@@ -696,6 +721,8 @@
 
     .detail-hero { position: relative; }
     .detail-backdrop { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: var(--surface-2); }
+    /* N4: cap the backdrop height on wider/desktop screens so the info isn't pushed far down (mobile unaffected) */
+    @media (min-width: 600px) { .detail-backdrop { max-height: 360px; } }
     .detail-hero.no-backdrop { padding-top: calc(var(--safe-top) + 60px); }
     .detail-hero-grad {
       position: absolute; left: 0; right: 0; bottom: 0; height: 70%;
@@ -842,7 +869,8 @@
     .wuerfel-btn:active { filter: brightness(.92); }
     .wuerfel-btn:disabled { opacity: .4; cursor: default; }
 
-    .poster-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    /* N3: responsive columns — ~3 on phones, more on wider screens, posters never stretch huge */
+    .poster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 10px; }
     .grid-item { position: relative; cursor: pointer; }
     .grid-item img, .grid-item .gi-empty {
       width: 100%; aspect-ratio: 2/3; border-radius: 8px; object-fit: cover;
@@ -923,12 +951,6 @@
     }
     .dfb-toggle.on { color: var(--accent); border-color: var(--accent); }
     .dfb-advanced { margin-top: 12px; display: flex; flex-direction: column; gap: 12px; }
-    .df-apply {
-      width: 100%; margin-top: 12px; padding: 12px; border-radius: 12px; cursor: pointer;
-      background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
-      font-family: inherit; font-size: 14px; font-weight: 700;
-    }
-    .df-apply:active { filter: brightness(1.15); }
 
     /* Watchlist quick-button on Discover cards (A1) */
     /* Two action buttons overlapping the bottom edge of a poster card (P1) */
@@ -1125,6 +1147,13 @@
 
       <div id="log-home">
         <div id="log-hero" hidden></div>
+        <div id="lh-edit-bar" hidden>
+          <button id="lh-edit-toggle" class="lh-edit-btn" type="button">
+            <svg viewBox="0 0 24 24"><polyline points="8 9 12 5 16 9"/><polyline points="8 15 12 19 16 15"/></svg>
+            <span>Anordnen</span>
+          </button>
+        </div>
+        <div id="lh-reorder" hidden></div>
         <div id="lh-progress" class="log-home-row" hidden>
           <div class="log-home-title">Serien in Arbeit</div>
           <div id="lh-progress-list" class="progress-list"></div>
@@ -1692,7 +1721,8 @@
             progress: parsed.progress || {},
             meta: parsed.meta || {},
             epRatings: parsed.epRatings || {},
-            tagDefs: parsed.tagDefs || null
+            tagDefs: parsed.tagDefs || null,
+            homeOrder: Array.isArray(parsed.homeOrder) ? parsed.homeOrder : null
           };
           migrateTags(out);
           return out;
@@ -2205,7 +2235,85 @@
       buildHomeRow("lh-watchlist", "Meine Watchlist", watchlist, false);
       buildHomeRow("lh-movies", "Top Filme", topMovies, true);
       buildHomeRow("lh-series", "Top Serien", topSeries, true);
+
+      // N5: apply the user's saved section order; show the reorder toggle only with content
+      applyHomeOrder();
+      const editBar = document.getElementById("lh-edit-bar");
+      if (editBar) editBar.hidden =
+        !(all.length || Object.keys(db.watchlist).length || Object.keys(db.progress).length);
     }
+
+    // ---------- Home section reordering (N5) ----------
+    const SECTION_LABELS = {
+      "lh-progress":  "Serien in Arbeit",
+      "lh-recent":    "Zuletzt gesehen",
+      "lh-watchlist": "Meine Watchlist",
+      "lh-movies":    "Top Filme",
+      "lh-series":    "Top Serien"
+    };
+    const DEFAULT_HOME_ORDER = ["lh-progress", "lh-recent", "lh-watchlist", "lh-movies", "lh-series"];
+
+    function getHomeOrder() {
+      let o = Array.isArray(db.homeOrder) ? db.homeOrder.filter(id => DEFAULT_HOME_ORDER.includes(id)) : [];
+      DEFAULT_HOME_ORDER.forEach(id => { if (!o.includes(id)) o.push(id); });  // heal missing ids
+      return o;
+    }
+
+    // Reorder the section elements (between hero and the empty-state hint) to match the saved order.
+    function applyHomeOrder() {
+      const home = document.getElementById("log-home");
+      const hint = document.getElementById("log-hint");
+      if (!home) return;
+      getHomeOrder().forEach(id => {
+        const el = document.getElementById(id);
+        if (el) home.insertBefore(el, hint);
+      });
+    }
+
+    const CHEVRON_UP   = '<svg viewBox="0 0 24 24"><polyline points="6 15 12 9 18 15"/></svg>';
+    const CHEVRON_DOWN = '<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>';
+
+    function renderReorderPanel() {
+      const panel = document.getElementById("lh-reorder");
+      if (!panel) return;
+      const o = getHomeOrder();
+      panel.innerHTML = "";
+      o.forEach((id, idx) => {
+        const row = document.createElement("div"); row.className = "reorder-row";
+        const name = document.createElement("span"); name.className = "reorder-name"; name.textContent = SECTION_LABELS[id];
+        const ctrls = document.createElement("div"); ctrls.className = "reorder-ctrls";
+        const up = document.createElement("button"); up.type = "button"; up.className = "reorder-arrow";
+        up.setAttribute("aria-label", "Nach oben"); up.innerHTML = CHEVRON_UP; up.disabled = idx === 0;
+        up.addEventListener("click", () => moveSection(id, -1));
+        const down = document.createElement("button"); down.type = "button"; down.className = "reorder-arrow";
+        down.setAttribute("aria-label", "Nach unten"); down.innerHTML = CHEVRON_DOWN; down.disabled = idx === o.length - 1;
+        down.addEventListener("click", () => moveSection(id, +1));
+        ctrls.appendChild(up); ctrls.appendChild(down);
+        row.appendChild(name); row.appendChild(ctrls);
+        panel.appendChild(row);
+      });
+    }
+
+    function moveSection(id, dir) {
+      const o = getHomeOrder();
+      const i = o.indexOf(id), j = i + dir;
+      if (j < 0 || j >= o.length) return;
+      const tmp = o[i]; o[i] = o[j]; o[j] = tmp;
+      db.homeOrder = o; saveDB();
+      applyHomeOrder();        // live feedback on the real rows
+      renderReorderPanel();
+    }
+
+    let homeEditMode = false;
+    document.getElementById("lh-edit-toggle").addEventListener("click", () => {
+      homeEditMode = !homeEditMode;
+      const panel = document.getElementById("lh-reorder");
+      const btn = document.getElementById("lh-edit-toggle");
+      panel.hidden = !homeEditMode;
+      btn.classList.toggle("on", homeEditMode);
+      btn.querySelector("span").textContent = homeEditMode ? "Fertig" : "Anordnen";
+      if (homeEditMode) renderReorderPanel();
+    });
 
     // ---------- Action sheet (bucket / watchlist) ----------
     const backdrop     = document.getElementById("sheet-backdrop");
@@ -2684,7 +2792,7 @@
         release_date: data.release_date, first_air_date: data.first_air_date,
         vote_average: data.vote_average, genres: data.genres, runtime: data.runtime
       };
-      detailCtx = { mediaType, id: data.id, r };
+      detailCtx = { mediaType, id: data.id, r, companies: data.production_companies || [] };
 
       // ---- facts row ----
       const facts = [];
@@ -2759,6 +2867,11 @@
         if (bud) html += '<p class="detail-revenue">Produktionsbudget: <strong>' + esc(bud) + "</strong></p>";
         if (rev) html += '<p class="detail-revenue">Einspielergebnis: <strong>' + esc(rev) + "</strong></p>";
       }
+      // ---- studios / production companies (N1) ----
+      const studios = (data.production_companies || []).filter(c => c && c.name);
+      if (studios.length) {
+        html += '<p class="detail-crew">Studio: <strong>' + studios.map(c => esc(c.name)).join(", ") + "</strong></p>";
+      }
       html += "</div>";
 
       // ---- streaming providers (DE) ----
@@ -2820,6 +2933,8 @@
           refreshResults();
         } else {
           logWatched(r);                // not watched → mark watched immediately as "Ungerankt" (P3)
+          applyStudioTags(key, data.production_companies);   // N1: auto-tag studios on log
+          renderPersonal(mediaType, data.id);
         }
       });
       // Tap the status line of an unranked title to rate it later (P3 optional rating)
@@ -2830,7 +2945,11 @@
       document.getElementById("detail-watchlist").addEventListener("click", () => {
         const key = keyOf(mediaType, data.id);
         if (db.watchlist[key]) { delete db.watchlist[key]; saveDB(); showToast("Von Watchlist entfernt"); }
-        else { db.watchlist[key] = recordFrom(r, null); saveDB(); showToast("Auf Watchlist gespeichert"); }
+        else {
+          db.watchlist[key] = recordFrom(r, null); saveDB(); showToast("Auf Watchlist gespeichert");
+          applyStudioTags(key, data.production_companies);   // N1: auto-tag studios on log
+          renderPersonal(mediaType, data.id);
+        }
         refreshDetailStatus();
         refreshResults();
       });
@@ -2842,6 +2961,9 @@
       });
       if (isTv) renderProgress(data);
       if (isTv) renderEpRatings(data);
+      // N1: retro-apply studio tags if this title is already logged (covers card-logged titles)
+      const dkey = keyOf(mediaType, data.id);
+      if (db.items[dkey] || db.watchlist[dkey]) applyStudioTags(dkey, data.production_companies);
       renderPersonal(mediaType, data.id);
       refreshDetailStatus();
     }
@@ -2990,6 +3112,43 @@
       if (!n) return "";
       if (!tagDefs().includes(n)) { tagDefs().push(n); saveDB(); }
       return n;
+    }
+
+    // ---------- Studio auto-tagging (N1) ----------
+    // Match TMDB production-company names to a tag. Keyword → tag label.
+    const STUDIO_TAGS = [
+      { re: /marvel/i,          tag: "Marvel" },
+      { re: /pixar/i,           tag: "Pixar" },
+      { re: /disney/i,          tag: "Disney" },
+      { re: /lucasfilm/i,       tag: "Lucasfilm" },
+      { re: /warner bros/i,     tag: "Warner Bros." },
+      { re: /\ba24\b/i,         tag: "A24" },
+      { re: /universal/i,       tag: "Universal" },
+      { re: /(sony|columbia)/i, tag: "Sony" },
+      { re: /paramount/i,       tag: "Paramount" },
+      { re: /dreamworks/i,      tag: "DreamWorks" },
+      { re: /\bdc\b/i,          tag: "DC" },
+      { re: /ghibli/i,          tag: "Studio Ghibli" }
+    ];
+    function studioTagsFor(companies) {
+      const tags = new Set();
+      (companies || []).forEach(c => {
+        const name = (c && c.name) ? c.name : "";
+        STUDIO_TAGS.forEach(s => { if (s.re.test(name)) tags.add(s.tag); });
+      });
+      return [...tags];
+    }
+    // Additively apply studio tags to a logged title's meta (user can remove them).
+    function applyStudioTags(key, companies) {
+      const studioTags = studioTagsFor(companies);
+      if (!studioTags.length) return;
+      const meta = getMeta(key);
+      let changed = false;
+      studioTags.forEach(t => {
+        addTagDef(t);                 // ensure the tag exists in the database
+        if (!meta.tags.includes(t)) { meta.tags.push(t); changed = true; }
+      });
+      if (changed) saveMeta(key, meta);
     }
 
     let personalNoteTimer = null;
