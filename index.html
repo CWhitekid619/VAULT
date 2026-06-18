@@ -951,6 +951,30 @@
     }
     .dfb-toggle.on { color: var(--accent); border-color: var(--accent); }
     .dfb-advanced { margin-top: 12px; display: flex; flex-direction: column; gap: 12px; }
+    .filter-field .modal-input { margin-bottom: 0; }
+
+    /* Cast / director autocomplete (16a) */
+    .person-ac { position: relative; }
+    .person-ac-list {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 20;
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
+      overflow: hidden; box-shadow: 0 10px 28px rgba(0,0,0,.45);
+    }
+    .person-ac-item {
+      display: flex; align-items: center; gap: 10px; width: 100%;
+      padding: 8px 12px; background: none; border: none; cursor: pointer;
+      color: var(--text); font-family: inherit; font-size: 14px; text-align: left;
+    }
+    .person-ac-item + .person-ac-item { border-top: 1px solid var(--border); }
+    .person-ac-item:active { background: var(--surface); }
+    .person-ac-item img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
+    .person-ac-noimg {
+      width: 32px; height: 32px; border-radius: 50%; flex: 0 0 auto;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--surface); color: var(--text-mute); font-weight: 700;
+    }
+    .person-ac-name { flex: 1; min-width: 0; }
+    .person-ac-name em { color: var(--text-mute); font-style: normal; font-size: 12px; }
 
     /* Watchlist quick-button on Discover cards (A1) */
     /* Two action buttons overlapping the bottom edge of a poster card (P1) */
@@ -1242,6 +1266,20 @@
           <button id="df-toggle" class="dfb-toggle" type="button" aria-label="Mehr Filter">⋯</button>
         </div>
         <div id="df-advanced" class="dfb-advanced" hidden>
+          <div class="filter-field">
+            <label for="df-cast">Schauspieler</label>
+            <div class="person-ac">
+              <input id="df-cast" class="modal-input" type="text" placeholder="Name eingeben …" autocomplete="off">
+              <div id="df-cast-list" class="person-ac-list" hidden></div>
+            </div>
+          </div>
+          <div class="filter-field">
+            <label for="df-crew">Regisseur</label>
+            <div class="person-ac">
+              <input id="df-crew" class="modal-input" type="text" placeholder="Name eingeben …" autocomplete="off">
+              <div id="df-crew-list" class="person-ac-list" hidden></div>
+            </div>
+          </div>
           <div class="filter-field">
             <label>Dauer (Min.)</label>
             <div class="filter-pair">
@@ -1985,7 +2023,12 @@
       const inProgress = Object.keys(db.progress)
         .filter(k => {
           const p = db.progress[k]; const it = db.items[k];
-          return it && it.mediaType === "tv" && p && Object.keys(p.eps).length > 0;
+          if (!(it && it.mediaType === "tv" && p && Object.keys(p.eps).length > 0)) return false;
+          // hide fully-watched series once the total episode count is known (item 14);
+          // if the total isn't loaded yet, keep it visible until it can be verified
+          const tot = seriesTotalCache[k];
+          if (tot != null && Object.keys(p.eps).length >= tot) return false;
+          return true;
         })
         .map(k => ({ key: k, it: db.items[k], p: db.progress[k] }))
         .sort((a, b) => (b.it.loggedAt || 0) - (a.it.loggedAt || 0))
@@ -2050,6 +2093,11 @@
               const tot = totalEpisodes(data);
               if (!tot) return;
               seriesTotalCache[key] = tot;
+              if (watched >= tot) {        // item 14: now verified as finished → drop the row
+                row.remove();
+                if (!list.children.length) host.hidden = true;
+                return;
+              }
               updateRow(tot);
             })
             .catch(() => {});
@@ -3116,26 +3164,51 @@
 
     // ---------- Studio auto-tagging (N1) ----------
     // Match TMDB production-company names to a tag. Keyword → tag label.
-    const STUDIO_TAGS = [
-      { re: /marvel/i,          tag: "Marvel" },
-      { re: /pixar/i,           tag: "Pixar" },
-      { re: /disney/i,          tag: "Disney" },
-      { re: /lucasfilm/i,       tag: "Lucasfilm" },
-      { re: /warner bros/i,     tag: "Warner Bros." },
-      { re: /\ba24\b/i,         tag: "A24" },
-      { re: /universal/i,       tag: "Universal" },
-      { re: /(sony|columbia)/i, tag: "Sony" },
-      { re: /paramount/i,       tag: "Paramount" },
-      { re: /dreamworks/i,      tag: "DreamWorks" },
-      { re: /\bdc\b/i,          tag: "DC" },
-      { re: /ghibli/i,          tag: "Studio Ghibli" }
-    ];
+    // Inspect the WHOLE production-company list and derive normalized brand tags.
+    // Smarter than per-company keyword matching: it can tell an MCU film apart from a
+    // Sony/Fox film that merely features Marvel characters, and DC apart from plain Warner Bros.
     function studioTagsFor(companies) {
+      const names = (companies || []).map(c => (c && c.name ? c.name : "").toLowerCase());
+      const has = re => names.some(n => re.test(n));
       const tags = new Set();
-      (companies || []).forEach(c => {
-        const name = (c && c.name) ? c.name : "";
-        STUDIO_TAGS.forEach(s => { if (s.re.test(name)) tags.add(s.tag); });
-      });
+
+      const marvelStudios = has(/marvel studios/);
+      const anyMarvel     = has(/marvel/);                 // incl. Marvel Entertainment / Comics
+      const sony          = has(/\bsony\b|columbia/);
+      const fox           = has(/20th century|twentieth century|fox searchlight|fox 2000|\bfox\b/);
+      const pixar         = has(/pixar/);
+      const waltDisney    = has(/walt disney/);            // Pictures / Animation / Feature Animation
+      const lucasfilm     = has(/lucasfilm/);
+      const dc            = has(/\bdc\b|dc films|dc studios|dc entertainment|dc comics/);
+      const warner        = has(/warner bros/);
+
+      // --- Marvel family ---
+      if (marvelStudios) {
+        tags.add("MCU"); tags.add("Marvel"); tags.add("Disney");  // Marvel Studios is Disney-owned
+      } else if (anyMarvel) {
+        tags.add("Marvel");                                       // Marvel characters, not an MCU production
+        if (sony) tags.add("Sony");                               // e.g. Venom, Into the Spider-Verse
+        if (fox)  tags.add("Fox");                                // e.g. X-Men, pre-Disney Deadpool
+      }
+
+      // --- DC family (kept separate: DC ≠ Warner Bros. necessarily) ---
+      if (dc) { tags.add("DC"); tags.add("Warner Bros."); }       // DC films are Warner productions
+      else if (warner) tags.add("Warner Bros.");                  // plain WB film, not DC
+
+      // --- Disney / Pixar (normalized to a single "Disney" label) ---
+      if (pixar) { tags.add("Pixar"); tags.add("Disney"); }
+      if (waltDisney) tags.add("Disney");
+      if (lucasfilm) tags.add("Lucasfilm");
+
+      // --- other studios (independent of the groupings above) ---
+      if (sony)              tags.add("Sony");
+      if (fox)               tags.add("Fox");
+      if (has(/\ba24\b/))    tags.add("A24");
+      if (has(/universal/))  tags.add("Universal");
+      if (has(/paramount/))  tags.add("Paramount");
+      if (has(/dreamworks/)) tags.add("DreamWorks");
+      if (has(/ghibli/))     tags.add("Studio Ghibli");
+
       return [...tags];
     }
     // Additively apply studio tags to a logged title's meta (user can remove them).
@@ -4369,6 +4442,11 @@
     const dfMore   = document.getElementById("df-more");
     let fb = { page: 0, totalPages: 1, url: "", media: "movie" };
     let dfGenresFilled = "";
+    let dfCastPerson = null;   // {id, name} selected actor (16a)
+    let dfCrewPerson = null;   // {id, name} selected director (16a)
+    let pf = { items: [], shown: 0, media: "movie" };   // person-filtered result state
+    const PF_PAGE = 30;        // client-side page size for person credits
+    function personFilterActive() { return !!(dfCastPerson || dfCrewPerson); }
 
     async function fillDfGenres() {
       const media = dfMedia.value;
@@ -4406,12 +4484,23 @@
       return { url, media };
     }
 
+    // One poster cell (shared by discover paging and the person-credits path)
+    function fbCell(it, media) {
+      const cell = document.createElement("div"); cell.className = "grid-item";
+      const img = document.createElement("img"); img.loading = "lazy"; img.src = IMG_BASE + "w185" + it.poster_path; img.alt = "";
+      cell.appendChild(img);
+      cell.appendChild(makeCardActions(it, media));
+      cell.addEventListener("click", () => openDetail(media, it.id));
+      return cell;
+    }
+
     function applyFilterBrowse() {
-      const { url, media } = buildFilterUrl();
-      fb = { page: 0, totalPages: 1, url, media };
       dfGrid.innerHTML = "";
       showDiscFiltered();
       discFiltered.scrollTop = 0;
+      if (personFilterActive()) { applyPersonFilter(); return; }   // 16a
+      const { url, media } = buildFilterUrl();
+      fb = { page: 0, totalPages: 1, url, media };
       loadFilterPage();
     }
 
@@ -4428,20 +4517,122 @@
         const items = (d.results || []).filter(it => it.poster_path);
         if (fb.page === 1 && !items.length) { dfGrid.innerHTML = '<div class="grid-empty">Nichts gefunden.</div>'; return; }
         const frag = document.createDocumentFragment();
-        items.forEach(it => {
-          const cell = document.createElement("div"); cell.className = "grid-item";
-          const img = document.createElement("img"); img.loading = "lazy"; img.src = IMG_BASE + "w185" + it.poster_path; img.alt = "";
-          cell.appendChild(img);
-          cell.appendChild(makeCardActions(it, fb.media));
-          cell.addEventListener("click", () => openDetail(fb.media, it.id));
-          frag.appendChild(cell);
-        });
+        items.forEach(it => frag.appendChild(fbCell(it, fb.media)));
         dfGrid.appendChild(frag);
         dfMore.hidden = fb.page >= fb.totalPages;
       } catch (e) {
         if (fb.page === 1) dfGrid.innerHTML = '<div class="grid-empty">Konnte nicht laden.</div>';
       }
     }
+
+    // ---------- Cast / director filter (16a) ----------
+    // TMDB's discover endpoint has no cast/crew filter for TV, so we drive this off the
+    // person's credits (works for both movie and tv) and apply the other filters client-side.
+    async function fetchPersonCredits(personId, media) {
+      const ep = media === "tv" ? "tv_credits" : "movie_credits";
+      const res = await fetch("https://api.themoviedb.org/3/person/" + personId + "/" + ep
+        + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
+      if (!res.ok) throw new Error();
+      return res.json();
+    }
+    const isDirectorCredit = c => c.job === "Director" || c.department === "Directing";
+
+    async function applyPersonFilter() {
+      const media = dfMedia.value;
+      dfGrid.innerHTML = '<div class="grid-empty">Lädt …</div>';
+      dfMore.hidden = true;
+      try {
+        const sets = [];
+        if (dfCastPerson) { const d = await fetchPersonCredits(dfCastPerson.id, media); sets.push(d.cast || []); }
+        if (dfCrewPerson) { const d = await fetchPersonCredits(dfCrewPerson.id, media); sets.push((d.crew || []).filter(isDirectorCredit)); }
+
+        // Both an actor AND a director selected → intersection; otherwise the single set
+        let combined;
+        if (sets.length === 2) { const ids = new Set(sets[1].map(c => c.id)); combined = sets[0].filter(c => ids.has(c.id)); }
+        else combined = sets[0] || [];
+
+        // de-dupe by id (a person can be credited on a title more than once)
+        const seen = {}; let items = [];
+        combined.forEach(c => { if (!seen[c.id]) { seen[c.id] = true; items.push(c); } });
+
+        // client-side filters (genre / year / rating — runtime isn't on credit objects)
+        const genreId   = dfGenre.value ? parseInt(dfGenre.value, 10) : null;
+        const minRating = parseFloat(document.getElementById("df-rating").value) || 0;
+        const yrMin     = parseInt(document.getElementById("df-yr-min").value, 10) || 0;
+        const yrMax     = parseInt(document.getElementById("df-yr-max").value, 10) || 0;
+        const yearOf = c => { const s = media === "tv" ? c.first_air_date : c.release_date; return s ? parseInt(s.slice(0, 4), 10) : 0; };
+
+        items = items.filter(c => c.poster_path);
+        if (genreId)   items = items.filter(c => (c.genre_ids || []).includes(genreId));
+        if (minRating) items = items.filter(c => (c.vote_average || 0) >= minRating);
+        if (yrMin)     items = items.filter(c => yearOf(c) >= yrMin);
+        if (yrMax)     items = items.filter(c => yearOf(c) && yearOf(c) <= yrMax);
+        items.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+
+        pf = { items, shown: 0, media };
+        dfGrid.innerHTML = "";
+        if (!items.length) { dfGrid.innerHTML = '<div class="grid-empty">Keine Treffer für diese Person.</div>'; return; }
+        renderPersonSlice();
+      } catch (e) {
+        dfGrid.innerHTML = '<div class="grid-empty">Konnte nicht laden.</div>';
+      }
+    }
+
+    function renderPersonSlice() {
+      const slice = pf.items.slice(pf.shown, pf.shown + PF_PAGE);
+      const frag = document.createDocumentFragment();
+      slice.forEach(it => frag.appendChild(fbCell(it, pf.media)));
+      dfGrid.appendChild(frag);
+      pf.shown += slice.length;
+      dfMore.hidden = pf.shown >= pf.items.length;
+    }
+
+    // Wire one name field to TMDB person search; onPick/onClear update the filter state.
+    function setupPersonAC(inputId, listId, onPick, onClear) {
+      const input = document.getElementById(inputId);
+      const list  = document.getElementById(listId);
+      let timer = null, abort = null;
+      const close = () => { list.hidden = true; list.innerHTML = ""; };
+      input.addEventListener("input", () => {
+        onClear();                                  // typing invalidates a previous pick
+        const q = input.value.trim();
+        clearTimeout(timer);
+        if (q.length < 2) { close(); return; }
+        timer = setTimeout(async () => {
+          if (abort) abort.abort();
+          abort = new AbortController();
+          try {
+            const res = await fetch("https://api.themoviedb.org/3/search/person?api_key=" + TMDB_KEY
+              + "&language=" + TMDB_LANG + "&include_adult=false&query=" + encodeURIComponent(q), { signal: abort.signal });
+            if (!res.ok) throw new Error();
+            const d = await res.json();
+            const people = (d.results || []).slice(0, 6);
+            if (!people.length) { close(); return; }
+            list.innerHTML = "";
+            people.forEach(p => {
+              const known = p.known_for_department === "Directing" ? "Regie"
+                          : p.known_for_department === "Acting" ? "Schauspiel" : (p.known_for_department || "");
+              const item = document.createElement("button");
+              item.type = "button"; item.className = "person-ac-item";
+              item.innerHTML = (p.profile_path
+                  ? '<img src="' + IMG_BASE + "w92" + p.profile_path + '" alt="">'
+                  : '<span class="person-ac-noimg">' + esc((p.name || "?").charAt(0)) + "</span>")
+                + '<span class="person-ac-name">' + esc(p.name) + (known ? ' <em>· ' + esc(known) + "</em>" : "") + "</span>";
+              item.addEventListener("click", () => { input.value = p.name; close(); onPick({ id: p.id, name: p.name }); });
+              list.appendChild(item);
+            });
+            list.hidden = false;
+          } catch (e) { if (e.name !== "AbortError") close(); }
+        }, 300);
+      });
+      input.addEventListener("blur", () => setTimeout(close, 150));   // let a click register first
+    }
+    setupPersonAC("df-cast", "df-cast-list",
+      pers => { dfCastPerson = pers; scheduleFilter(); },
+      ()    => { if (dfCastPerson) { dfCastPerson = null; scheduleFilter(); } });
+    setupPersonAC("df-crew", "df-crew-list",
+      pers => { dfCrewPerson = pers; scheduleFilter(); },
+      ()    => { if (dfCrewPerson) { dfCrewPerson = null; scheduleFilter(); } });
 
     // N2: live filtering — any filter change updates the grid (debounced), no button
     let dfTimer = null;
@@ -4457,7 +4648,7 @@
       dfToggle.classList.toggle("on", !dfAdvanced.hidden);
     });
     document.getElementById("df-back").addEventListener("click", showDiscBrowse);
-    dfMore.addEventListener("click", loadFilterPage);
+    dfMore.addEventListener("click", () => { if (personFilterActive()) renderPersonSlice(); else loadFilterPage(); });
 
     // ====================================================================
     //  PROFILE  (stats)
