@@ -205,7 +205,7 @@
     /* ---------- Series progress list ---------- */
     .progress-list { display: flex; flex-direction: column; }
     .prog-row {
-      display: flex; gap: 12px; align-items: flex-start;
+      display: flex; gap: 12px; align-items: center;
       cursor: pointer; padding: 10px 0;
       border-bottom: 1px solid var(--border);
     }
@@ -218,7 +218,7 @@
       flex: 0 0 40px; width: 40px; height: 60px;
       border-radius: 6px; background: var(--surface-2);
     }
-    .prog-body { flex: 1; min-width: 0; padding-top: 1px; }
+    .prog-body { flex: 1; min-width: 0; padding-top: 1px; display: flex; flex-direction: column; }
     .prog-title {
       font-size: 14px; font-weight: 700; letter-spacing: -.01em;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -228,6 +228,9 @@
     .prog-bar-wrap { height: 3px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
     .prog-bar { height: 100%; background: var(--accent); border-radius: 2px; transition: width .5s ease; }
     .prog-counts { font-size: 11px; color: var(--text-mute); margin-top: 4px; }
+    .prog-remove { flex: 0 0 auto; width: 36px; height: 36px; background: none; border: none; color: var(--text-mute); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .prog-remove svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; }
+    .prog-remove:active { color: #ef6b6b; }
 
     /* ---------- Episode rating grid ---------- */
     .ep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(36px, 1fr)); gap: 5px; margin-top: 10px; }
@@ -675,6 +678,15 @@
       color: #fff; text-align: left;
       font-size: 14px; font-weight: 700; line-height: 1.25;
     }
+    /* point 9a: current rank badge over the top of each duel poster */
+    .duel-rank {
+      position: absolute; top: 8px; left: 8px; z-index: 2;
+      padding: 4px 9px; border-radius: 999px;
+      background: rgba(0,0,0,.7); color: var(--accent);
+      font-size: 13px; font-weight: 800; letter-spacing: .02em;
+      backdrop-filter: blur(2px);
+    }
+    .duel-rank.unranked { color: var(--text-dim); font-size: 11px; font-weight: 700; }
     .duel-vs {
       text-align: center; color: var(--text-mute);
       font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
@@ -687,6 +699,39 @@
       color: var(--text-dim); font-family: inherit; font-size: 15px; cursor: pointer;
     }
     .duel-skip:active { background: var(--surface); }
+    /* point 11: undo the last duel comparison */
+    .duel-undo {
+      flex: 0 0 auto; margin-top: 10px;
+      width: 100%; padding: 12px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      background: none; border: 1px solid var(--border); border-radius: 12px;
+      color: var(--accent); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    .duel-undo svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .duel-undo:active { background: var(--surface); }
+
+    /* point 10: brief level-up celebration when a film climbs a tier */
+    .levelup {
+      position: fixed; inset: 0; z-index: 300; pointer-events: none;   /* never blocks the next duel */
+      display: flex; align-items: center; justify-content: center;
+    }
+    .levelup-card {
+      display: flex; flex-direction: column; align-items: center; gap: 14px;
+      animation: levelup-pop 1.4s ease forwards;
+    }
+    .levelup-poster {
+      width: 124px; aspect-ratio: 2 / 3; border-radius: 12px; object-fit: cover;
+      box-shadow: 0 0 0 2px var(--accent), 0 0 44px 10px rgba(232,179,57,.55);
+    }
+    .levelup-text { text-align: center; }
+    .levelup-up { display: block; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--text-dim); }
+    .levelup-bucket { display: block; font-size: 24px; font-weight: 800; color: var(--accent); margin-top: 3px; letter-spacing: -.01em; }
+    @keyframes levelup-pop {
+      0%   { opacity: 0; transform: translateY(44px) scale(.9); }
+      18%  { opacity: 1; transform: translateY(0) scale(1); }
+      72%  { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-26px) scale(.98); }
+    }
 
     /* ---------- Sheet: details link ---------- */
     .sheet-details {
@@ -801,6 +846,39 @@
     .person .person-noimg { display: flex; align-items: center; justify-content: center; color: var(--text-mute); font-size: 22px; font-weight: 600; }
     .person-name { font-size: 12px; font-weight: 600; margin-top: 7px; line-height: 1.2; }
     .person-role { font-size: 11px; color: var(--text-mute); margin-top: 2px; line-height: 1.2; }
+
+    /* Block / unblock (point 12) */
+    .detail-block-row { margin: 22px 0 4px; display: flex; justify-content: center; }
+    .detail-block-btn {
+      background: none; border: 1px solid var(--border); color: var(--text-mute);
+      font-family: inherit; font-size: 13px; padding: 8px 18px; border-radius: 999px; cursor: pointer;
+    }
+    .detail-block-btn.blocked { color: #ef6b6b; border-color: #ef6b6b; }
+    .blocked-list { display: flex; flex-direction: column; gap: 8px; }
+    .blocked-row { display: flex; align-items: center; gap: 12px; }
+    .blocked-thumb { width: 34px; height: 51px; border-radius: 6px; object-fit: cover; background: var(--surface-2); flex: 0 0 auto; }
+    .blocked-thumb.empty { background: var(--surface-2); }
+    .blocked-title { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .blocked-unblock {
+      flex: 0 0 auto; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-dim);
+      font-family: inherit; font-size: 12px; padding: 7px 12px; border-radius: 999px; cursor: pointer;
+    }
+
+    /* "Already watched" checkmark badge on collection cards (point 13a) */
+    .seen-badge {
+      position: absolute; top: 6px; right: 6px; z-index: 3;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--accent); display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,.45);
+    }
+    .seen-badge svg { width: 13px; height: 13px; stroke: #1a1206; fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* Scene stills gallery (point 7) */
+    .still { flex: 0 0 auto; }
+    .still img {
+      width: 240px; aspect-ratio: 16 / 9; border-radius: 10px;
+      object-fit: cover; background: var(--surface-2); display: block;
+    }
 
     .provider { flex: 0 0 auto; width: 54px; text-align: center; }
     .provider img { width: 54px; height: 54px; border-radius: 12px; object-fit: cover; background: var(--surface-2); }
@@ -1387,6 +1465,7 @@
       </div>
       <div id="profile-stats" class="stat-grid"></div>
       <div id="profile-note" class="profile-note"></div>
+      <div id="profile-blocked"></div>
     </section>
 
   </div>
@@ -1469,16 +1548,33 @@
     </div>
     <div class="duel-cards">
       <button id="duel-a" class="duel-card" type="button">
+        <div class="duel-rank"></div>
         <img class="duel-poster" alt="" />
         <div class="duel-name"></div>
       </button>
       <div class="duel-vs">oder</div>
       <button id="duel-b" class="duel-card" type="button">
+        <div class="duel-rank"></div>
         <img class="duel-poster" alt="" />
         <div class="duel-name"></div>
       </button>
     </div>
     <button id="duel-skip" class="duel-skip" type="button">Überspringen</button>
+    <button id="duel-undo" class="duel-undo" type="button" hidden>
+      <svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg>
+      Rückgängig
+    </button>
+  </div>
+
+  <!-- ============ LEVEL-UP CELEBRATION (point 10) ============ -->
+  <div id="levelup" class="levelup" hidden>
+    <div class="levelup-card">
+      <img class="levelup-poster" alt="" />
+      <div class="levelup-text">
+        <span class="levelup-up">Aufgestiegen</span>
+        <span class="levelup-bucket"></span>
+      </div>
+    </div>
   </div>
 
   <!-- ============ DETAIL PAGE ============ -->
@@ -1783,13 +1879,15 @@
             epRatings: parsed.epRatings || {},
             tagDefs: parsed.tagDefs || null,
             homeOrder: Array.isArray(parsed.homeOrder) ? parsed.homeOrder : null,
-            hideWatched: typeof parsed.hideWatched === "boolean" ? parsed.hideWatched : true   // point 6: default ON
+            hideWatched: typeof parsed.hideWatched === "boolean" ? parsed.hideWatched : true,   // point 6: default ON
+            blocklist: (parsed.blocklist && typeof parsed.blocklist === "object") ? parsed.blocklist : {},   // point 12
+            hiddenSeries: (parsed.hiddenSeries && typeof parsed.hiddenSeries === "object") ? parsed.hiddenSeries : {}   // hide series from Home view only
           };
           migrateTags(out);
           return out;
         }
       } catch (e) { /* corrupted store — start fresh */ }
-      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true };
+      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, blocklist: {}, hiddenSeries: {} };
     }
     let db = loadDB();
     function saveDB() {
@@ -1811,6 +1909,7 @@
     // and a title's *displayed* zone is derived from its current score —
     // so winning duels can carry a title across bucket boundaries.
     const BUCKET_BASE = { great: 2000, good: 1700, watchable: 1400, meh: 1100, bad: 800 };
+    const BUCKET_ORDER = ["bad", "meh", "watchable", "good", "great"];   // point 10: worst → best
     function ensureScore(it) {
       if (typeof it.score !== "number") it.score = (BUCKET_BASE[it.bucket] != null ? BUCKET_BASE[it.bucket] : 1400);
       return it.score;
@@ -1879,8 +1978,8 @@
         if (!res.ok) throw new Error("HTTP " + res.status);
         const data = await res.json();
         if (searchInput.value.trim() !== q) return; // stale response
-        const items = (data.results || [])
-          .filter(r => r.media_type === "movie" || r.media_type === "tv")
+        const items = filterBlocked((data.results || [])
+          .filter(r => r.media_type === "movie" || r.media_type === "tv"), null)   // point 12
           .slice(0, 20);
         renderResults(items);
       } catch (e) {
@@ -2051,6 +2150,8 @@
           // if the total isn't loaded yet, keep it visible until it can be verified
           const tot = seriesTotalCache[k];
           if (tot != null && Object.keys(p.eps).length >= tot) return false;
+          // hide series that the user swiped away (data retained, just hidden from Home)
+          if (db.hiddenSeries && db.hiddenSeries[k]) return false;
           return true;
         })
         .map(k => ({ key: k, it: db.items[k], p: db.progress[k] }))
@@ -2068,6 +2169,26 @@
 
         const row = document.createElement("div");
         row.className = "prog-row";
+
+        // swipe-left or X-button to hide the series from Home view (data retained)
+        let touchStartX = 0;
+        const hideRow = () => {
+          db.hiddenSeries[key] = true;
+          saveDB();
+          row.remove();
+          if (!list.children.length) host.hidden = true;
+          showToast("Serie verborgen");
+        };
+        row.addEventListener("touchstart", e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+        row.addEventListener("touchmove", e => {
+          const delta = e.touches[0].clientX - touchStartX;
+          if (delta < -60) { e.preventDefault(); hideRow(); }
+        }, { passive: false });
+        // fallback: X button on the right (mobile/small screens, or non-touch)
+        const xBtn = document.createElement("button");
+        xBtn.type = "button"; xBtn.className = "prog-remove"; xBtn.title = "Verbergen";
+        xBtn.innerHTML = '<svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+        xBtn.addEventListener("click", e => { e.stopPropagation(); hideRow(); });
 
         if (it.poster) {
           const img = document.createElement("img");
@@ -2104,6 +2225,7 @@
         body.appendChild(titleEl); body.appendChild(sub);
         body.appendChild(barWrap); body.appendChild(counts);
         row.appendChild(body);
+        row.appendChild(xBtn);   // swipe-left or tap to hide
         row.addEventListener("click", () => openDetail("tv", parseInt(key.split(":")[1], 10)));
         list.appendChild(row);
 
@@ -2457,6 +2579,7 @@
       showToast("Eingetragen: " + bucketLabel(bucket));
       refreshResults();
       refreshDetailStatus();
+      if (document.body.dataset.tab === "ranking") renderRanking();   // point 9b: reflect re-rate live
     }
 
     // Quick "Watch" action (P3): mark as watched immediately, no rating popup.
@@ -2642,7 +2765,18 @@
         if (it.year) { const y = document.createElement("div"); y.className = "rank-year"; y.textContent = it.year; bodyEl.appendChild(y); }
         row.appendChild(bodyEl);
 
-        row.addEventListener("click", () => openDetail(it.mediaType, it.id));
+        // tap → detail; long-press → quick-rate popup (point 9b)
+        let pressTimer = null, longFired = false;
+        const rRec = { media_type: it.mediaType, id: it.id, title: it.title, name: it.title, poster_path: it.poster };
+        const startPress = () => { longFired = false; pressTimer = setTimeout(() => { longFired = true; openQuickRate(rRec); }, 500); };
+        const cancelPress = () => clearTimeout(pressTimer);
+        row.addEventListener("touchstart", startPress, { passive: true });
+        row.addEventListener("touchend", cancelPress);
+        row.addEventListener("touchmove", cancelPress, { passive: true });
+        row.addEventListener("mousedown", startPress);
+        row.addEventListener("mouseup", cancelPress);
+        row.addEventListener("mouseleave", cancelPress);
+        row.addEventListener("click", () => { if (longFired) { longFired = false; return; } openDetail(it.mediaType, it.id); });
         frag.appendChild(row);
       };
 
@@ -2748,9 +2882,24 @@
       return null; // all relevant pairs exhausted
     }
 
+    // point 9a: a title's current leaderboard position ("#12") or "Ungerankt"
+    function currentRankLabel(it) {
+      if (it.unranked) return "Ungerankt";
+      const ranked = Object.values(db.items)
+        .filter(x => x.mediaType === it.mediaType && !x.unranked)
+        .sort((a, b) => b.score - a.score);
+      const idx = ranked.findIndex(x => x.id === it.id);
+      return idx >= 0 ? "#" + (idx + 1) : "Ungerankt";
+    }
+
     function fillDuelCard(card, it) {
+      const rank = card.querySelector(".duel-rank");
       const img  = card.querySelector(".duel-poster");
       const name = card.querySelector(".duel-name");
+      if (rank) {
+        rank.textContent = currentRankLabel(it);
+        rank.classList.toggle("unranked", it.unranked);   // point 9a
+      }
       if (it.poster) { img.src = IMG_BASE + "w342" + it.poster; img.style.display = ""; }
       else { img.removeAttribute("src"); img.style.display = "none"; }
       name.textContent = it.year ? (it.title + " (" + it.year + ")") : it.title;
@@ -2763,13 +2912,36 @@
       fillDuelCard(duelCardB, pair[1]);
     }
 
+    let lastDuel = null;   // point 11: snapshot of the most recent comparison, for one-level undo
+    function updateUndoBtn() {
+      const b = document.getElementById("duel-undo");
+      if (b) b.hidden = !lastDuel;
+    }
+
     function openDuel() {
       duelSeenPairs = new Set(); // fresh session
+      lastDuel = null;           // point 11: nothing to undo at the start
+      updateUndoBtn();
       const pair = pickPair();
       if (!pair) { showToast("Mindestens 2 Titel nötig"); return; }
       showDuelPair(pair);
       duelEl.hidden = false;
       document.body.style.overflow = "hidden";
+    }
+
+    // point 11: roll back the last comparison — restore both scores + unranked flags,
+    // un-see the pair, and re-show it so the user can decide again.
+    function undoDuel() {
+      if (!lastDuel) return;
+      lastDuel.a.score = lastDuel.aScore; lastDuel.a.unranked = lastDuel.aUn;
+      lastDuel.b.score = lastDuel.bScore; lastDuel.b.unranked = lastDuel.bUn;
+      duelSeenPairs.delete(lastDuel.sig);
+      saveDB();
+      const pair = [lastDuel.a, lastDuel.b];
+      lastDuel = null;
+      showDuelPair(pair);
+      updateUndoBtn();
+      showToast("Rückgängig gemacht");
     }
 
     function closeDuel(msg) {
@@ -2787,14 +2959,46 @@
       loser.score  = Math.round(loser.score  + K * (0 - (1 - expWin)));
     }
 
+    // point 10: short celebration when the winner climbs into a higher tier.
+    // pointer-events:none + auto-dismiss means it never blocks the next duel.
+    let levelupTimer = null;
+    function playLevelUp(item, bucket) {
+      const el = document.getElementById("levelup");
+      if (!el) return;
+      const img = el.querySelector(".levelup-poster");
+      if (item.poster) { img.src = IMG_BASE + "w185" + item.poster; img.style.display = ""; }
+      else img.style.display = "none";
+      el.querySelector(".levelup-bucket").textContent = bucketLabel(bucket) + "!";
+      el.hidden = false;
+      const card = el.querySelector(".levelup-card");      // restart the keyframe animation
+      card.style.animation = "none"; void card.offsetWidth; card.style.animation = "";
+      clearTimeout(levelupTimer);
+      levelupTimer = setTimeout(() => { el.hidden = true; }, 1400);
+    }
+
     function chooseWinner(winner) {
       if (!duelPair) return;
       const loser = winner === duelPair[0] ? duelPair[1] : duelPair[0];
+      // point 11: snapshot both titles BEFORE changing anything, for one-level undo
+      lastDuel = {
+        a: winner, b: loser,
+        aScore: winner.score, bScore: loser.score,
+        aUn: winner.unranked, bUn: loser.unranked,
+        sig: pairSig(winner, loser)
+      };
+      // point 10: winner's tier before the duel (an unranked title counts as a promotion)
+      const wasUnranked = winner.unranked;
+      const oldBucket = deriveBucket(winner.score);
       // A duel result places both titles: they leave the "Ungerankt" zone (P3)
       winner.unranked = false;
       loser.unranked = false;
       applyElo(winner, loser);
       saveDB();
+      updateUndoBtn();
+      const newBucket = deriveBucket(winner.score);
+      if (wasUnranked || BUCKET_ORDER.indexOf(newBucket) > BUCKET_ORDER.indexOf(oldBucket)) {
+        playLevelUp(winner, newBucket);     // point 10: tier promotion
+      }
       const next = pickPair();
       if (next) showDuelPair(next); else closeDuel("Duell abgeschlossen!");
     }
@@ -2807,6 +3011,7 @@
     });
     duelCardA.addEventListener("click", () => chooseWinner(duelPair[0]));
     duelCardB.addEventListener("click", () => chooseWinner(duelPair[1]));
+    document.getElementById("duel-undo").addEventListener("click", undoDuel);   // point 11
 
     // ---------- Detail page ----------
     const detailEl   = document.getElementById("detail");
@@ -2835,7 +3040,7 @@
 
       const base = "https://api.themoviedb.org/3/" + mediaType + "/" + id;
       const url = base + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG
-        + "&append_to_response=credits,videos,watch/providers,similar,images"
+        + "&append_to_response=credits,videos,watch/providers,recommendations,images"
         + "&include_image_language=null,en,de";   // point 7: text-free + EN/DE scene stills
       try {
         const res = await fetch(url);
@@ -3015,20 +3220,13 @@
         html += "</div></div>";
       }
 
-      // ---- similar ----
-      const similar = ((data.similar && data.similar.results) || []).filter(s => s.poster_path || s.title || s.name).slice(0, 14);
-      if (similar.length) {
-        html += '<div class="detail-section"><h3>Ähnliche Titel</h3><div class="hscroll" id="detail-similar">';
-        html += similar.map(s => {
-          const st = isTv ? (s.name || s.original_name) : (s.title || s.original_title);
-          return '<div class="sim" data-media="' + mediaType + '" data-id="' + s.id + '">' +
-            (s.poster_path
-              ? '<img src="' + IMG_BASE + "w185" + s.poster_path + '" alt="">'
-              : '<div class="sim-noimg">' + esc(st || "") + "</div>") +
-            '<div class="sim-title">' + esc(st || "") + "</div></div>";
-        }).join("");
-        html += "</div></div>";
-      }
+      // ---- collection ("Weitere Teile") + recommendations (point 13) ----
+      // Filled after innerHTML below: collection needs an extra fetch; both use card style.
+      if (!isTv) html += '<div id="detail-collection"></div>';   // movies can belong to a collection
+      html += '<div id="detail-recs"></div>';
+
+      // ---- block / unblock (point 12): subtle, at the very bottom ----
+      html += '<div class="detail-block-row"><button id="detail-block" class="detail-block-btn" type="button"></button></div>';
 
       detailBody.innerHTML = html;
       detailBody.scrollTop = 0;
@@ -3066,11 +3264,24 @@
         refreshResults();
       });
       document.getElementById("detail-lists").addEventListener("click", () => openListPicker(r, true));
-      const simWrap = document.getElementById("detail-similar");
-      if (simWrap) simWrap.addEventListener("click", e => {
-        const card = e.target.closest(".sim");
-        if (card) openDetail(card.dataset.media, parseInt(card.dataset.id, 10));
-      });
+      renderRecs(data, mediaType);                                       // point 13b: recommendations
+      if (!isTv) renderCollection(data.belongs_to_collection, data.id, mediaType);  // point 13a: collection
+      // point 12: block / unblock toggle
+      const blockBtn = document.getElementById("detail-block");
+      if (blockBtn) {
+        const paintBlock = () => {
+          const on = isBlocked(mediaType, data.id);
+          blockBtn.textContent = on ? "Sperre aufheben" : "Titel sperren";
+          blockBtn.classList.toggle("blocked", on);
+        };
+        paintBlock();
+        blockBtn.addEventListener("click", () => {
+          const on = !isBlocked(mediaType, data.id);
+          setBlocked(r, on);
+          showToast(on ? "Titel gesperrt" : "Sperre aufgehoben");
+          paintBlock();
+        });
+      }
       if (isTv) renderProgress(data);
       if (isTv) renderEpRatings(data);
       // N1: retro-apply studio tags if this title is already logged (covers card-logged titles)
@@ -3085,6 +3296,52 @@
       delete db.items[key];
       heroItemCount = -1;
       saveDB();
+    }
+
+    // point 13b: up to 10 recommendations, same card style as the discover rows
+    function renderRecs(data, mediaType) {
+      const host = document.getElementById("detail-recs");
+      if (!host) return;
+      const recs = ((data.recommendations && data.recommendations.results) || [])
+        .filter(s => s.poster_path).slice(0, 10);
+      if (!recs.length) return;
+      const sec = document.createElement("div"); sec.className = "detail-section";
+      sec.innerHTML = "<h3>" + (mediaType === "tv" ? "Ähnliche Serien" : "Ähnliche Filme") + "</h3>";
+      const scroll = document.createElement("div"); scroll.className = "hscroll";
+      recs.forEach(rec => scroll.appendChild(discPosterCard(rec, mediaType)));
+      sec.appendChild(scroll);
+      host.appendChild(sec);
+    }
+
+    // point 13a: other films in the same collection (extra fetch); checkmark for watched ones
+    async function renderCollection(coll, currentId, mediaType) {
+      const host = document.getElementById("detail-collection");
+      if (!host || !coll) return;
+      try {
+        const res = await fetch("https://api.themoviedb.org/3/collection/" + coll.id
+          + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
+        if (!res.ok) return;
+        const d = await res.json();
+        const parts = (d.parts || [])
+          .filter(p => p.poster_path && p.id !== currentId)
+          .sort((a, b) => (a.release_date || "").localeCompare(b.release_date || ""));
+        if (!parts.length) return;
+        const sec = document.createElement("div"); sec.className = "detail-section";
+        sec.innerHTML = "<h3>Weitere Teile</h3>";
+        const scroll = document.createElement("div"); scroll.className = "hscroll";
+        parts.forEach(p => {
+          const card = discPosterCard(p, mediaType);
+          if (db.items[keyOf(mediaType, p.id)]) {           // already watched → checkmark badge
+            const badge = document.createElement("div");
+            badge.className = "seen-badge";
+            badge.innerHTML = '<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>';
+            const pw = card.querySelector(".pcard-poster"); if (pw) pw.appendChild(badge);
+          }
+          scroll.appendChild(card);
+        });
+        sec.appendChild(scroll);
+        host.appendChild(sec);
+      } catch (e) { /* ignore */ }
     }
 
     function refreshDetailStatus() {
@@ -4362,11 +4619,27 @@
       return card;
     }
 
+    // point 12: blocklist helpers. Keyed by "mediaType:id" so a blocked movie can't
+    // accidentally hide a series that happens to share the TMDB id.
+    function isBlocked(mediaType, id) { return !!(db.blocklist && db.blocklist[keyOf(mediaType, id)]); }
+    function setBlocked(rec, on) {
+      const key = keyOf(rec.media_type, rec.id);
+      if (on) db.blocklist[key] = { id: rec.id, mediaType: rec.media_type, title: titleOf(rec) || "", poster: rec.poster_path || "" };
+      else delete db.blocklist[key];
+      saveDB();
+    }
+    // Drop blocked titles — applied to every discovery AND search path (point 12).
+    function filterBlocked(items, mediaType) {
+      return items.filter(it => !isBlocked(mediaType || it.media_type, it.id));
+    }
+
     // point 6: drop already-watched titles when the toggle is on. mediaType may be
     // null for mixed rows (then fall back to the item's own media_type).
+    // Also strips blocked titles (point 12) so every discover path is covered.
     function filterHidden(items, mediaType) {
-      if (!db.hideWatched) return items;
-      return items.filter(it => !db.items[keyOf(mediaType || it.media_type, it.id)]);
+      let out = filterBlocked(items, mediaType);
+      if (db.hideWatched) out = out.filter(it => !db.items[keyOf(mediaType || it.media_type, it.id)]);
+      return out;
     }
 
     function buildRows() {
@@ -4443,7 +4716,7 @@
         if (!res.ok) throw new Error();
         const d = await res.json();
         if (discSearch.value.trim() !== q) return;
-        const items = (d.results || []).filter(r => r.media_type === "movie" || r.media_type === "tv").slice(0, 30);
+        const items = filterBlocked((d.results || []).filter(r => r.media_type === "movie" || r.media_type === "tv"), null).slice(0, 30);   // point 12
         renderDiscResults(items);
       } catch (e) {
         if (e.name === "AbortError") return;
@@ -4782,7 +5055,28 @@
       ).join("");
     }
 
+    // point 12: list blocked titles with an unblock button (invisible when empty)
+    function renderBlocked() {
+      const host = document.getElementById("profile-blocked");
+      if (!host) return;
+      const entries = Object.entries(db.blocklist || {});
+      if (!entries.length) { host.innerHTML = ""; return; }
+      let html = '<div class="detail-section"><h3>Gesperrte Titel</h3><div class="blocked-list">';
+      html += entries.map(([key, b]) =>
+        '<div class="blocked-row">' +
+          (b.poster ? '<img class="blocked-thumb" loading="lazy" src="' + IMG_BASE + "w92" + b.poster + '" alt="">' : '<div class="blocked-thumb empty"></div>') +
+          '<div class="blocked-title">' + esc(b.title || key) + "</div>" +
+          '<button class="blocked-unblock" type="button" data-key="' + esc(key) + '">Entsperren</button>' +
+        "</div>").join("");
+      html += "</div></div>";
+      host.innerHTML = html;
+      host.querySelectorAll(".blocked-unblock").forEach(btn => {
+        btn.addEventListener("click", () => { delete db.blocklist[btn.dataset.key]; saveDB(); renderBlocked(); });
+      });
+    }
+
     async function renderProfile() {
+      renderBlocked();   // point 12: always render the blocklist, even with no logged items
       const noteEl = document.getElementById("profile-note");
       const items = Object.values(db.items);
       const movies = items.filter(i => i.mediaType === "movie");
