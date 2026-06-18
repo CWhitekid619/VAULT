@@ -953,6 +953,13 @@
     .dfb-advanced { margin-top: 12px; display: flex; flex-direction: column; gap: 12px; }
     .filter-field .modal-input { margin-bottom: 0; }
 
+    /* "Gesehene ausblenden" toggle (point 6) */
+    .hide-watched-toggle {
+      display: flex; align-items: center; gap: 9px; margin-top: 12px;
+      font-size: 14px; color: var(--text-dim); cursor: pointer; user-select: none;
+    }
+    .hide-watched-toggle input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+
     /* Cast / director autocomplete (16a) */
     .person-ac { position: relative; }
     .person-ac-list {
@@ -1265,6 +1272,10 @@
           </div>
           <button id="df-toggle" class="dfb-toggle" type="button" aria-label="Mehr Filter">⋯</button>
         </div>
+        <label class="hide-watched-toggle">
+          <input id="df-hide-watched" type="checkbox" />
+          <span>Gesehene ausblenden</span>
+        </label>
         <div id="df-advanced" class="dfb-advanced" hidden>
           <div class="filter-field">
             <label for="df-cast">Schauspieler</label>
@@ -1290,8 +1301,8 @@
           <div class="filter-field">
             <label>Jahr</label>
             <div class="filter-pair">
-              <select id="df-yr-min" class="modal-select" aria-label="Jahr von"><option value="">von: Egal</option><option value="1970">ab 1970</option><option value="1980">ab 1980</option><option value="1990">ab 1990</option><option value="2000">ab 2000</option><option value="2010">ab 2010</option><option value="2015">ab 2015</option><option value="2020">ab 2020</option><option value="2023">ab 2023</option></select>
-              <select id="df-yr-max" class="modal-select" aria-label="Jahr bis"><option value="">bis: Egal</option><option value="1989">bis 1989</option><option value="1999">bis 1999</option><option value="2009">bis 2009</option><option value="2019">bis 2019</option><option value="2022">bis 2022</option><option value="2024">bis 2024</option><option value="2025">bis 2025</option></select>
+              <select id="df-yr-min" class="modal-select" aria-label="Jahr von"><option value="">von: Egal</option></select>
+              <select id="df-yr-max" class="modal-select" aria-label="Jahr bis"><option value="">bis: Egal</option></select>
             </div>
           </div>
           <div class="filter-field">
@@ -1434,6 +1445,17 @@
         <div id="sheet-buckets" class="bucket-list"></div>
         <button id="sheet-cancel2" class="sheet-btn-cancel" type="button">Abbrechen</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ============ QUICK-RATE POPUP (points 5 + 8) ============ -->
+  <!-- Fast 5-bucket rating shown right after a Watch press; tap outside = skip -->
+  <div id="qr-backdrop" class="sheet-backdrop" hidden>
+    <div class="sheet qr-sheet" role="dialog" aria-modal="true" aria-label="Bewerten">
+      <div class="sheet-handle"></div>
+      <div class="sheet-section-label">Wie war's?</div>
+      <div id="qr-buckets" class="bucket-list"></div>
+      <button id="qr-skip" class="sheet-btn-cancel" type="button">Überspringen</button>
     </div>
   </div>
 
@@ -1760,13 +1782,14 @@
             meta: parsed.meta || {},
             epRatings: parsed.epRatings || {},
             tagDefs: parsed.tagDefs || null,
-            homeOrder: Array.isArray(parsed.homeOrder) ? parsed.homeOrder : null
+            homeOrder: Array.isArray(parsed.homeOrder) ? parsed.homeOrder : null,
+            hideWatched: typeof parsed.hideWatched === "boolean" ? parsed.hideWatched : true   // point 6: default ON
           };
           migrateTags(out);
           return out;
         }
       } catch (e) { /* corrupted store — start fresh */ }
-      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice() };
+      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true };
     }
     let db = loadDB();
     function saveDB() {
@@ -2458,6 +2481,37 @@
       refreshDetailStatus();
     }
 
+    // ---------- Quick-rate popup (points 5 + 8) ----------
+    // Lightweight 5-bucket rating shown right after a Watch press. Picking a bucket
+    // rates + ranks the title (logItem); dismissing leaves it watched + "Ungerankt".
+    const qrBackdrop = document.getElementById("qr-backdrop");
+    const qrBuckets  = document.getElementById("qr-buckets");
+    let qrItem = null;
+
+    function openQuickRate(r) {
+      qrItem = r;
+      const existing = db.items[keyOf(r.media_type, r.id)];
+      qrBuckets.innerHTML = "";
+      BUCKETS.forEach((b, i) => {
+        const el = document.createElement("button");
+        el.className = "bucket" + (existing && existing.bucket === b.id ? " selected" : "");
+        el.type = "button";
+        el.innerHTML = '<span class="bucket-rank">' + (i + 1) + "</span><span>" + b.label + "</span>";
+        el.addEventListener("click", () => { logItem(r, b.id); closeQuickRate(); });
+        qrBuckets.appendChild(el);
+      });
+      qrBackdrop.hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+    function closeQuickRate() {
+      qrBackdrop.hidden = true;
+      qrItem = null;
+      document.body.style.overflow = "";
+    }
+    // Tap outside the sheet, or "Überspringen" → close instantly (no confirmation)
+    qrBackdrop.addEventListener("click", e => { if (e.target === qrBackdrop) closeQuickRate(); });
+    document.getElementById("qr-skip").addEventListener("click", closeQuickRate);
+
     // ---------- Toast ----------
     let toastTimer = null;
     function showToast(msg) {
@@ -2781,7 +2835,8 @@
 
       const base = "https://api.themoviedb.org/3/" + mediaType + "/" + id;
       const url = base + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG
-        + "&append_to_response=credits,videos,watch/providers,similar";
+        + "&append_to_response=credits,videos,watch/providers,similar,images"
+        + "&include_image_language=null,en,de";   // point 7: text-free + EN/DE scene stills
       try {
         const res = await fetch(url);
         if (!res.ok) throw new Error("HTTP " + res.status);
@@ -2922,6 +2977,14 @@
       }
       html += "</div>";
 
+      // ---- scene stills gallery (point 7) ----
+      const stills = ((data.images && data.images.backdrops) || []).filter(b => b.file_path).slice(0, 8);
+      if (stills.length) {
+        html += '<div class="detail-section"><h3>Szenenbilder</h3><div class="hscroll still-scroll">';
+        html += stills.map(b => '<div class="still"><img loading="lazy" src="' + IMG_BASE + "w500" + b.file_path + '" alt=""></div>').join("");
+        html += "</div></div>";
+      }
+
       // ---- streaming providers (DE) ----
       const wp = data["watch/providers"] && data["watch/providers"].results && data["watch/providers"].results.DE;
       html += '<div class="detail-section"><h3>Streaming (DE)</h3>';
@@ -2983,6 +3046,7 @@
           logWatched(r);                // not watched → mark watched immediately as "Ungerankt" (P3)
           applyStudioTags(key, data.production_companies);   // N1: auto-tag studios on log
           renderPersonal(mediaType, data.id);
+          openQuickRate(r);             // points 5 + 8: show the 5-bucket popup right away
         }
       });
       // Tap the status line of an unranked title to rate it later (P3 optional rating)
@@ -3145,11 +3209,12 @@
     // ====================================================================
     function getMeta(key) {
       const m = db.meta[key];
-      return { note: (m && m.note) || "", tags: (m && m.tags) || [], rewatch: !!(m && m.rewatch), flagged: !!(m && m.flagged) };
+      return { note: (m && m.note) || "", tags: (m && m.tags) || [], rewatch: !!(m && m.rewatch), flagged: !!(m && m.flagged), removedTags: (m && m.removedTags) || [] };
     }
     function saveMeta(key, meta) {
-      if (!meta.note && (!meta.tags || !meta.tags.length) && !meta.rewatch && !meta.flagged) delete db.meta[key];
-      else db.meta[key] = { note: meta.note || "", tags: meta.tags || [], rewatch: !!meta.rewatch, flagged: !!meta.flagged };
+      const removed = meta.removedTags || [];
+      if (!meta.note && (!meta.tags || !meta.tags.length) && !meta.rewatch && !meta.flagged && !removed.length) delete db.meta[key];
+      else db.meta[key] = { note: meta.note || "", tags: meta.tags || [], rewatch: !!meta.rewatch, flagged: !!meta.flagged, removedTags: removed };
       saveDB();
     }
 
@@ -3218,6 +3283,7 @@
       const meta = getMeta(key);
       let changed = false;
       studioTags.forEach(t => {
+        if (meta.removedTags.includes(t)) return;   // respect a tag the user removed manually (point 1)
         addTagDef(t);                 // ensure the tag exists in the database
         if (!meta.tags.includes(t)) { meta.tags.push(t); changed = true; }
       });
@@ -3271,6 +3337,7 @@
           x.addEventListener("click", () => {
             const c = getMeta(key);
             c.tags = c.tags.filter(g => g !== tag);
+            if (!c.removedTags.includes(tag)) c.removedTags.push(tag);   // remember removal so auto-tags don't return (point 1)
             saveMeta(key, c);
             renderTags(); fillTagSelect();
           });
@@ -3281,7 +3348,9 @@
       function addTagToTitle(tag) {
         if (!tag) return;
         const cur = getMeta(key);
-        if (!cur.tags.includes(tag)) { cur.tags.push(tag); saveMeta(key, cur); }
+        cur.removedTags = cur.removedTags.filter(t => t !== tag);   // re-adding clears the removal memory (point 1)
+        if (!cur.tags.includes(tag)) cur.tags.push(tag);
+        saveMeta(key, cur);
         renderTags(); fillTagSelect();
       }
       renderTags(); fillTagSelect();
@@ -4253,9 +4322,15 @@
       });
       watch.addEventListener("click", e => {
         e.stopPropagation();
-        if (db.items[key]) { showToast("Schon als gesehen markiert"); return; }
-        logWatched(itemToR(item, mediaType));  // immediate, no popup → "Ungerankt"
-        setWatch(); setWl();                   // logWatched also clears the watchlist entry
+        if (db.items[key]) {                     // second press → unwatch (true toggle, point 2)
+          unwatchItem(key);
+          showToast("Nicht mehr als gesehen markiert");
+        } else {
+          const rr = itemToR(item, mediaType);
+          logWatched(rr);                        // watched immediately (Ungerankt)
+          openQuickRate(rr);                     // offer a fast rating (points 5 + 8)
+        }
+        setWatch(); setWl();                     // logWatched also clears the watchlist entry
       });
 
       wrap.appendChild(wl); wrap.appendChild(watch);
@@ -4287,6 +4362,13 @@
       return card;
     }
 
+    // point 6: drop already-watched titles when the toggle is on. mediaType may be
+    // null for mixed rows (then fall back to the item's own media_type).
+    function filterHidden(items, mediaType) {
+      if (!db.hideWatched) return items;
+      return items.filter(it => !db.items[keyOf(mediaType || it.media_type, it.id)]);
+    }
+
     function buildRows() {
       discRows.innerHTML = "";
       for (const def of DISC_ROWS) {
@@ -4308,7 +4390,7 @@
         const d = await res.json();
         let items = (d.results || []);
         if (def.mixed) items = items.filter(it => it.media_type === "movie" || it.media_type === "tv");
-        items = items.filter(it => it.poster_path).slice(0, 18);
+        items = filterHidden(items.filter(it => it.poster_path), def.mixed ? null : def.media).slice(0, 18);
         sc.innerHTML = "";
         if (!items.length) { sc.innerHTML = '<div class="disc-loading">—</div>'; return; }
         const frag = document.createDocumentFragment();
@@ -4411,7 +4493,7 @@
         const d = await res.json();
         gb.totalPages = Math.min(d.total_pages || 1, 500);
         if (gb.page === 1) discGenreGrid.innerHTML = "";
-        const items = (d.results || []).filter(it => it.poster_path);
+        const items = filterHidden((d.results || []).filter(it => it.poster_path), "movie");   // point 6
         if (gb.page === 1 && !items.length) { discGenreGrid.innerHTML = '<div class="grid-empty">Nichts gefunden.</div>'; return; }
         const frag = document.createDocumentFragment();
         items.forEach(it => {
@@ -4462,6 +4544,21 @@
         dfGenresFilled = media;
       } catch (e) { /* ignore */ }
     }
+
+    // Year range options are generated dynamically so the top always reaches the
+    // current year + 2 (point 3); the "bis" field defaults to the current year.
+    function fillYearSelects() {
+      const now = new Date().getFullYear();
+      const maxY = now + 2, minY = 1950;
+      let opts = "";
+      for (let y = maxY; y >= minY; y--) opts += '<option value="' + y + '">' + y + "</option>";
+      const yrMin = document.getElementById("df-yr-min");
+      const yrMax = document.getElementById("df-yr-max");
+      yrMin.innerHTML = '<option value="">von: Egal</option>' + opts;
+      yrMax.innerHTML = '<option value="">bis: Egal</option>' + opts;
+      yrMax.value = String(now);   // default upper bound = current year
+    }
+    fillYearSelects();
 
     function buildFilterUrl() {
       const media = dfMedia.value;
@@ -4514,7 +4611,7 @@
         const d = await res.json();
         fb.totalPages = Math.min(d.total_pages || 1, 500);
         if (fb.page === 1) dfGrid.innerHTML = "";
-        const items = (d.results || []).filter(it => it.poster_path);
+        const items = filterHidden((d.results || []).filter(it => it.poster_path), fb.media);   // point 6
         if (fb.page === 1 && !items.length) { dfGrid.innerHTML = '<div class="grid-empty">Nichts gefunden.</div>'; return; }
         const frag = document.createDocumentFragment();
         items.forEach(it => frag.appendChild(fbCell(it, fb.media)));
@@ -4563,6 +4660,7 @@
         const yearOf = c => { const s = media === "tv" ? c.first_air_date : c.release_date; return s ? parseInt(s.slice(0, 4), 10) : 0; };
 
         items = items.filter(c => c.poster_path);
+        items = filterHidden(items, media);   // point 6: hide already-watched
         if (genreId)   items = items.filter(c => (c.genre_ids || []).includes(genreId));
         if (minRating) items = items.filter(c => (c.vote_average || 0) >= minRating);
         if (yrMin)     items = items.filter(c => yearOf(c) >= yrMin);
@@ -4649,6 +4747,20 @@
     });
     document.getElementById("df-back").addEventListener("click", showDiscBrowse);
     dfMore.addEventListener("click", () => { if (personFilterActive()) renderPersonSlice(); else loadFilterPage(); });
+
+    // point 6: "Gesehene ausblenden" toggle — default ON, persisted, re-renders the active view
+    const hideWatchedCb = document.getElementById("df-hide-watched");
+    hideWatchedCb.checked = !!db.hideWatched;
+    function refreshDiscoverWatched() {
+      if (discInited) buildRows();                            // browse rows
+      if (!discFiltered.hidden) applyFilterBrowse();          // active filter / person grid
+      if (!discGenreView.hidden) { gb.page = 0; discGenreGrid.innerHTML = ""; loadGenrePage(); }
+    }
+    hideWatchedCb.addEventListener("change", () => {
+      db.hideWatched = hideWatchedCb.checked;
+      saveDB();
+      refreshDiscoverWatched();
+    });
 
     // ====================================================================
     //  PROFILE  (stats)
