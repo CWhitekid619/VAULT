@@ -3966,10 +3966,15 @@
       const cc = data.combined_credits || {};
       const seen = {};
       const credits = [];
+      const _blockedGenres = new Set([10767, 10764, 10763]); // Talk, Reality, News
+      const _selfCharRe    = /\b(guest|self|himself|herself)\b/i;
       [...(cc.cast || []), ...(cc.crew || [])].forEach(c => {
         if (c.media_type !== "movie" && c.media_type !== "tv") return;
         if (!c.poster_path) return;
-        if ((c.vote_count || 0) < 100) return;  // R7-P4: filter obscure/unreleased titles
+        if (c.job && c.job !== "Director") return;
+        if (c.character && _selfCharRe.test(c.character)) return;
+        if ((c.genre_ids || []).some(g => _blockedGenres.has(g))) return;
+        if ((c.vote_count || 0) < (c.media_type === "tv" ? 200 : 100)) return;
         const k = c.media_type + ":" + c.id;
         if (seen[k]) return;
         seen[k] = true;
@@ -5564,8 +5569,12 @@
         const yrMax     = parseInt(document.getElementById("df-yr-max").value, 10) || 0;
         const yearOf = c => { const s = media === "tv" ? c.first_air_date : c.release_date; return s ? parseInt(s.slice(0, 4), 10) : 0; };
 
+        const _blockedGenres = new Set([10767, 10764, 10763]); // Talk, Reality, News
+        const _selfCharRe    = /\b(guest|self|himself|herself)\b/i;
         items = items.filter(c => c.poster_path);
-        items = items.filter(c => (c.vote_count || 0) >= 100);  // R7-P4: filter obscure/unreleased titles
+        items = items.filter(c => !c.character || !_selfCharRe.test(c.character));
+        items = items.filter(c => !(c.genre_ids || []).some(g => _blockedGenres.has(g)));
+        items = items.filter(c => (c.vote_count || 0) >= (media === "tv" ? 200 : 100));
         items = filterHidden(items, media);   // point 6: hide already-watched
         if (genreId)   items = items.filter(c => (c.genre_ids || []).includes(genreId));
         if (minRating) items = items.filter(c => (c.vote_average || 0) >= minRating);
