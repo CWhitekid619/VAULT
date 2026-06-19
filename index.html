@@ -1299,6 +1299,33 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .grid-badge.ghost { background: rgba(0,0,0,.7); color: var(--text); border: 1px solid var(--border); }
+
+    /* ---------- R7: People ranking + tier labels ---------- */
+    .rank-tier { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+    .rank-tier.unranked-lbl { color: var(--text-mute); }
+    .rank-poster.round { border-radius: 50%; }
+
+    /* "Ins Ranking" toggle on cast cards */
+    .rank-in-btn {
+      display: block; width: 100%; margin-top: 4px;
+      background: none; border: 1px solid var(--border);
+      color: var(--text-dim); border-radius: 6px; padding: 3px 6px;
+      font-size: 10px; font-family: inherit; cursor: pointer;
+      white-space: nowrap; text-align: center;
+    }
+    .rank-in-btn.active { background: var(--accent); color: #1a1206; border-color: var(--accent); }
+
+    /* Person hero ranking info */
+    .person-rank-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .person-rank-pos { font-size: 13px; color: var(--text-dim); }
+    .person-rank-pos strong { color: var(--text); }
+
+    /* Person results in search */
+    .people-section-label { font-size: 12px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-mute); padding: 14px 0 4px; }
+
+    /* Duel pre-filter */
+    .duel-filter { display: flex; gap: 8px; margin-bottom: 10px; }
+    .duel-filter select { flex: 1; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 7px 10px; font-size: 13px; font-family: inherit; }
   </style>
 </head>
 <body data-tab="log">
@@ -1515,9 +1542,10 @@
       <div class="segmented" id="rank-toggle">
         <button class="seg active" type="button" data-media="movie">Filme</button>
         <button class="seg" type="button" data-media="tv">Serien</button>
+        <button class="seg" type="button" data-media="person">Schauspieler</button>
       </div>
 
-      <div class="rank-filters">
+      <div class="rank-filters" id="rank-filters">
         <select id="rank-genre" class="modal-select"><option value="">Alle Genres</option></select>
         <select id="rank-tag" class="modal-select"><option value="">Alle Tags</option></select>
       </div>
@@ -1618,6 +1646,17 @@
       <button id="duel-close" class="duel-close" type="button" aria-label="Schließen">
         <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
       </button>
+    </div>
+    <div class="duel-filter" id="duel-filter">
+      <select id="df-duel-bucket" class="modal-select">
+        <option value="">Alle Zonen</option>
+        <option value="great">Richtig gut</option>
+        <option value="good">Gut</option>
+        <option value="watchable">Watchable</option>
+        <option value="meh">Meh</option>
+        <option value="bad">Schlecht</option>
+      </select>
+      <select id="df-duel-genre" class="modal-select"><option value="">Alle Genres</option></select>
     </div>
     <div class="duel-cards">
       <button id="duel-a" class="duel-card" type="button">
@@ -2012,13 +2051,14 @@
             hideWatchlist: typeof parsed.hideWatchlist === "boolean" ? parsed.hideWatchlist : false,  // R6-P8: default OFF
             blocklist: (parsed.blocklist && typeof parsed.blocklist === "object") ? parsed.blocklist : {},   // point 12
             hiddenSeries: (parsed.hiddenSeries && typeof parsed.hiddenSeries === "object") ? parsed.hiddenSeries : {},   // hide series from Home view only
-            homeCustomSections: Array.isArray(parsed.homeCustomSections) ? parsed.homeCustomSections : []  // custom list IDs pinned to Home
+            homeCustomSections: Array.isArray(parsed.homeCustomSections) ? parsed.homeCustomSections : [],  // custom list IDs pinned to Home
+            people: (parsed.people && typeof parsed.people === "object") ? parsed.people : {}  // R7: ranked actors/directors
           };
           migrateTags(out);
           return out;
         }
       } catch (e) { /* corrupted store — start fresh */ }
-      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, homeCustomSections: [] };
+      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, homeCustomSections: [], people: {} };
     }
     let db = loadDB();
     function saveDB() {
@@ -2051,6 +2091,21 @@
       if (score >= 1250) return "watchable";
       if (score >= 950)  return "meh";
       return "bad";
+    }
+
+    // R7: add/remove a person from db.people ranking pool
+    function togglePersonRanking(personId, name, photo, knownFor) {
+      if (!db.people) db.people = {};
+      if (db.people[personId]) {
+        delete db.people[personId];
+        saveDB();
+        showToast("Aus Ranking entfernt");
+      } else {
+        db.people[personId] = { id: personId, name: name || "", photo: photo || "", known_for: knownFor || "", score: 1400, unranked: true, addedAt: Date.now() };
+        saveDB();
+        showToast("Ins Ranking hinzugefügt");
+      }
+      if (rankMedia === "person") renderRanking();
     }
 
     // ---------- TMDB helpers ----------
@@ -2100,26 +2155,52 @@
     async function runSearch(q) {
       if (searchAbort) searchAbort.abort();
       searchAbort = new AbortController();
-      const url = "https://api.themoviedb.org/3/search/multi"
-        + "?api_key=" + TMDB_KEY
-        + "&language=" + TMDB_LANG
-        + "&include_adult=false&query=" + encodeURIComponent(q);
+      const base = "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG + "&include_adult=false&query=" + encodeURIComponent(q);
+      const mediaUrl  = "https://api.themoviedb.org/3/search/multi"  + base;
+      const personUrl = "https://api.themoviedb.org/3/search/person" + base;
       try {
-        const res = await fetch(url, { signal: searchAbort.signal });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const data = await res.json();
-        if (searchInput.value.trim() !== q) return; // stale response
-        const items = filterBlocked((data.results || [])
-          .filter(r => r.media_type === "movie" || r.media_type === "tv"), null)   // point 12
-          .slice(0, 20);
-        renderResults(items);
+        const [mRes, pRes] = await Promise.all([
+          fetch(mediaUrl,  { signal: searchAbort.signal }),
+          fetch(personUrl, { signal: searchAbort.signal })
+        ]);
+        if (!mRes.ok) throw new Error("HTTP " + mRes.status);
+        const [mData, pData] = await Promise.all([mRes.json(), pRes.ok ? pRes.json() : { results: [] }]);
+        if (searchInput.value.trim() !== q) return;
+        const items  = filterBlocked((mData.results || []).filter(r => r.media_type === "movie" || r.media_type === "tv"), null).slice(0, 20);
+        const people = (pData.results || []).slice(0, 5);
+        renderResults(items, people);
       } catch (e) {
         if (e.name === "AbortError") return;
-        renderResults("error");
+        renderResults("error", []);
       }
     }
 
-    function renderResults(items) {
+    // R7: shared person result row (Home + Discover search)
+    function buildPersonResultRow(p) {
+      const btn = document.createElement("button");
+      btn.className = "result"; btn.type = "button";
+      if (p.profile_path) {
+        const img = document.createElement("img"); img.className = "result-poster"; img.loading = "lazy";
+        img.src = IMG_BASE + "w92" + p.profile_path; img.alt = "";
+        btn.appendChild(img);
+      } else {
+        const ph = document.createElement("div"); ph.className = "result-poster empty";
+        ph.textContent = (p.name || "?").charAt(0);
+        btn.appendChild(ph);
+      }
+      const meta  = document.createElement("div"); meta.className = "result-meta";
+      const title = document.createElement("div"); title.className = "result-title"; title.textContent = p.name || "";
+      const sub   = document.createElement("div"); sub.className = "result-sub";
+      sub.textContent = p.known_for_department === "Directing" ? "Regisseur"
+        : p.known_for_department === "Acting" ? "Schauspieler"
+        : (p.known_for_department || "Person");
+      meta.appendChild(title); meta.appendChild(sub);
+      btn.appendChild(meta);
+      btn.addEventListener("click", () => openPerson(p.id, p.name || ""));
+      return btn;
+    }
+
+    function renderResults(items, people) {
       if (Array.isArray(items)) lastItems = items;
       resultsEl.innerHTML = "";
 
@@ -2130,13 +2211,18 @@
         resultsEl.innerHTML = '<div class="results-empty">Suche fehlgeschlagen. Internet prüfen?</div>';
         return;
       }
-      if (items.length === 0) {
+      if (!items.length && (!people || !people.length)) {
         resultsEl.innerHTML = '<div class="results-empty">Nichts gefunden.</div>';
         return;
       }
 
       const frag = document.createDocumentFragment();
       for (const r of items) frag.appendChild(buildResultRow(r, () => openSheet(r)));
+      if (people && people.length) {
+        const lbl = document.createElement("div"); lbl.className = "people-section-label"; lbl.textContent = "Personen";
+        frag.appendChild(lbl);
+        people.forEach(p => frag.appendChild(buildPersonResultRow(p)));
+      }
       resultsEl.appendChild(frag);
     }
 
@@ -3035,18 +3121,28 @@
 
     // Populate the genre + tag filter dropdowns from what the user has actually logged (B2)
     async function populateRankFilters() {
+      if (rankMedia === "person") {
+        rankGenreSel.innerHTML = '<option value="">Alle Genres</option>';
+        rankTagSel.innerHTML   = '<option value="">Alle Tags</option>';
+        const duelGenreSel = document.getElementById("df-duel-genre");
+        if (duelGenreSel) duelGenreSel.innerHTML = '<option value="">Alle Genres</option>';
+        return;
+      }
       await ensureGenres();
       const items = Object.values(db.items).filter(it => it.mediaType === rankMedia);
-      // genres present in this media set
       const gids = new Set();
       items.forEach(it => (it.genreIds || []).forEach(g => gids.add(g)));
       const prevG = rankGenreSel.value;
-      rankGenreSel.innerHTML = '<option value="">Alle Genres</option>' +
+      const genreOptions = '<option value="">Alle Genres</option>' +
         [...gids].map(id => ({ id, name: (genreMapById && genreMapById[id]) || null }))
           .filter(g => g.name)
           .sort((a, b) => a.name.localeCompare(b.name))
           .map(g => '<option value="' + g.id + '">' + esc(g.name) + "</option>").join("");
+      rankGenreSel.innerHTML = genreOptions;
       if ([...rankGenreSel.options].some(o => o.value === prevG)) rankGenreSel.value = prevG;
+      // mirror same options into duel genre filter
+      const duelGenreSel = document.getElementById("df-duel-genre");
+      if (duelGenreSel) duelGenreSel.innerHTML = genreOptions;
       // tags present on this media set
       const tags = new Set();
       items.forEach(it => (getMeta(keyOf(it.mediaType, it.id)).tags || []).forEach(t => tags.add(t)));
@@ -3057,12 +3153,20 @@
     }
 
     function renderRanking() {
-      const genreFilter = rankGenreSel.value ? parseInt(rankGenreSel.value, 10) : null;
-      const tagFilter   = rankTagSel.value || null;
-      let items = Object.values(db.items).filter(it => it.mediaType === rankMedia);
-      if (genreFilter) items = items.filter(it => (it.genreIds || []).includes(genreFilter));
-      if (tagFilter)   items = items.filter(it => (getMeta(keyOf(it.mediaType, it.id)).tags || []).includes(tagFilter));
-      items.forEach(ensureScore);
+      const isPerson    = rankMedia === "person";
+      const genreFilter = (!isPerson && rankGenreSel.value) ? parseInt(rankGenreSel.value, 10) : null;
+      const tagFilter   = (!isPerson && rankTagSel.value)   ? rankTagSel.value : null;
+
+      let items;
+      if (isPerson) {
+        items = Object.values(db.people || {});
+        items.forEach(p => { if (typeof p.score !== "number") p.score = 1400; });
+      } else {
+        items = Object.values(db.items).filter(it => it.mediaType === rankMedia);
+        if (genreFilter) items = items.filter(it => (it.genreIds || []).includes(genreFilter));
+        if (tagFilter)   items = items.filter(it => (getMeta(keyOf(it.mediaType, it.id)).tags || []).includes(tagFilter));
+        items.forEach(ensureScore);
+      }
 
       const duelBtn = document.getElementById("duel-start");
       if (duelBtn) duelBtn.disabled = duelItems().length < 2;
@@ -3071,58 +3175,64 @@
       if (items.length === 0) {
         const empty = document.createElement("div");
         empty.className = "results-empty";
-        if (genreFilter || tagFilter) {
+        if (isPerson) {
+          empty.textContent = "Noch keine Personen im Ranking. Füge Schauspieler oder Regisseure über ihre Detailseite hinzu.";
+        } else if (genreFilter || tagFilter) {
           empty.textContent = "Keine Treffer für diesen Filter.";
         } else {
-          empty.textContent = rankMedia === "movie"
-            ? "Noch keine Filme eingetragen."
-            : "Noch keine Serien eingetragen.";
+          empty.textContent = rankMedia === "movie" ? "Noch keine Filme eingetragen." : "Noch keine Serien eingetragen.";
         }
         rankListEl.appendChild(empty);
         return;
       }
 
-      // Placed titles form the Elo leaderboard; "Ungerankt" titles sit at the bottom (P3)
-      const ranked   = items.filter(it => !it.unranked).sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
-      const unranked = items.filter(it =>  it.unranked).sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0));
+      const getName = it => isPerson ? (it.name || "") : (it.title || "");
+      const ranked   = items.filter(it => !it.unranked).sort((a, b) => b.score - a.score || getName(a).localeCompare(getName(b)));
+      const unranked = items.filter(it =>  it.unranked).sort((a, b) => (b.addedAt || b.loggedAt || 0) - (a.addedAt || a.loggedAt || 0));
 
       const frag = document.createDocumentFragment();
 
-      // Builds one leaderboard row; `num` is the rank label ("1", "2", … or "–" for unranked)
       const addRow = (it, num) => {
         const row = document.createElement("div");
         row.className = "rank-row";
 
-        const n = document.createElement("div");
-        n.className = "rank-num";
-        n.textContent = num;
+        const n = document.createElement("div"); n.className = "rank-num"; n.textContent = num;
         row.appendChild(n);
 
-        if (it.poster) {
+        const posterSrc = isPerson ? it.photo : it.poster;
+        const titleText = isPerson ? it.name  : it.title;
+        const subText   = isPerson ? (it.known_for || "") : (it.year || "");
+
+        if (posterSrc) {
           const img = document.createElement("img");
-          img.className = "rank-poster";
-          img.loading = "lazy";
-          img.src = IMG_BASE + "w92" + it.poster;
-          img.alt = "";
+          img.className = "rank-poster" + (isPerson ? " round" : "");
+          img.loading = "lazy"; img.src = IMG_BASE + "w92" + posterSrc; img.alt = "";
           row.appendChild(img);
         } else {
           const ph = document.createElement("div");
-          ph.className = "rank-poster empty";
-          ph.textContent = "Kein Bild";
+          ph.className = "rank-poster empty" + (isPerson ? " round" : "");
+          ph.textContent = isPerson ? ((titleText || "?").charAt(0)) : "Kein Bild";
           row.appendChild(ph);
         }
 
-        const bodyEl = document.createElement("div");
-        bodyEl.className = "rank-body";
-        const t = document.createElement("div"); t.className = "rank-title"; t.textContent = it.title;
+        const bodyEl = document.createElement("div"); bodyEl.className = "rank-body";
+        const t = document.createElement("div"); t.className = "rank-title"; t.textContent = titleText;
         bodyEl.appendChild(t);
-        if (it.year) { const y = document.createElement("div"); y.className = "rank-year"; y.textContent = it.year; bodyEl.appendChild(y); }
+        if (subText) { const y = document.createElement("div"); y.className = "rank-year"; y.textContent = subText; bodyEl.appendChild(y); }
+        // R7-P6: tier label per row
+        const tierLbl = document.createElement("div"); tierLbl.className = "rank-tier" + (it.unranked ? " unranked-lbl" : "");
+        tierLbl.textContent = it.unranked ? "Ungerankt" : bucketLabel(deriveBucket(it.score));
+        bodyEl.appendChild(tierLbl);
         row.appendChild(bodyEl);
 
-        // tap → detail; long-press → quick-rate popup (point 9b)
         let pressTimer = null, longFired = false;
-        const rRec = { media_type: it.mediaType, id: it.id, title: it.title, name: it.title, poster_path: it.poster };
-        const startPress = () => { longFired = false; pressTimer = setTimeout(() => { longFired = true; openQuickRate(rRec); }, 500); };
+        const startPress = () => {
+          longFired = false;
+          pressTimer = setTimeout(() => {
+            longFired = true;
+            if (!isPerson) openQuickRate({ media_type: it.mediaType, id: it.id, title: it.title, name: it.title, poster_path: it.poster });
+          }, 500);
+        };
         const cancelPress = () => clearTimeout(pressTimer);
         row.addEventListener("touchstart", startPress, { passive: true });
         row.addEventListener("touchend", cancelPress);
@@ -3130,33 +3240,32 @@
         row.addEventListener("mousedown", startPress);
         row.addEventListener("mouseup", cancelPress);
         row.addEventListener("mouseleave", cancelPress);
-        row.addEventListener("click", () => { if (longFired) { longFired = false; return; } openDetail(it.mediaType, it.id); });
+        row.addEventListener("click", () => {
+          if (longFired) { longFired = false; return; }
+          if (isPerson) openPerson(it.id, it.name);
+          else openDetail(it.mediaType, it.id);
+        });
         frag.appendChild(row);
       };
 
       const addZoneLabel = (text, n) => {
-        const lbl = document.createElement("div");
-        lbl.className = "zone-label";
+        const lbl = document.createElement("div"); lbl.className = "zone-label";
         const name = document.createElement("span"); name.textContent = text;
         const count = document.createElement("span"); count.className = "zone-count"; count.textContent = n;
         lbl.appendChild(name); lbl.appendChild(count);
         frag.appendChild(lbl);
       };
 
-      // Pre-count titles per derived zone for the zone labels (ranked only)
       const counts = {};
       ranked.forEach(it => { const z = deriveBucket(it.score); counts[z] = (counts[z] || 0) + 1; });
 
-      let rank = 0;
-      let lastZone = null;
+      let rank = 0, lastZone = null;
       for (const it of ranked) {
         const zone = deriveBucket(it.score);
         if (zone !== lastZone) { lastZone = zone; addZoneLabel(bucketLabel(zone), counts[zone]); }
         rank++;
         addRow(it, rank);
       }
-
-      // "Ungerankt" section at the very bottom
       if (unranked.length) {
         addZoneLabel("Ungerankt", unranked.length);
         unranked.forEach(it => addRow(it, "–"));
@@ -3171,6 +3280,9 @@
       rankMedia = btn.dataset.media;
       rankToggle.querySelectorAll(".seg").forEach(s => s.classList.toggle("active", s === btn));
       rankGenreSel.value = ""; rankTagSel.value = "";
+      const isPerson = rankMedia === "person";
+      const rankFiltersEl = document.getElementById("rank-filters");
+      if (rankFiltersEl) rankFiltersEl.hidden = isPerson;
       populateRankFilters().then(renderRanking);
     });
     rankGenreSel.addEventListener("change", renderRanking);
@@ -3184,8 +3296,18 @@
     let duelSeenPairs = new Set(); // canonical "smallerId|largerId" — resets per session
 
     function duelItems() {
-      const arr = Object.values(db.items).filter(it => it.mediaType === rankMedia);
+      if (rankMedia === "person") {
+        const arr = Object.values(db.people || {});
+        arr.forEach(p => { if (typeof p.score !== "number") p.score = 1400; });
+        return arr;
+      }
+      let arr = Object.values(db.items).filter(it => it.mediaType === rankMedia);
       arr.forEach(ensureScore);
+      // R7-P7: duel pre-filter (bucket zone + genre)
+      const bucketF = (document.getElementById("df-duel-bucket") || {}).value || "";
+      const genreF  = parseInt((document.getElementById("df-duel-genre") || {}).value || "0", 10) || 0;
+      if (bucketF) arr = arr.filter(it => deriveBucket(it.score) === bucketF);
+      if (genreF)  arr = arr.filter(it => (it.genreIds || []).includes(genreF));
       return arr;
     }
 
@@ -3239,6 +3361,11 @@
     // point 9a: a title's current leaderboard position ("#12") or "Ungerankt"
     function currentRankLabel(it) {
       if (it.unranked) return "Ungerankt";
+      if (rankMedia === "person") {
+        const pool = Object.values(db.people || {}).filter(p => !p.unranked).sort((a, b) => b.score - a.score);
+        const idx = pool.findIndex(p => p.id === it.id);
+        return idx >= 0 ? "#" + (idx + 1) : "Ungerankt";
+      }
       const ranked = Object.values(db.items)
         .filter(x => x.mediaType === it.mediaType && !x.unranked)
         .sort((a, b) => b.score - a.score);
@@ -3252,11 +3379,13 @@
       const name = card.querySelector(".duel-name");
       if (rank) {
         rank.textContent = currentRankLabel(it);
-        rank.classList.toggle("unranked", it.unranked);   // point 9a
+        rank.classList.toggle("unranked", it.unranked);
       }
-      if (it.poster) { img.src = IMG_BASE + "w342" + it.poster; img.style.display = ""; }
+      const isPerson = rankMedia === "person";
+      const imgPath  = isPerson ? it.photo : it.poster;
+      if (imgPath) { img.src = IMG_BASE + "w185" + imgPath; img.style.display = ""; }
       else { img.removeAttribute("src"); img.style.display = "none"; }
-      name.textContent = it.year ? (it.title + " (" + it.year + ")") : it.title;
+      name.textContent = isPerson ? it.name : (it.year ? it.title + " (" + it.year + ")" : it.title);
     }
 
     function showDuelPair(pair) {
@@ -3273,11 +3402,16 @@
     }
 
     function openDuel() {
-      duelSeenPairs = new Set(); // fresh session
-      lastDuel = null;           // point 11: nothing to undo at the start
+      duelSeenPairs = new Set();
+      lastDuel = null;
       updateUndoBtn();
       const pair = pickPair();
-      if (!pair) { showToast("Mindestens 2 Titel nötig"); return; }
+      if (!pair) { showToast("Mindestens 2 nötig für ein Duell"); return; }
+      const isPerson = rankMedia === "person";
+      const qEl = duelEl.querySelector(".duel-q");
+      if (qEl) qEl.textContent = isPerson ? "Wer ist dein Liebling?" : "Welcher war besser?";
+      const duelFilterEl = document.getElementById("duel-filter");
+      if (duelFilterEl) duelFilterEl.hidden = isPerson;
       showDuelPair(pair);
       duelEl.hidden = false;
       document.body.style.overflow = "hidden";
@@ -3320,7 +3454,8 @@
       const el = document.getElementById("levelup");
       if (!el) return;
       const img = el.querySelector(".levelup-poster");
-      if (item.poster) { img.src = IMG_BASE + "w185" + item.poster; img.style.display = ""; }
+      const imgPath = item.poster || item.photo || null;
+      if (imgPath) { img.src = IMG_BASE + "w185" + imgPath; img.style.display = ""; }
       else img.style.display = "none";
       el.querySelector(".levelup-bucket").textContent = bucketLabel(bucket) + "!";
       el.hidden = false;
@@ -3590,14 +3725,22 @@
       const cast = ((data.credits && data.credits.cast) || []).slice(0, 14);
       if (cast.length) {
         html += '<div class="detail-section"><h3>Besetzung</h3><div class="hscroll">';
-        html += cast.map(c =>
-          '<div class="person" data-person="' + c.id + '" data-name="' + esc(c.name) + '">' +
+        html += cast.map(c => {
+          const pRanked = !!(db.people && db.people[c.id]);
+          return '<div class="person" data-person="' + c.id + '" data-name="' + esc(c.name) + '">' +
             (c.profile_path
               ? '<img src="' + IMG_BASE + "w185" + c.profile_path + '" alt="">'
               : '<div class="person-noimg">' + esc((c.name || "?").charAt(0)) + "</div>") +
             '<div class="person-name">' + esc(c.name) + "</div>" +
             (c.character ? '<div class="person-role">' + esc(c.character) + "</div>" : "") +
-          "</div>").join("");
+            '<button class="rank-in-btn' + (pRanked ? " active" : "") + '" type="button"' +
+              ' data-rank-person="' + c.id + '"' +
+              ' data-rank-name="' + esc(c.name) + '"' +
+              ' data-rank-photo="' + esc(c.profile_path || "") + '"' +
+              ' data-rank-dept="Schauspieler">' +
+            (pRanked ? "★ Gerankt" : "+ Ranking") + "</button>" +
+          "</div>";
+        }).join("");
         html += "</div></div>";
       }
 
@@ -3782,8 +3925,17 @@
       if (sheetItem) { const r = sheetItem; closeSheet(); openDetail(r.media_type, r.id); }
     });
 
-    // Tapping a cast member / director opens their person page (delegated, once)
+    // Tapping a cast member / director opens their person page; "Ins Ranking" button toggles ranking
     detailBody.addEventListener("click", e => {
+      const rankBtn = e.target.closest(".rank-in-btn[data-rank-person]");
+      if (rankBtn) {
+        const pid = parseInt(rankBtn.dataset.rankPerson, 10);
+        togglePersonRanking(pid, rankBtn.dataset.rankName, rankBtn.dataset.rankPhoto || "", rankBtn.dataset.rankDept || "");
+        const nowRanked = !!(db.people && db.people[pid]);
+        rankBtn.textContent = nowRanked ? "★ Gerankt" : "+ Ranking";
+        rankBtn.classList.toggle("active", nowRanked);
+        return;
+      }
       const p = e.target.closest("[data-person]");
       if (p) openPerson(parseInt(p.dataset.person, 10), p.dataset.name || "");
     });
@@ -3811,19 +3963,33 @@
     }
 
     function renderPerson(data) {
-      // merge acting + crew credits, dedupe by media, keep movies/tv with a poster
       const cc = data.combined_credits || {};
       const seen = {};
       const credits = [];
       [...(cc.cast || []), ...(cc.crew || [])].forEach(c => {
         if (c.media_type !== "movie" && c.media_type !== "tv") return;
+        if (!c.poster_path) return;
+        if ((c.vote_count || 0) < 100) return;  // R7-P4: filter obscure/unreleased titles
         const k = c.media_type + ":" + c.id;
         if (seen[k]) return;
         seen[k] = true;
         credits.push(c);
       });
       credits.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-      const shown = credits.slice(0, 40);
+
+      const personId  = data.id;
+      const isRanked  = !!(db.people && db.people[personId]);
+      const knownFor  = data.known_for_department === "Directing" ? "Regisseur"
+        : data.known_for_department === "Acting" ? "Schauspieler"
+        : (data.known_for_department || "");
+      const watchedCount = credits.filter(c => db.items[c.media_type + ":" + c.id]).length;
+
+      let rankPos = "";
+      if (isRanked && db.people[personId] && !db.people[personId].unranked) {
+        const pool = Object.values(db.people).filter(p => !p.unranked).sort((a, b) => b.score - a.score);
+        const idx  = pool.findIndex(p => p.id === personId);
+        if (idx >= 0) rankPos = "#" + (idx + 1);
+      }
 
       let html = '<div class="person-page">';
       html += '<div class="person-hero">';
@@ -3831,40 +3997,62 @@
         ? '<img class="person-photo" src="' + IMG_BASE + "w185" + data.profile_path + '" alt="">'
         : '<div class="person-photo"></div>';
       html += '<div class="person-hero-meta"><h2 class="detail-title">' + esc(data.name || "") + "</h2>";
-      if (data.known_for_department) html += '<div class="detail-genres">' + esc(data.known_for_department) + "</div>";
-      const watchedHere = shown.filter(c => db.items[c.media_type + ":" + c.id]).length;
-      html += '<div class="person-stat">' + shown.length + " Titel · " + watchedHere + " gesehen</div>";
-      html += "</div></div>";
+      if (knownFor) html += '<div class="detail-genres">' + esc(knownFor) + "</div>";
+      html += '<div class="person-stat">' + credits.length + " Titel · " + watchedCount + " gesehen</div>";
+      html += '<div class="person-rank-row">';
+      html += '<button class="rank-in-btn' + (isRanked ? " active" : "") + '" id="person-rank-btn" type="button">';
+      html += isRanked ? "★ Gerankt" : "+ Ins Ranking";
+      html += "</button>";
+      if (rankPos) html += '<span class="person-rank-pos"><strong>' + esc(rankPos) + "</strong> im Ranking</span>";
+      html += "</div></div></div>";
 
       if (data.biography) {
         html += '<div class="detail-section"><p class="detail-overview">' + esc(data.biography.slice(0, 400)) + (data.biography.length > 400 ? " …" : "") + "</p></div>";
       }
 
-      html += '<div class="detail-section"><h3>Titel</h3><div class="poster-grid" id="person-grid">';
-      html += shown.map(c => {
-        const mt = c.media_type;
-        const t = mt === "tv" ? (c.name || c.original_name) : (c.title || c.original_title);
-        const key = mt + ":" + c.id;
-        const logged = db.items[key];
-        let badge = "";
-        if (logged) badge = '<span class="grid-badge">' + esc(bucketLabel(deriveBucket(ensureScore(logged)))) + "</span>";
-        else if (membershipLabel(key)) badge = '<span class="grid-badge ghost">Liste</span>';
-        return '<div class="grid-item" data-media="' + mt + '" data-id="' + c.id + '">' +
-          (c.poster_path
-            ? '<img loading="lazy" src="' + IMG_BASE + "w185" + c.poster_path + '" alt="">'
-            : '<div class="gi-empty">' + esc(t || "") + "</div>") +
-          badge + "</div>";
-      }).join("");
-      html += "</div></div></div>";
+      html += '<div class="detail-section"><h3>Filmografie</h3>';
+      html += '<div class="poster-grid" id="person-grid"></div>';
+      html += '<button id="person-more-btn" class="new-list-btn" type="button" hidden>Mehr anzeigen</button>';
+      html += "</div></div>";
 
       detailBody.innerHTML = html;
       detailBody.scrollTop = 0;
       detailEl.scrollTop = 0;
 
-      document.getElementById("person-grid").addEventListener("click", e => {
-        const cell = e.target.closest(".grid-item");
-        if (cell) openDetail(cell.dataset.media, parseInt(cell.dataset.id, 10));
-      });
+      // Ranking toggle
+      const rankBtn = document.getElementById("person-rank-btn");
+      if (rankBtn) {
+        rankBtn.addEventListener("click", () => {
+          togglePersonRanking(personId, data.name, data.profile_path || "", knownFor);
+          const nowRanked = !!(db.people && db.people[personId]);
+          rankBtn.textContent = nowRanked ? "★ Gerankt" : "+ Ins Ranking";
+          rankBtn.classList.toggle("active", nowRanked);
+        });
+      }
+
+      // Filmography grid — DOM-based for card actions (R7-P5)
+      const grid = document.getElementById("person-grid");
+      const moreBtn = document.getElementById("person-more-btn");
+      let pfShown = 0;
+      const PF_CHUNK = 30;
+
+      function renderPersonChunk() {
+        const slice = credits.slice(pfShown, pfShown + PF_CHUNK);
+        slice.forEach(c => {
+          const mt   = c.media_type;
+          const cell = document.createElement("div"); cell.className = "grid-item";
+          const img  = document.createElement("img"); img.loading = "lazy"; img.src = IMG_BASE + "w185" + c.poster_path; img.alt = "";
+          cell.appendChild(img);
+          cell.appendChild(makeCardActions(c, mt));
+          cell.addEventListener("click", () => openDetail(mt, c.id));
+          grid.appendChild(cell);
+        });
+        pfShown += slice.length;
+        if (moreBtn) moreBtn.hidden = pfShown >= credits.length;
+      }
+
+      renderPersonChunk();
+      if (moreBtn) moreBtn.addEventListener("click", renderPersonChunk);
     }
 
     // ====================================================================
@@ -4452,8 +4640,13 @@
         ct.textContent = inList ? "✓ drin" : (Object.keys(list.items).length + "");
         btn.appendChild(nm); btn.appendChild(ct);
         btn.addEventListener("click", () => {
-          if (addToList(list.id, pendingPickItem)) showToast("Hinzugefügt zu " + list.name);
-          else showToast("Schon auf " + list.name);
+          if (inList) {
+            removeFromList(list.id, key);
+            showToast("Entfernt von " + list.name);
+          } else {
+            addToList(list.id, pendingPickItem);
+            showToast("Hinzugefügt zu " + list.name);
+          }
           closeListPicker();
           refreshResults();
           refreshDetailStatus();
@@ -4466,6 +4659,7 @@
     function closeListPicker() {
       pickerBackdrop.hidden = true;
       document.body.style.overflow = "";
+      refreshAllCardActions();  // R7-P3: refresh card WL button states after picker closes
     }
     document.getElementById("picker-cancel").addEventListener("click", closeListPicker);
     pickerBackdrop.addEventListener("click", e => { if (e.target === pickerBackdrop) closeListPicker(); });
@@ -5001,10 +5195,8 @@
       setWl(); setWatch();
 
       wl.addEventListener("click", e => {
-        e.stopPropagation();              // don't open the detail page
-        if (db.watchlist[key]) { delete db.watchlist[key]; saveDB(); showToast("Von Watchlist entfernt"); }
-        else { db.watchlist[key] = recordFrom(itemToR(item, mediaType), null); saveDB(); showToast("Auf Watchlist"); }
-        setWl();
+        e.stopPropagation();
+        openListPicker(itemToR(item, mediaType), false);  // R7-P3: open list picker instead of direct toggle
       });
       watch.addEventListener("click", e => {
         e.stopPropagation();
@@ -5139,28 +5331,38 @@
     async function runDiscSearch(q) {
       if (discAbort) discAbort.abort();
       discAbort = new AbortController();
-      const url = "https://api.themoviedb.org/3/search/multi?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG
-        + "&include_adult=false&query=" + encodeURIComponent(q);
+      const base = "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG + "&include_adult=false&query=" + encodeURIComponent(q);
+      const mediaUrl  = "https://api.themoviedb.org/3/search/multi"  + base;
+      const personUrl = "https://api.themoviedb.org/3/search/person" + base;
       try {
-        const res = await fetch(url, { signal: discAbort.signal });
-        if (!res.ok) throw new Error();
-        const d = await res.json();
+        const [mRes, pRes] = await Promise.all([
+          fetch(mediaUrl,  { signal: discAbort.signal }),
+          fetch(personUrl, { signal: discAbort.signal })
+        ]);
+        if (!mRes.ok) throw new Error();
+        const [d, pd] = await Promise.all([mRes.json(), pRes.ok ? pRes.json() : { results: [] }]);
         if (discSearch.value.trim() !== q) return;
-        const items = filterBlocked((d.results || []).filter(r => r.media_type === "movie" || r.media_type === "tv"), null).slice(0, 30);   // point 12
-        renderDiscResults(items);
+        const items  = filterBlocked((d.results || []).filter(r => r.media_type === "movie" || r.media_type === "tv"), null).slice(0, 30);
+        const people = (pd.results || []).slice(0, 5);
+        renderDiscResults(items, people);
       } catch (e) {
         if (e.name === "AbortError") return;
         renderDiscResults("error");
       }
     }
 
-    function renderDiscResults(items) {
+    function renderDiscResults(items, people) {
       showDiscResults();
       discResults.innerHTML = "";
       if (items === "error") { discResults.innerHTML = '<div class="results-empty">Suche fehlgeschlagen. Internet prüfen?</div>'; return; }
-      if (!items.length) { discResults.innerHTML = '<div class="results-empty">Nichts gefunden.</div>'; return; }
+      if (!items.length && (!people || !people.length)) { discResults.innerHTML = '<div class="results-empty">Nichts gefunden.</div>'; return; }
       const frag = document.createDocumentFragment();
       for (const r of items) frag.appendChild(buildResultRow(r, () => openDetail(r.media_type, r.id)));
+      if (people && people.length) {
+        const lbl = document.createElement("div"); lbl.className = "people-section-label"; lbl.textContent = "Personen";
+        frag.appendChild(lbl);
+        people.forEach(p => frag.appendChild(buildPersonResultRow(p)));
+      }
       discResults.appendChild(frag);
     }
 
@@ -5363,6 +5565,7 @@
         const yearOf = c => { const s = media === "tv" ? c.first_air_date : c.release_date; return s ? parseInt(s.slice(0, 4), 10) : 0; };
 
         items = items.filter(c => c.poster_path);
+        items = items.filter(c => (c.vote_count || 0) >= 100);  // R7-P4: filter obscure/unreleased titles
         items = filterHidden(items, media);   // point 6: hide already-watched
         if (genreId)   items = items.filter(c => (c.genre_ids || []).includes(genreId));
         if (minRating) items = items.filter(c => (c.vote_average || 0) >= minRating);
