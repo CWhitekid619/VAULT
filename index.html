@@ -1360,7 +1360,7 @@
         </div>
         <div id="lh-reorder" hidden></div>
         <div id="lh-progress" class="log-home-row" hidden>
-          <div class="log-home-title log-home-title-link" data-section="lh-progress">Serien in Arbeit <span class="section-chevron">›</span></div>
+          <div class="log-home-title log-home-title-link" data-section="lh-progress">Aktuelle Serien <span class="section-chevron">›</span></div>
           <div id="lh-progress-list" class="progress-list"></div>
         </div>
         <div id="lh-recent" class="log-home-row" hidden></div>
@@ -1962,16 +1962,14 @@
     // Opening a title/person parks a history entry so the device/browser Back
     // button closes the overlay and returns to the current tab — instead of
     // leaving the app and stranding the user on a now-broken screen.
-    let detailBackEntry = false;
-    let closingDetailFromPop = false;
+    let navStack = [];  // detail-overlay nav history: [{ type:'detail'|'person', ... }]
     let programmingGoingBack = false;  // P11: prevents our own history.back() from re-triggering popstate
     let hsoBackEntry = false;
     let closingHsoFromPop = false;
 
-    function armDetailBack() {
-      if (detailBackEntry) return;
-      detailBackEntry = true;
-      history.pushState({ vaultOverlay: "detail" }, "");
+    function _pushDetailNav(entry) {
+      navStack.push(entry);
+      history.pushState({ vaultOverlay: "detail", depth: navStack.length }, "");
     }
 
     function armHsoBack() {
@@ -1985,9 +1983,14 @@
       if (programmingGoingBack) { programmingGoingBack = false; return; }
       const d = document.getElementById("detail");
       if (d && !d.hidden) {
-        closingDetailFromPop = true;
-        closeDetail();
-        closingDetailFromPop = false;
+        navStack.pop();
+        if (navStack.length > 0) {
+          const prev = navStack[navStack.length - 1];
+          if (prev.type === "person") openPerson(prev.personId, prev.name, false);
+          else openDetail(prev.mediaType, prev.id, false);
+        } else {
+          _closeDetailFull();
+        }
         return;
       }
       const hso = document.getElementById("hso-overlay");
@@ -2051,6 +2054,7 @@
             hideWatchlist: typeof parsed.hideWatchlist === "boolean" ? parsed.hideWatchlist : false,  // R6-P8: default OFF
             blocklist: (parsed.blocklist && typeof parsed.blocklist === "object") ? parsed.blocklist : {},   // point 12
             hiddenSeries: (parsed.hiddenSeries && typeof parsed.hiddenSeries === "object") ? parsed.hiddenSeries : {},   // hide series from Home view only
+            trackedSeries: (parsed.trackedSeries && typeof parsed.trackedSeries === "object") ? parsed.trackedSeries : {},   // explicitly tracked series (shown in Serien in Arbeit)
             homeCustomSections: Array.isArray(parsed.homeCustomSections) ? parsed.homeCustomSections : [],  // custom list IDs pinned to Home
             people: (parsed.people && typeof parsed.people === "object") ? parsed.people : {}  // R7: ranked actors/directors
           };
@@ -2058,13 +2062,25 @@
           return out;
         }
       } catch (e) { /* corrupted store — start fresh */ }
-      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, homeCustomSections: [], people: {} };
+      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, trackedSeries: {}, homeCustomSections: [], people: {} };
     }
     let db = loadDB();
     function saveDB() {
       try { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
       catch (e) { showToast("Speichern fehlgeschlagen"); }
     }
+
+    // One-time reset (R8 follow-up): earlier builds flagged every series as tracked
+    // via the old hiddenSeries logic. "Tracken" is now strictly opt-in, so wipe any
+    // stale trackedSeries flags exactly once. Guarded by a separate localStorage key
+    // so it never runs again and the user's future selections survive reloads.
+    try {
+      if (!localStorage.getItem("reel.trkReset.v1")) {
+        db.trackedSeries = {};
+        saveDB();
+        localStorage.setItem("reel.trkReset.v1", "1");
+      }
+    } catch (e) { /* ignore storage errors */ }
 
     // ---------- Buckets (zones of the single leaderboard) ----------
     const BUCKETS = [
@@ -2373,12 +2389,11 @@
         .filter(k => {
           const p = db.progress[k]; const it = db.items[k];
           if (!(it && it.mediaType === "tv" && p && Object.keys(p.eps).length > 0)) return false;
-          // hide fully-watched series once the total episode count is known (item 14);
-          // if the total isn't loaded yet, keep it visible until it can be verified
+          // only show series the user explicitly tracked
+          if (!db.trackedSeries || !db.trackedSeries[k]) return false;
+          // hide fully-watched series once the total episode count is known
           const tot = seriesTotalCache[k];
           if (tot != null && Object.keys(p.eps).length >= tot) return false;
-          // hide series that the user swiped away (data retained, just hidden from Home)
-          if (db.hiddenSeries && db.hiddenSeries[k]) return false;
           return true;
         })
         .map(k => ({ key: k, it: db.items[k], p: db.progress[k] }))
@@ -2398,7 +2413,7 @@
         row.className = "prog-row";
 
         const hideRow = () => {
-          db.hiddenSeries[key] = true;
+          delete db.trackedSeries[key];
           saveDB();
           if (activeSwipeRow === row) activeSwipeRow = null;
           row.remove();
@@ -2717,7 +2732,7 @@
 
     // ---------- Home section reordering (N5) + custom list sections (R6-P4) ----------
     const SECTION_LABELS = {
-      "lh-progress":  "Serien in Arbeit",
+      "lh-progress":  "Aktuelle Serien",
       "lh-recent":    "Zuletzt gesehen",
       "lh-watchlist": "Meine Watchlist",
       "lh-movies":    "Top Filme",
@@ -2894,11 +2909,11 @@
         const tracked = Object.keys(db.progress).filter(k => {
           const it = db.items[k]; const p = db.progress[k];
           if (!(it && it.mediaType === "tv" && p && Object.keys(p.eps).length > 0)) return false;
-          if (db.hiddenSeries && db.hiddenSeries[k]) return false;
+          if (!db.trackedSeries || !db.trackedSeries[k]) return false;
           return true;
         }).map(k => ({ key: k, it: db.items[k], p: db.progress[k] }))
           .sort((a, b) => (b.it.loggedAt || 0) - (a.it.loggedAt || 0));
-        if (!tracked.length) { listEl.innerHTML = '<div class="placeholder"><span>Keine Serien in Arbeit.</span></div>'; return; }
+        if (!tracked.length) { listEl.innerHTML = '<div class="placeholder"><span>Keine aktuellen Serien.</span></div>'; return; }
         tracked.forEach(({ key, it, p }) => {
           const watched = Object.keys(p.eps).length;
           const tot = seriesTotalCache[key] || null;
@@ -3519,11 +3534,13 @@
       catch (e) { return "$" + n.toLocaleString("de-DE"); }
     }
 
-    async function openDetail(mediaType, id) {
-      // P11: ignore rapid re-tap if already showing exactly this item
-      if (!detailEl.hidden && detailCtx && detailCtx.mediaType === mediaType && detailCtx.id === id) return;
+    async function openDetail(mediaType, id, _nav = true) {
+      if (_nav) {
+        // P11: ignore rapid re-tap if already showing exactly this item
+        if (!detailEl.hidden && detailCtx && detailCtx.mediaType === mediaType && detailCtx.id === id) return;
+        _pushDetailNav({ type: "detail", mediaType, id });
+      }
       detailEl.hidden = false;
-      armDetailBack();                  // 2d: Back button returns to the current tab
       detailEl.scrollTop = 0;
       document.body.style.overflow = "hidden";
       detailBody.innerHTML = '<div class="detail-loading">Lädt …</div>';
@@ -3565,15 +3582,12 @@
       }
     }
 
-    function closeDetail() {
+    function _closeDetailFull() {
+      navStack = [];
       detailEl.hidden = true;
       detailCtx = null;
       document.body.style.overflow = "";
       detailBody.innerHTML = "";
-      if (detailBackEntry) {
-        detailBackEntry = false;
-        if (!closingDetailFromPop) { programmingGoingBack = true; history.back(); }
-      }
       refreshAllCardActions();   // P9: sync card button states to db after detail changes
     }
 
@@ -3792,12 +3806,12 @@
       if (trackBtn) {
         trackBtn.addEventListener("click", () => {
           const key = keyOf(mediaType, data.id);
-          if (db.hiddenSeries[key]) {
-            delete db.hiddenSeries[key];
-            showToast("Zu Serien in Arbeit hinzugefügt");
+          if (db.trackedSeries[key]) {
+            delete db.trackedSeries[key];
+            showToast("Aus Aktuelle Serien entfernt");
           } else {
-            db.hiddenSeries[key] = true;
-            showToast("Aus Serien in Arbeit entfernt");
+            db.trackedSeries[key] = true;
+            showToast("Zu Aktuelle Serien hinzugefügt");
           }
           saveDB();
           refreshDetailStatus();
@@ -3910,17 +3924,30 @@
         const lab = document.getElementById("detail-wl-label");
         if (lab) lab.textContent = on ? "Auf Watchlist" : "Watchlist";
       }
-      // Tracken state (tv only — hidden = not tracked)
+      // Tracken state (tv only — explicit opt-in via trackedSeries)
       const trkBtn = document.getElementById("detail-track");
       if (trkBtn) {
-        const tracked = !db.hiddenSeries[key];
+        const tracked = !!db.trackedSeries[key];
         trkBtn.classList.toggle("active", tracked);
         const trkLab = document.getElementById("detail-track-label");
         if (trkLab) trkLab.textContent = tracked ? "Getrackt" : "Tracken";
       }
     }
 
-    document.getElementById("detail-back").addEventListener("click", closeDetail);
+    document.getElementById("detail-back").addEventListener("click", () => {
+      if (navStack.length <= 1) {
+        _closeDetailFull();
+        programmingGoingBack = true;
+        history.back();
+      } else {
+        navStack.pop();
+        const prev = navStack[navStack.length - 1];
+        programmingGoingBack = true;
+        history.back();
+        if (prev.type === "person") openPerson(prev.personId, prev.name, false);
+        else openDetail(prev.mediaType, prev.id, false);
+      }
+    });
     document.getElementById("sheet-details").addEventListener("click", () => {
       if (sheetItem) { const r = sheetItem; closeSheet(); openDetail(r.media_type, r.id); }
     });
@@ -3941,9 +3968,9 @@
     });
 
     // ---------- Person page (reuses the detail overlay) ----------
-    async function openPerson(personId, name) {
+    async function openPerson(personId, name, _nav = true) {
+      if (_nav) _pushDetailNav({ type: "person", personId, name });
       detailEl.hidden = false;
-      armDetailBack();                  // 2d: Back button returns to the current tab
       detailEl.scrollTop = 0;
       document.body.style.overflow = "hidden";
       detailCtx = null; // no logging context on a person page
@@ -4319,7 +4346,16 @@
       return "Bei S" + last.s + " E" + last.e + " von " + epsInSeason + " · " + watched + "/" + total + " Episoden";
     }
 
-    let progSeason = 1; // currently expanded season
+    let tvSeason = 1; // shared season for both Fortschritt and Episodenbewertungen
+
+    // Switch both sections to the same season at once
+    function switchTvSeason(data, tvId, newSeason) {
+      tvSeason = newSeason;
+      const chipWrap = document.getElementById("prog-seasons");
+      if (chipWrap) chipWrap.querySelectorAll(".prog-chip").forEach(x => x.classList.toggle("active", parseInt(x.dataset.season, 10) === newSeason));
+      loadSeason(data, tvId, newSeason);
+      loadEpGrid(data, tvId, newSeason);
+    }
 
     function renderProgress(data) {
       const host = document.getElementById("detail-progress");
@@ -4330,8 +4366,8 @@
 
       // default to the season of the last watched episode
       const last = lastWatched(tvId);
-      progSeason = last ? last.s : seasons[0].season_number;
-      if (!seasons.some(s => s.season_number === progSeason)) progSeason = seasons[0].season_number;
+      tvSeason = last ? last.s : seasons[0].season_number;
+      if (!seasons.some(s => s.season_number === tvSeason)) tvSeason = seasons[0].season_number;
 
       host.innerHTML =
         '<div class="detail-section"><h3>Fortschritt</h3>' +
@@ -4344,19 +4380,15 @@
       const chipWrap = document.getElementById("prog-seasons");
       seasons.forEach(s => {
         const c = document.createElement("button");
-        c.className = "chip prog-chip" + (s.season_number === progSeason ? " active" : "");
+        c.className = "chip prog-chip" + (s.season_number === tvSeason ? " active" : "");
         c.type = "button";
         c.dataset.season = s.season_number;
         c.textContent = "S" + s.season_number;
-        c.addEventListener("click", () => {
-          progSeason = s.season_number;
-          chipWrap.querySelectorAll(".prog-chip").forEach(x => x.classList.toggle("active", x === c));
-          loadSeason(data, tvId, s.season_number);
-        });
+        c.addEventListener("click", () => switchTvSeason(data, tvId, s.season_number));
         chipWrap.appendChild(c);
       });
 
-      loadSeason(data, tvId, progSeason);
+      loadSeason(data, tvId, tvSeason);
     }
 
     function updateProgSummary(data, tvId) {
@@ -4381,7 +4413,7 @@
         } catch (e) { epsEl.innerHTML = '<div class="ep-loading">Konnte nicht laden.</div>'; return; }
       }
       // guard: user may have switched season while loading
-      if (progSeason !== season) return;
+      if (tvSeason !== season) return;
 
       epsEl.innerHTML = "";
       // "whole season" toggle
@@ -4891,6 +4923,7 @@
           if (!isEpWatched(tvId, s, e)) toggleEp(tvId, s, e, true); // rating implies watched
           ensureSeriesWatched(epRateCtx && epRateCtx.data);          // P6: series enters ranking as Ungerankt
           applyEpCell(cell, b.id);
+          refreshEpGridCell(tvId, s, e, b.id);  // sync grid colors when rated from the list
           refreshEpDots(tvId, s, e, b.id);
           if (epRateCtx && epRateCtx.onChange) epRateCtx.onChange();
           closeEpRateSheet();
@@ -4923,15 +4956,13 @@
       if (!epRateCtx) return;
       setEpRating(epRateCtx.tvId, epRateCtx.s, epRateCtx.e, null);
       applyEpCell(epRateCtx.cell, null);
+      refreshEpGridCell(epRateCtx.tvId, epRateCtx.s, epRateCtx.e, null);
       refreshEpDots(epRateCtx.tvId, epRateCtx.s, epRateCtx.e, null);
       if (epRateCtx.onChange) epRateCtx.onChange();
       closeEpRateSheet();
     });
     document.getElementById("ep-rate-cancel").addEventListener("click", closeEpRateSheet);
     epRateBackdrop.addEventListener("click", e => { if (e.target === epRateBackdrop) closeEpRateSheet(); });
-
-    // grid rendering
-    let epGridSeason = 1;
 
     function renderEpRatings(data) {
       const host = document.getElementById("detail-ep-ratings");
@@ -4940,37 +4971,19 @@
       const seasons = realSeasons(data);
       if (!seasons.length) { host.innerHTML = ""; return; }
 
-      epGridSeason = seasons[0].season_number;
-      const last = lastWatched(tvId);
-      if (last && seasons.some(s => s.season_number === last.s)) epGridSeason = last.s;
-
       const legend = BUCKETS.map(b =>
         '<div class="ep-legend-item">' +
         '<div class="ep-legend-dot" style="background:' + BUCKET_COLORS[b.id] + '"></div>' +
         b.label + "</div>"
       ).join("");
 
+      // No separate season chips — the Fortschritt chip row (prog-seasons) controls both sections
       host.innerHTML =
         '<div class="detail-section"><h3>Episodenbewertungen</h3>' +
-        '<div class="season-chips" id="epg-seasons"></div>' +
         '<div id="epg-grid"></div>' +
         '<div class="ep-legend">' + legend + "</div></div>";
 
-      const chipWrap = document.getElementById("epg-seasons");
-      seasons.forEach(s => {
-        const c = document.createElement("button");
-        c.className = "chip" + (s.season_number === epGridSeason ? " active" : "");
-        c.type = "button";
-        c.textContent = "S" + s.season_number;
-        c.addEventListener("click", () => {
-          epGridSeason = s.season_number;
-          chipWrap.querySelectorAll(".chip").forEach(x => x.classList.toggle("active", x === c));
-          loadEpGrid(data, tvId, s.season_number);
-        });
-        chipWrap.appendChild(c);
-      });
-
-      loadEpGrid(data, tvId, epGridSeason);
+      loadEpGrid(data, tvId, tvSeason);
     }
 
     async function loadEpGrid(data, tvId, season) {
@@ -4990,13 +5003,15 @@
           seasonCache[cacheKey] = episodes;
         } catch (_) { gridEl.innerHTML = '<div class="ep-loading">Konnte nicht laden.</div>'; return; }
       }
-      if (epGridSeason !== season) return;
+      if (tvSeason !== season) return;
 
       gridEl.innerHTML = "";
       const grid = document.createElement("div"); grid.className = "ep-grid";
       episodes.forEach(ep => {
         const cell = document.createElement("button");
         cell.className = "ep-gc"; cell.type = "button"; cell.textContent = ep.n;
+        // data attributes allow refreshEpGridCell to find this cell without re-rendering
+        cell.dataset.tvid = tvId; cell.dataset.s = season; cell.dataset.ep = ep.n;
         const rating = getEpRating(tvId, season, ep.n);
         if (rating) { cell.dataset.b = rating; cell.title = bucketLabel(rating); }
         else { cell.title = ep.name || ("Episode " + ep.n); }
@@ -5004,6 +5019,11 @@
         grid.appendChild(cell);
       });
       gridEl.appendChild(grid);
+    }
+
+    function refreshEpGridCell(tvId, s, e, bucket) {
+      const sel = '.ep-gc[data-tvid="' + tvId + '"][data-s="' + s + '"][data-ep="' + e + '"]';
+      document.querySelectorAll(sel).forEach(cell => applyEpCell(cell, bucket));
     }
 
     // ====================================================================
