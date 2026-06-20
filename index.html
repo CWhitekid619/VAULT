@@ -310,7 +310,9 @@
       position: relative; height: 250px;
       margin: 4px -16px 24px; overflow: hidden;
       perspective: 1100px;
+      touch-action: pan-y;   /* R9-P3: let us handle horizontal swipes, keep vertical scroll */
     }
+    #log-hero img { -webkit-user-drag: none; user-select: none; }
     .hero-stage { position: absolute; inset: 0; transform-style: preserve-3d; }
     .hero-slide {
       position: absolute; top: 28px; left: 50%;
@@ -924,6 +926,20 @@
     }
     .detail-block-btn.blocked { color: #ef6b6b; border-color: #ef6b6b; }
     .blocked-list { display: flex; flex-direction: column; gap: 8px; }
+    /* R9-P6a: tap-to-reveal disclosure for blocked titles */
+    .blocked-toggle {
+      display: flex; align-items: center; gap: 10px; width: 100%;
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
+      padding: 13px 14px; cursor: pointer; color: var(--text); font-family: inherit; font-size: 14px; font-weight: 600;
+    }
+    .blocked-toggle-label { flex: 1; text-align: left; }
+    .blocked-count {
+      flex: 0 0 auto; background: var(--surface); border: 1px solid var(--border);
+      color: var(--text-mute); font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px;
+    }
+    .blocked-chev { width: 18px; height: 18px; stroke: var(--text-mute); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .2s ease; flex: 0 0 auto; }
+    .blocked-toggle.open .blocked-chev { transform: rotate(180deg); }
+    .blocked-list[id] { margin-top: 10px; }
     .blocked-row { display: flex; align-items: center; gap: 12px; }
     .blocked-thumb { width: 34px; height: 51px; border-radius: 6px; object-fit: cover; background: var(--surface-2); flex: 0 0 auto; }
     .blocked-thumb.empty { background: var(--surface-2); }
@@ -932,6 +948,29 @@
       flex: 0 0 auto; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-dim);
       font-family: inherit; font-size: 12px; padding: 7px 12px; border-radius: 999px; cursor: pointer;
     }
+
+    /* ---------- R9-P4: settings rows + toggle switch ---------- */
+    .settings-sub-label { font-size: 12px; color: var(--text-mute); margin: 0 0 10px; line-height: 1.5; }
+    .settings-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+    .settings-group-title { font-size: 13px; font-weight: 600; color: var(--text-dim); margin: 4px 0 8px; }
+    .settings-empty { font-size: 13px; color: var(--text-mute); padding: 2px 0 6px; }
+    .set-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px;
+    }
+    .set-row-label { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .switch { position: relative; flex: 0 0 auto; width: 42px; height: 24px; }
+    .switch input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+    .switch-track {
+      position: absolute; inset: 0; border-radius: 999px; background: var(--surface);
+      border: 1px solid var(--border); transition: background .2s ease, border-color .2s ease;
+    }
+    .switch-track::after {
+      content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%;
+      background: var(--text-mute); transition: transform .2s ease, background .2s ease;
+    }
+    .switch input:checked + .switch-track { background: var(--accent); border-color: var(--accent); }
+    .switch input:checked + .switch-track::after { transform: translateX(18px); background: #1a1206; }
 
     /* "Already watched" checkmark badge on collection cards (point 13a) */
     .seen-badge {
@@ -1198,6 +1237,72 @@
     .drow-skeleton .sk { width: 108px; height: 162px; border-radius: 8px; background: var(--surface); flex: 0 0 auto; }
     .disc-loading { text-align: center; color: var(--text-mute); font-size: 14px; padding: 40px 0; }
 
+    /* ---------- R9-P5: smart search suggestions ---------- */
+    .search-suggest { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 14px; }
+    .suggest-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: color-mix(in srgb, var(--accent) 14%, var(--surface-2));
+      border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+      color: var(--text); font-family: inherit; font-size: 13px; font-weight: 600;
+      padding: 7px 13px; border-radius: 999px; cursor: pointer;
+    }
+    .suggest-chip:active { filter: brightness(1.1); }
+    .suggest-chip svg { width: 14px; height: 14px; stroke: var(--accent); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .suggest-chip .sc-kind { color: var(--text-mute); font-weight: 500; }
+
+    /* ---------- R9-P1: personalized recommendation slideshow ---------- */
+    .disc-recos { margin: 2px 0 26px; }
+    .disc-recos-head { display: flex; align-items: center; justify-content: space-between; margin: 0 0 12px; }
+    .disc-recos-head h2 {
+      font-size: 16px; font-weight: 700; letter-spacing: -.01em; margin: 0;
+      position: relative; padding-left: 11px;
+    }
+    .disc-recos-head h2::before {
+      content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+      width: 3px; height: 14px; border-radius: 2px;
+      background: linear-gradient(180deg, #38a0ff, #a878ff);
+    }
+    .reco-reshuffle {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      color: var(--text-dim); font-size: 12px; font-weight: 600;
+      padding: 6px 11px; border-radius: 999px; cursor: pointer;
+    }
+    .reco-reshuffle:active { background: var(--surface); }
+    .reco-reshuffle svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .reco-reshuffle.spin svg { animation: reco-spin .55s ease; }
+    @keyframes reco-spin { from { transform: rotate(0); } to { transform: rotate(-360deg); } }
+    .reco-track {
+      display: flex; gap: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x mandatory; scrollbar-width: none;
+      margin: 0 -16px; padding: 0 16px 4px;
+    }
+    .reco-track::-webkit-scrollbar { display: none; }
+    .reco-card, .reco-skeleton {
+      flex: 0 0 86%; scroll-snap-align: center;
+      aspect-ratio: 16 / 10; border-radius: var(--radius); background: var(--surface-2);
+    }
+    .reco-card { position: relative; overflow: hidden; cursor: pointer; border: 1px solid var(--border); }
+    .reco-card:active { transform: scale(.99); }
+    .reco-card-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .reco-card-dim {
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(8,8,10,.04) 0%, rgba(8,8,10,.42) 46%, rgba(8,8,10,.92) 100%);
+    }
+    .reco-card-src {
+      position: absolute; top: 11px; left: 11px; max-width: calc(100% - 22px);
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(0,0,0,.5); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+      color: rgba(255,255,255,.92); font-size: 10.5px; font-weight: 600;
+      padding: 4px 9px; border-radius: 999px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .reco-card-body { position: absolute; left: 14px; right: 14px; bottom: 13px; }
+    .reco-card-title { color: #fff; font-size: 18px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
+    .reco-card-meta { color: rgba(255,255,255,.72); font-size: 12px; margin-top: 4px; }
+    .reco-card-meta .reco-star { color: var(--accent); font-weight: 700; }
+    .reco-skeleton { border: 1px solid var(--border); }
+
     /* ---------- Series progress ---------- */
     .prog-summary {
       font-size: 14px; color: var(--text); font-weight: 600;
@@ -1456,6 +1561,10 @@
         </label>
         <div id="df-advanced" class="dfb-advanced" hidden>
           <div class="filter-field">
+            <label for="df-studio">Studio</label>
+            <select id="df-studio" class="modal-select"><option value="">Alle</option></select>
+          </div>
+          <div class="filter-field">
             <label for="df-cast">Schauspieler</label>
             <div class="person-ac">
               <input id="df-cast" class="modal-input" type="text" placeholder="Name eingeben …" autocomplete="off">
@@ -1505,6 +1614,7 @@
 
       <!-- Curated browse content -->
       <div id="disc-browse">
+        <div id="disc-recos" class="disc-recos" hidden></div>
         <div id="disc-genre-chips" class="genre-chips"></div>
         <div id="disc-rows"></div>
       </div>
@@ -1567,6 +1677,7 @@
       <div id="profile-stats" class="stat-grid"></div>
       <div id="profile-note" class="profile-note"></div>
       <div id="profile-blocked"></div>
+      <div id="profile-settings"></div>
     </section>
 
   </div>
@@ -1872,6 +1983,13 @@
         <label>Genre</label>
         <select id="dw-genre" class="modal-select"><option value="">Alle</option></select>
       </div>
+      <div class="filter-row">
+        <label>Schauspieler</label>
+        <div class="person-ac">
+          <input id="dw-cast" class="modal-input" type="text" placeholder="Name eingeben …" autocomplete="off">
+          <div id="dw-cast-list" class="person-ac-list" hidden></div>
+        </div>
+      </div>
 
       <div id="dw-status" class="wuerfel-status"></div>
       <div id="dw-result" class="wuerfel-result" hidden></div>
@@ -1926,7 +2044,11 @@
       // Lists tab always returns to the overview
       if (target === "lists" && typeof showListsOverview === "function") showListsOverview();
       // Discover loads its curated content once
-      if (target === "discover" && typeof initDiscover === "function") initDiscover();
+      if (target === "discover" && typeof initDiscover === "function") {
+        initDiscover();
+        // R9-P4: recommendation sources changed in settings → regenerate the slideshow
+        if (recoDirty && typeof buildRecos === "function") { recoDirty = false; buildRecos(); }
+      }
       // Profile recomputes stats each open
       if (target === "profile" && typeof renderProfile === "function") renderProfile();
     }
@@ -2056,13 +2178,15 @@
             hiddenSeries: (parsed.hiddenSeries && typeof parsed.hiddenSeries === "object") ? parsed.hiddenSeries : {},   // hide series from Home view only
             trackedSeries: (parsed.trackedSeries && typeof parsed.trackedSeries === "object") ? parsed.trackedSeries : {},   // explicitly tracked series (shown in Serien in Arbeit)
             homeCustomSections: Array.isArray(parsed.homeCustomSections) ? parsed.homeCustomSections : [],  // custom list IDs pinned to Home
-            people: (parsed.people && typeof parsed.people === "object") ? parsed.people : {}  // R7: ranked actors/directors
+            people: (parsed.people && typeof parsed.people === "object") ? parsed.people : {},  // R7: ranked actors/directors
+            recoExcludeLists: (parsed.recoExcludeLists && typeof parsed.recoExcludeLists === "object") ? parsed.recoExcludeLists : {},  // R9-P4: lists excluded from recommendations
+            recoExcludeTags: (parsed.recoExcludeTags && typeof parsed.recoExcludeTags === "object") ? parsed.recoExcludeTags : {}  // R9-P4: tags excluded from recommendations
           };
           migrateTags(out);
           return out;
         }
       } catch (e) { /* corrupted store — start fresh */ }
-      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, trackedSeries: {}, homeCustomSections: [], people: {} };
+      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, trackedSeries: {}, homeCustomSections: [], people: {}, recoExcludeLists: {}, recoExcludeTags: {} };
     }
     let db = loadDB();
     function saveDB() {
@@ -2584,6 +2708,34 @@
       if (heroSlides.length > 1) heroTimer = setInterval(() => heroStep(1), 5000);
     }
 
+    // R9-P3: thumb swipe (left/right) to move between hero slides. Wired once on
+    // the persistent #log-hero container; pointer events cover both touch and mouse.
+    function setupHeroSwipe() {
+      const heroEl = document.getElementById("log-hero");
+      if (!heroEl || heroEl.dataset.swipeWired) return;
+      heroEl.dataset.swipeWired = "1";
+      let sx = 0, sy = 0, down = false, swiped = false;
+      heroEl.addEventListener("pointerdown", e => {
+        if (heroSlides.length < 2) return;
+        down = true; swiped = false; sx = e.clientX; sy = e.clientY;
+      });
+      heroEl.addEventListener("pointerup", e => {
+        if (!down) return; down = false;
+        const dx = e.clientX - sx, dy = e.clientY - sy;
+        if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) {
+          swiped = true;
+          heroStep(dx < 0 ? 1 : -1);   // swipe left → next, swipe right → previous
+          heroResetTimer();
+        }
+      });
+      heroEl.addEventListener("pointercancel", () => { down = false; });
+      // a pointer that ended in a swipe still fires a click — swallow it so we don't
+      // accidentally open a detail page or re-centre on the wrong slide
+      heroEl.addEventListener("click", e => {
+        if (swiped) { e.stopPropagation(); e.preventDefault(); swiped = false; }
+      }, true);
+    }
+
     async function buildHero() {
       const heroEl = document.getElementById("log-hero");
       if (!heroEl) return;
@@ -2691,6 +2843,7 @@
 
       layoutHero();
       heroResetTimer();
+      setupHeroSwipe();
     }
 
     function renderLogHome() {
@@ -5032,6 +5185,34 @@
     const dwBackdrop = document.getElementById("dw-backdrop");
     const dwStatus   = document.getElementById("dw-status");
     const dwResult   = document.getElementById("dw-result");
+    let dwCastPerson = null;   // R9-P2: selected actor for the Würfel
+
+    // Render one rolled title into the Würfel result card (shared by both paths).
+    function showDwResult(it, mediaType) {
+      const t    = mediaType === "tv" ? (it.name || it.original_name) : (it.title || it.original_title);
+      const yr   = (it.release_date || it.first_air_date || "").slice(0, 4);
+      const rtng = it.vote_average ? it.vote_average.toFixed(1).replace(".", ",") : null;
+      dwResult.innerHTML = "";
+      if (it.poster_path) {
+        const img = document.createElement("img"); img.src = IMG_BASE + "w185" + it.poster_path; img.alt = "";
+        dwResult.appendChild(img);
+      } else {
+        const e = document.createElement("div"); e.className = "wr-empty"; e.textContent = "Kein Bild";
+        dwResult.appendChild(e);
+      }
+      const body = document.createElement("div"); body.className = "wr-body";
+      const titleEl = document.createElement("div"); titleEl.className = "wr-title"; titleEl.textContent = t || "";
+      const subEl   = document.createElement("div"); subEl.className = "wr-sub";
+      const bits = [mediaType === "tv" ? "Serie" : "Film"];
+      if (yr) bits.push(yr);
+      if (rtng) bits.push("★ " + rtng);
+      subEl.textContent = bits.join(" · ");
+      const openEl = document.createElement("div"); openEl.className = "wr-open"; openEl.textContent = "Details ansehen →";
+      body.appendChild(titleEl); body.appendChild(subEl); body.appendChild(openEl);
+      dwResult.appendChild(body);
+      dwResult.hidden = false;
+      dwResult.onclick = () => { closeDiscWuerfel(); openDetail(mediaType, it.id); };
+    }
 
     async function openDiscWuerfel() {
       dwResult.hidden = true;
@@ -5064,12 +5245,43 @@
       const yearMax    = document.getElementById("dw-year-max").value;
       const minRating  = parseFloat(document.getElementById("dw-rating").value) || 0;
       const genreId    = document.getElementById("dw-genre").value;
+      const castPerson = dwCastPerson;
       const rollBtn    = document.getElementById("dw-roll");
 
       dwResult.hidden = true;
       dwResult.innerHTML = "";
       dwStatus.textContent = "Suche …";
       rollBtn.disabled = true;
+
+      // Actor + Serie: TMDB's /discover/tv has no cast filter, so drive it off the
+      // person's TV credits and apply the remaining filters client-side (runtime
+      // isn't available on credit objects, so it's skipped in this path).
+      if (castPerson && mediaType === "tv") {
+        try {
+          const cr = await fetchPersonCredits(castPerson.id, "tv");
+          const seen = {};
+          let items = (cr.cast || []).filter(c => c.poster_path && !seen[c.id] && (seen[c.id] = true));
+          // strip non-fiction noise (talk/reality/news shows + guest/self appearances)
+          const _blockedGenres = new Set([10767, 10764, 10763]);
+          const _selfCharRe    = /\b(guest|self|himself|herself)\b/i;
+          items = items.filter(c => !(c.genre_ids || []).some(g => _blockedGenres.has(g)));
+          items = items.filter(c => !c.character || !_selfCharRe.test(c.character));
+          items = items.filter(c => (c.vote_count || 0) >= 200);
+          const yearOf = c => { const s = c.first_air_date; return s ? parseInt(s.slice(0, 4), 10) : 0; };
+          if (genreId)   items = items.filter(c => (c.genre_ids || []).includes(parseInt(genreId, 10)));
+          if (minRating) items = items.filter(c => (c.vote_average || 0) >= minRating);
+          if (yearMin)   items = items.filter(c => yearOf(c) >= parseInt(yearMin, 10));
+          if (yearMax)   items = items.filter(c => yearOf(c) && yearOf(c) <= parseInt(yearMax, 10));
+          rollBtn.disabled = false;
+          if (!items.length) { dwStatus.textContent = "Kein Titel gefunden."; return; }
+          dwStatus.textContent = items.length + " Treffer";
+          showDwResult(items[Math.floor(Math.random() * items.length)], "tv");
+        } catch (e) {
+          rollBtn.disabled = false;
+          dwStatus.textContent = "Fehler. Internet prüfen?";
+        }
+        return;
+      }
 
       const dateGteParam = mediaType === "tv" ? "first_air_date.gte" : "primary_release_date.gte";
       const dateLteParam = mediaType === "tv" ? "first_air_date.lte" : "primary_release_date.lte";
@@ -5083,6 +5295,7 @@
       if (yearMin)       base += "&" + dateGteParam + "=" + yearMin + "-01-01";
       if (yearMax)       base += "&" + dateLteParam + "=" + yearMax + "-12-31";
       if (genreId)       base += "&with_genres=" + genreId;
+      if (castPerson)    base += "&with_cast=" + castPerson.id;   // R9-P2: actor (movie path)
 
       try {
         const r1 = await fetch(base + "&page=1");
@@ -5109,31 +5322,7 @@
         if (!pool.length) { dwStatus.textContent = "Kein Titel gefunden."; return; }
         dwStatus.textContent = (totalPages * 20) + "+ Treffer";
 
-        const it   = pool[Math.floor(Math.random() * pool.length)];
-        const t    = mediaType === "tv" ? (it.name || it.original_name) : (it.title || it.original_title);
-        const yr   = (it.release_date || it.first_air_date || "").slice(0, 4);
-        const rtng = it.vote_average ? it.vote_average.toFixed(1).replace(".", ",") : null;
-
-        dwResult.innerHTML = "";
-        if (it.poster_path) {
-          const img = document.createElement("img"); img.src = IMG_BASE + "w185" + it.poster_path; img.alt = "";
-          dwResult.appendChild(img);
-        } else {
-          const e = document.createElement("div"); e.className = "wr-empty"; e.textContent = "Kein Bild";
-          dwResult.appendChild(e);
-        }
-        const body = document.createElement("div"); body.className = "wr-body";
-        const titleEl = document.createElement("div"); titleEl.className = "wr-title"; titleEl.textContent = t || "";
-        const subEl   = document.createElement("div"); subEl.className = "wr-sub";
-        const bits = [mediaType === "tv" ? "Serie" : "Film"];
-        if (yr) bits.push(yr);
-        if (rtng) bits.push("★ " + rtng);
-        subEl.textContent = bits.join(" · ");
-        const openEl = document.createElement("div"); openEl.className = "wr-open"; openEl.textContent = "Details ansehen →";
-        body.appendChild(titleEl); body.appendChild(subEl); body.appendChild(openEl);
-        dwResult.appendChild(body);
-        dwResult.hidden = false;
-        dwResult.onclick = () => { closeDiscWuerfel(); openDetail(mediaType, it.id); };
+        showDwResult(pool[Math.floor(Math.random() * pool.length)], mediaType);
       } catch (e) {
         rollBtn.disabled = false;
         dwStatus.textContent = "Fehler. Internet prüfen?";
@@ -5144,6 +5333,10 @@
     document.getElementById("dw-roll").addEventListener("click", rollDiscWuerfel);
     document.getElementById("dw-cancel").addEventListener("click", closeDiscWuerfel);
     dwBackdrop.addEventListener("click", e => { if (e.target === dwBackdrop) closeDiscWuerfel(); });
+    // R9-P2: actor autocomplete in the Würfel (reuses the Discover person-search helper)
+    setupPersonAC("dw-cast", "dw-cast-list",
+      pers => { dwCastPerson = pers; },
+      ()    => { dwCastPerson = null; });
 
     // ====================================================================
     //  DISCOVER  (curated rows, genre browse, general search)
@@ -5168,6 +5361,7 @@
     function initDiscover() {
       if (discInited) return;
       discInited = true;
+      buildRecos();
       buildGenreChips();
       buildRows();
       fillDfGenres();
@@ -5282,8 +5476,10 @@
     // point 6: drop already-watched titles when the toggle is on. mediaType may be
     // null for mixed rows (then fall back to the item's own media_type).
     // Also strips blocked titles (point 12) so every discover path is covered.
+    // R9-P6b: also strips adult titles from every *unsolicited* browse path. Search
+    // deliberately uses filterBlocked (not this), so an explicit search still finds them.
     function filterHidden(items, mediaType) {
-      let out = filterBlocked(items, mediaType);
+      let out = filterBlocked(items, mediaType).filter(it => !it.adult);
       if (db.hideWatched) out = out.filter(it => !db.items[keyOf(mediaType || it.media_type, it.id)]);
       if (db.hideWatchlist) out = out.filter(it => !db.watchlist[keyOf(mediaType || it.media_type, it.id)]);
       return out;
@@ -5303,7 +5499,7 @@
 
     async function fillRow(def, sc) {
       try {
-        let url = "https://api.themoviedb.org/3" + def.url + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG;
+        let url = "https://api.themoviedb.org/3" + def.url + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG + "&include_adult=false";
         if (def.region) url += "&region=" + TMDB_REGION;
         const res = await fetch(url);
         if (!res.ok) throw new Error();
@@ -5319,6 +5515,217 @@
       } catch (e) {
         sc.innerHTML = '<div class="disc-loading">Konnte nicht laden.</div>';
       }
+    }
+
+    // ====================================================================
+    //  R9-P1: Personalized recommendation slideshow (Entdecken)
+    //  One slide per source (genre of well-rated titles, a tag, a custom
+    //  list). Each source aggregates TMDB /recommendations across a few seed
+    //  titles, filters out already-seen / blocked / adult, and surfaces the
+    //  top unseen pick. "Neu empfehlen" rotates each slide to its next
+    //  candidate and reshuffles the order.
+    // ====================================================================
+    const discRecos = document.getElementById("disc-recos");
+    let genreNameCache = null;   // { movie:{id:name}, tv:{id:name} }
+    let recoState = null;        // { slides: [{label, candidates, idx}] }
+    let recoBuilding = false;
+    let recoDirty = false;       // R9-P4: set when settings change reco sources → rebuild on next Discover open
+
+    async function loadGenreNames() {
+      if (genreNameCache) return genreNameCache;
+      const out = { movie: {}, tv: {} };
+      try {
+        const [mr, tr] = await Promise.all([
+          fetch("https://api.themoviedb.org/3/genre/movie/list?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG),
+          fetch("https://api.themoviedb.org/3/genre/tv/list?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG)
+        ]);
+        if (mr.ok) (await mr.json()).genres.forEach(g => out.movie[g.id] = g.name);
+        if (tr.ok) (await tr.json()).genres.forEach(g => out.tv[g.id] = g.name);
+      } catch (e) { /* ignore */ }
+      genreNameCache = out;
+      return out;
+    }
+
+    // A title must NOT be recommended if it is already watched, on the
+    // watchlist (already planned), or blocked.
+    function recoIsSeen(mediaType, id) {
+      const k = keyOf(mediaType, id);
+      return !!(db.items[k] || db.watchlist[k] || (db.blocklist && db.blocklist[k]));
+    }
+
+    async function fetchRecsFor(mediaType, id) {
+      try {
+        const res = await fetch("https://api.themoviedb.org/3/" + mediaType + "/" + id +
+          "/recommendations?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG + "&page=1");
+        if (!res.ok) return [];
+        const d = await res.json();
+        return (d.results || []).map(r => Object.assign({}, r, { media_type: r.media_type || mediaType }));
+      } catch (e) { return []; }
+    }
+
+    // Aggregate recommendations across seeds → ranked, deduped, unseen pool.
+    async function aggregateRecs(seeds) {
+      const tally = {};
+      const lists = await Promise.all(seeds.map(s => fetchRecsFor(s.mediaType, s.id)));
+      lists.forEach(recs => recs.forEach(r => {
+        const mt = r.media_type === "tv" ? "tv" : "movie";
+        if (r.adult) return;
+        if (!r.poster_path && !r.backdrop_path) return;
+        if (recoIsSeen(mt, r.id)) return;
+        const k = keyOf(mt, r.id);
+        if (!tally[k]) tally[k] = { item: r, mt: mt, freq: 0 };
+        tally[k].freq += 1;
+      }));
+      return Object.values(tally)
+        .sort((a, b) => (b.freq - a.freq) || ((b.item.vote_count || 0) - (a.item.vote_count || 0)))
+        .map(t => Object.assign({}, t.item, { _mt: t.mt }));
+    }
+
+    // Watched + ranked titles sitting in the top two buckets (taste signal).
+    function wellRatedItems() {
+      const ranked = Object.values(db.items).filter(it => !it.unranked);
+      const top = ranked
+        .map(it => ({ it: it, score: ensureScore(it), b: deriveBucket(ensureScore(it)) }))
+        .filter(x => x.b === "great" || x.b === "good")
+        .sort((a, b) => b.score - a.score)
+        .map(x => x.it);
+      if (top.length) return top;
+      // fallback: not enough high-bucket titles yet → take best-scored overall
+      return ranked.sort((a, b) => ensureScore(b) - ensureScore(a)).slice(0, 6);
+    }
+
+    async function buildRecoSources() {
+      const names = await loadGenreNames();
+      const sources = [];
+
+      // (1) genre-based slides from well-rated titles
+      const pool = wellRatedItems();
+      const gfreq = {};
+      pool.forEach(it => (it.genreIds || []).forEach(g => { gfreq[g] = (gfreq[g] || 0) + 1; }));
+      const topGenres = Object.keys(gfreq).sort((a, b) => gfreq[b] - gfreq[a]).slice(0, 2);
+      topGenres.forEach(gid => {
+        const seeds = pool.filter(it => (it.genreIds || []).includes(+gid))
+          .slice(0, 2).map(it => ({ id: it.id, mediaType: it.mediaType }));
+        if (!seeds.length) return;
+        const gname = names.movie[gid] || names.tv[gid];
+        sources.push({ label: gname ? ("Anhand deiner " + gname + "-Titel") : "Anhand deiner Favoriten", seeds: seeds });
+      });
+      if (!sources.length && pool.length) {
+        sources.push({ label: "Anhand deiner Favoriten", seeds: pool.slice(0, 3).map(it => ({ id: it.id, mediaType: it.mediaType })) });
+      }
+
+      // (2) tag-based slides (excluded tags skipped — R9-P4)
+      const exclTags = db.recoExcludeTags || {};
+      const tagSeeds = {};
+      Object.keys(db.items).forEach(k => {
+        const it = db.items[k]; if (it.unranked) return;
+        (getMeta(k).tags || []).forEach(t => {
+          if (exclTags[t]) return;
+          (tagSeeds[t] = tagSeeds[t] || []).push({ id: it.id, mediaType: it.mediaType });
+        });
+      });
+      Object.keys(tagSeeds).slice(0, 2).forEach(t => {
+        sources.push({ label: "Anhand deinem Tag: " + t, seeds: tagSeeds[t].slice(0, 2) });
+      });
+
+      // (3) custom-list-based slides (Watchlist excluded by design; excluded lists skipped — R9-P4)
+      const exclLists = db.recoExcludeLists || {};
+      Object.keys(db.lists).forEach(lid => {
+        if (exclLists[lid]) return;
+        const lst = db.lists[lid];
+        const seeds = Object.values(lst.items || {})
+          .map(r => ({ id: r.id, mediaType: r.mediaType || r.media_type || "movie" }))
+          .filter(s => s.id).slice(0, 2);
+        if (!seeds.length) return;
+        sources.push({ label: "Anhand deiner Liste: " + lst.name, seeds: seeds });
+      });
+
+      return sources.slice(0, 7);
+    }
+
+    async function buildRecos() {
+      if (recoBuilding) return;
+      recoBuilding = true;
+      discRecos.hidden = false;
+      discRecos.innerHTML =
+        '<div class="disc-recos-head"><h2>Für dich empfohlen</h2></div>' +
+        '<div class="reco-track"><div class="reco-skeleton"></div><div class="reco-skeleton"></div></div>';
+      try {
+        const sources = await buildRecoSources();
+        if (!sources.length) { discRecos.hidden = true; recoBuilding = false; return; }
+        const pools = await Promise.all(sources.map(s => aggregateRecs(s.seeds)));
+        const slides = [];
+        sources.forEach((s, i) => {
+          if (pools[i] && pools[i].length) slides.push({ label: s.label, candidates: pools[i], idx: 0 });
+        });
+        if (!slides.length) { discRecos.hidden = true; recoBuilding = false; return; }
+        recoState = { slides: slides };
+        renderRecos();
+      } catch (e) {
+        discRecos.hidden = true;
+      }
+      recoBuilding = false;
+    }
+
+    function renderRecos() {
+      if (!recoState || !recoState.slides.length) { discRecos.hidden = true; return; }
+      discRecos.hidden = false;
+      const head = document.createElement("div");
+      head.className = "disc-recos-head";
+      head.innerHTML = '<h2>Für dich empfohlen</h2>' +
+        '<button class="reco-reshuffle" type="button" id="reco-reshuffle">' +
+        '<svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Neu empfehlen</button>';
+      const track = document.createElement("div");
+      track.className = "reco-track";
+      const used = new Set();
+      recoState.slides.forEach(sl => {
+        let pick = null;
+        for (let n = 0; n < sl.candidates.length; n++) {
+          const c = sl.candidates[(sl.idx + n) % sl.candidates.length];
+          const k = keyOf(c._mt || (c.media_type === "tv" ? "tv" : "movie"), c.id);
+          if (!used.has(k)) { pick = c; sl.idx = (sl.idx + n) % sl.candidates.length; used.add(k); break; }
+        }
+        if (!pick) pick = sl.candidates[sl.idx % sl.candidates.length];
+        track.appendChild(buildRecoCard(pick, sl.label));
+      });
+      discRecos.innerHTML = "";
+      discRecos.appendChild(head); discRecos.appendChild(track);
+      document.getElementById("reco-reshuffle").addEventListener("click", reshuffleRecos);
+    }
+
+    function buildRecoCard(item, label) {
+      const mt = item._mt || (item.media_type === "tv" ? "tv" : "movie");
+      const title = mt === "tv" ? (item.name || item.original_name) : (item.title || item.original_title);
+      const date = mt === "tv" ? item.first_air_date : item.release_date;
+      const year = date ? date.slice(0, 4) : "";
+      const card = document.createElement("div");
+      card.className = "reco-card";
+      const bgPath = item.backdrop_path ? (IMG_BASE + "w780" + item.backdrop_path)
+        : item.poster_path ? (IMG_BASE + "w500" + item.poster_path) : "";
+      const rating = (typeof item.vote_average === "number" && item.vote_average > 0)
+        ? ' · <span class="reco-star">★ ' + item.vote_average.toFixed(1).replace(".", ",") + "</span>" : "";
+      card.innerHTML =
+        (bgPath ? '<img class="reco-card-bg" loading="lazy" src="' + bgPath + '" alt="">' : '') +
+        '<div class="reco-card-dim"></div>' +
+        '<div class="reco-card-src">' + esc(label) + '</div>' +
+        '<div class="reco-card-body">' +
+          '<div class="reco-card-title">' + esc(title || "Ohne Titel") + '</div>' +
+          '<div class="reco-card-meta">' + (mt === "tv" ? "Serie" : "Film") + (year ? " · " + year : "") + rating + '</div>' +
+        '</div>';
+      card.addEventListener("click", () => openDetail(mt, item.id));
+      return card;
+    }
+
+    function reshuffleRecos() {
+      if (!recoState) return;
+      const btn = document.getElementById("reco-reshuffle");
+      if (btn) { btn.classList.remove("spin"); void btn.offsetWidth; btn.classList.add("spin"); }
+      recoState.slides.forEach(sl => { sl.idx = (sl.idx + 1) % sl.candidates.length; });
+      for (let i = recoState.slides.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = recoState.slides[i]; recoState.slides[i] = recoState.slides[j]; recoState.slides[j] = tmp;
+      }
+      renderRecos();
     }
 
     async function buildGenreChips() {
@@ -5369,19 +5776,37 @@
         if (discSearch.value.trim() !== q) return;
         const items  = filterBlocked((d.results || []).filter(r => r.media_type === "movie" || r.media_type === "tv"), null).slice(0, 30);
         const people = (pd.results || []).slice(0, 5);
-        renderDiscResults(items, people);
+        const suggestions = await discSearchSuggestions(q);   // R9-P5: genre / studio interpretation
+        if (discSearch.value.trim() !== q) return;
+        renderDiscResults(items, people, suggestions);
       } catch (e) {
         if (e.name === "AbortError") return;
         renderDiscResults("error");
       }
     }
 
-    function renderDiscResults(items, people) {
+    function renderDiscResults(items, people, suggestions) {
       showDiscResults();
       discResults.innerHTML = "";
       if (items === "error") { discResults.innerHTML = '<div class="results-empty">Suche fehlgeschlagen. Internet prüfen?</div>'; return; }
-      if (!items.length && (!people || !people.length)) { discResults.innerHTML = '<div class="results-empty">Nichts gefunden.</div>'; return; }
       const frag = document.createDocumentFragment();
+      // R9-P5: smart suggestions (e.g. "Genre: Horror", "Studio: Disney") at the top
+      if (suggestions && suggestions.length) {
+        const sw = document.createElement("div"); sw.className = "search-suggest";
+        suggestions.forEach(s => {
+          const chip = document.createElement("button");
+          chip.className = "suggest-chip"; chip.type = "button";
+          chip.innerHTML = '<svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3"/></svg>' +
+            '<span class="sc-kind">' + esc(s.kind) + ':</span>&nbsp;' + esc(s.label);
+          chip.addEventListener("click", s.action);
+          sw.appendChild(chip);
+        });
+        frag.appendChild(sw);
+      }
+      if (!items.length && (!people || !people.length)) {
+        const empty = document.createElement("div"); empty.className = "results-empty"; empty.textContent = "Nichts gefunden.";
+        frag.appendChild(empty); discResults.appendChild(frag); return;
+      }
       for (const r of items) frag.appendChild(buildResultRow(r, () => openDetail(r.media_type, r.id)));
       if (people && people.length) {
         const lbl = document.createElement("div"); lbl.className = "people-section-label"; lbl.textContent = "Personen";
@@ -5389,6 +5814,40 @@
         people.forEach(p => frag.appendChild(buildPersonResultRow(p)));
       }
       discResults.appendChild(frag);
+    }
+
+    // R9-P5: interpret a free-text query as a genre or studio and offer it as a chip.
+    async function discSearchSuggestions(q) {
+      const ql = q.toLowerCase().trim();
+      const out = [];
+      if (ql.length < 3) return out;
+      const tokens = ql.split(/\s+/);
+      await ensureGenres();
+      if (genreMapById) {
+        for (const id in genreMapById) {
+          const gn = genreMapById[id].toLowerCase();
+          const hit = gn.includes(" ") ? ql.includes(gn) : (ql === gn || tokens.includes(gn));
+          if (hit) { out.push({ kind: "Genre", label: genreMapById[id], action: () => applyGenreFromSearch(id, genreMapById[id]) }); break; }
+        }
+      }
+      for (const s of STUDIOS) {
+        const hit = s.match.some(m => m.includes(" ") ? ql.includes(m) : tokens.includes(m));
+        if (hit) { out.push({ kind: "Studio", label: s.name, action: () => applyStudioFromSearch(s) }); break; }
+      }
+      return out;
+    }
+
+    function applyGenreFromSearch(id, name) {
+      discSearch.value = ""; discClear.hidden = true;
+      openGenreBrowse(id, name);
+    }
+    function applyStudioFromSearch(studio) {
+      discSearch.value = ""; discClear.hidden = true;
+      dfMedia.value = "movie";          // studio filtering targets films
+      dfStudio.value = studio.id;
+      if (dfAdvanced.hidden) { dfAdvanced.hidden = false; dfToggle.classList.add("on"); }   // reveal active studio
+      fillDfGenres();
+      applyFilterBrowse();
     }
 
     discSearch.addEventListener("input", onDiscInput);
@@ -5448,10 +5907,34 @@
     // ---------- Filter browse (A3) ----------
     const dfMedia  = document.getElementById("df-media");
     const dfGenre  = document.getElementById("df-genre");
+    const dfStudio = document.getElementById("df-studio");
     const dfToggle = document.getElementById("df-toggle");
     const dfAdvanced = document.getElementById("df-advanced");
     const dfGrid   = document.getElementById("df-grid");
     const dfMore   = document.getElementById("df-more");
+
+    // R9-P5: known studios → TMDB company id(s). "|" means OR (e.g. legacy + current
+    // label). `match` holds lowercase keywords used to detect a studio in free-text search.
+    const STUDIOS = [
+      { name: "Disney",        id: "2",        match: ["disney", "walt disney"] },
+      { name: "Pixar",         id: "3",        match: ["pixar"] },
+      { name: "Marvel Studios",id: "420",      match: ["marvel"] },
+      { name: "Lucasfilm",     id: "1",        match: ["lucasfilm", "star wars"] },
+      { name: "Warner Bros.",  id: "174",      match: ["warner", "wb"] },
+      { name: "Universal",     id: "33",       match: ["universal"] },
+      { name: "Sony / Columbia", id: "5|34",   match: ["sony", "columbia"] },
+      { name: "Paramount",     id: "4",        match: ["paramount"] },
+      { name: "20th Century",  id: "25|127928",match: ["20th century", "fox"] },
+      { name: "DreamWorks",    id: "521|7",    match: ["dreamworks"] },
+      { name: "A24",           id: "41077",    match: ["a24"] },
+      { name: "Studio Ghibli", id: "10342",    match: ["ghibli"] }
+    ];
+    function fillDfStudios() {
+      if (dfStudio.options.length > 1) return;   // populate once (studio list is static)
+      dfStudio.innerHTML = '<option value="">Alle</option>' +
+        STUDIOS.map(s => '<option value="' + s.id + '">' + esc(s.name) + "</option>").join("");
+    }
+    fillDfStudios();
     let fb = { page: 0, totalPages: 1, url: "", media: "movie" };
     let dfGenresFilled = "";
     let dfCastPerson = null;   // {id, name} selected actor (16a)
@@ -5508,6 +5991,7 @@
       if (yrMin) url += "&" + dateGte + "=" + yrMin + "-01-01";
       if (yrMax) url += "&" + dateLte + "=" + yrMax + "-12-31";
       if (genreId) url += "&with_genres=" + genreId;
+      if (dfStudio.value) url += "&with_companies=" + dfStudio.value;   // R9-P5
       return { url, media };
     }
 
@@ -5677,7 +6161,7 @@
     // R6-P7: reset all Discover filters and return to the curated home view
     function resetDiscoverFilters() {
       const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
-      set("df-media", "movie"); set("df-genre", ""); set("df-rt-min", "0"); set("df-rt-max", "0");
+      set("df-media", "movie"); set("df-genre", ""); set("df-studio", ""); set("df-rt-min", "0"); set("df-rt-max", "0");
       set("df-rating", "0"); set("df-cast", ""); set("df-crew", "");
       const yrMin = document.getElementById("df-yr-min"); if (yrMin) yrMin.selectedIndex = 0;
       const yrMax = document.getElementById("df-yr-max"); if (yrMax) yrMax.selectedIndex = 0;
@@ -5690,7 +6174,7 @@
       showDiscBrowse();
       buildRows();
     }
-    ["df-genre", "df-rt-min", "df-rt-max", "df-yr-min", "df-yr-max", "df-rating"]
+    ["df-genre", "df-studio", "df-rt-min", "df-rt-max", "df-yr-min", "df-yr-max", "df-rating"]
       .forEach(id => document.getElementById(id).addEventListener("change", scheduleFilter));
     dfMedia.addEventListener("change", async () => { await fillDfGenres(); scheduleFilter(); });
     dfToggle.addEventListener("click", () => {
@@ -5733,13 +6217,21 @@
       ).join("");
     }
 
-    // point 12: list blocked titles with an unblock button (invisible when empty)
+    // point 12 / R9-P6a: blocked titles are hidden behind a tap so unwanted content
+    // isn't visible at a glance. The list collapses by default and reveals on tap.
+    let blockedRevealed = false;
     function renderBlocked() {
       const host = document.getElementById("profile-blocked");
       if (!host) return;
       const entries = Object.entries(db.blocklist || {});
-      if (!entries.length) { host.innerHTML = ""; return; }
-      let html = '<div class="detail-section"><h3>Gesperrte Titel</h3><div class="blocked-list">';
+      if (!entries.length) { host.innerHTML = ""; blockedRevealed = false; return; }
+      let html = '<div class="detail-section">';
+      html += '<button class="blocked-toggle" type="button" id="blocked-toggle">' +
+        '<span class="blocked-toggle-label">Gesperrte Titel</span>' +
+        '<span class="blocked-count">' + entries.length + '</span>' +
+        '<svg class="blocked-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>' +
+        '</button>';
+      html += '<div class="blocked-list" id="blocked-list"' + (blockedRevealed ? "" : " hidden") + ">";
       html += entries.map(([key, b]) =>
         '<div class="blocked-row">' +
           (b.poster ? '<img class="blocked-thumb" loading="lazy" src="' + IMG_BASE + "w92" + b.poster + '" alt="">' : '<div class="blocked-thumb empty"></div>') +
@@ -5748,13 +6240,67 @@
         "</div>").join("");
       html += "</div></div>";
       host.innerHTML = html;
+
+      const toggle = document.getElementById("blocked-toggle");
+      const list   = document.getElementById("blocked-list");
+      toggle.classList.toggle("open", blockedRevealed);
+      toggle.addEventListener("click", () => {
+        blockedRevealed = !blockedRevealed;
+        list.hidden = !blockedRevealed;
+        toggle.classList.toggle("open", blockedRevealed);
+      });
       host.querySelectorAll(".blocked-unblock").forEach(btn => {
         btn.addEventListener("click", () => { delete db.blocklist[btn.dataset.key]; saveDB(); renderBlocked(); });
       });
     }
 
+    // R9-P4: Einstellungen → Empfehlungen. Toggle which custom lists / tags feed
+    // the recommendation slideshow (point 1). Switch ON = used as a source.
+    function renderSettings() {
+      const host = document.getElementById("profile-settings");
+      if (!host) return;
+      db.recoExcludeLists = db.recoExcludeLists || {};
+      db.recoExcludeTags  = db.recoExcludeTags || {};
+      const lists = Object.values(db.lists || {});
+      const tags  = (db.tagDefs || []).slice().sort((a, b) => a.localeCompare(b));
+
+      const row = (label, attr, val, included) =>
+        '<div class="set-row"><span class="set-row-label">' + esc(label) + '</span>' +
+        '<label class="switch"><input type="checkbox" ' + attr + '="' + esc(val) + '"' +
+        (included ? " checked" : "") + '><span class="switch-track"></span></label></div>';
+
+      let html = '<div class="detail-section"><h3>Einstellungen</h3>';
+      html += '<div class="settings-group-title">Empfehlungen</div>';
+      html += '<p class="settings-sub-label">Lege fest, welche Listen und Tags für die Empfehlungen im Entdecken-Tab genutzt werden. Ausgeschaltete Quellen werden übersprungen.</p>';
+
+      html += '<div class="settings-group-title">Listen</div><div class="settings-group">';
+      html += lists.length
+        ? lists.map(l => row(l.name, "data-reco-list", l.id, !db.recoExcludeLists[l.id])).join("")
+        : '<div class="settings-empty">Keine eigenen Listen.</div>';
+      html += '</div>';
+
+      html += '<div class="settings-group-title">Tags</div><div class="settings-group">';
+      html += tags.length
+        ? tags.map(t => row(t, "data-reco-tag", t, !db.recoExcludeTags[t])).join("")
+        : '<div class="settings-empty">Keine Tags.</div>';
+      html += '</div></div>';
+      host.innerHTML = html;
+
+      host.querySelectorAll("input[data-reco-list]").forEach(cb => cb.addEventListener("change", () => {
+        if (cb.checked) delete db.recoExcludeLists[cb.dataset.recoList];
+        else db.recoExcludeLists[cb.dataset.recoList] = true;
+        saveDB(); recoDirty = true;
+      }));
+      host.querySelectorAll("input[data-reco-tag]").forEach(cb => cb.addEventListener("change", () => {
+        if (cb.checked) delete db.recoExcludeTags[cb.dataset.recoTag];
+        else db.recoExcludeTags[cb.dataset.recoTag] = true;
+        saveDB(); recoDirty = true;
+      }));
+    }
+
     async function renderProfile() {
       renderBlocked();   // point 12: always render the blocklist, even with no logged items
+      renderSettings();  // R9-P4: recommendation source toggles
       const noteEl = document.getElementById("profile-note");
       const items = Object.values(db.items);
       const movies = items.filter(i => i.mediaType === "movie");
