@@ -819,7 +819,8 @@
     }
     .levelup-text { text-align: center; }
     .levelup-up { display: block; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--text-dim); }
-    .levelup-bucket { display: block; font-size: 24px; font-weight: 800; color: var(--accent); margin-top: 3px; letter-spacing: -.01em; }
+    .levelup-bucket { display: block; font-size: 26px; font-weight: 800; color: var(--accent); margin-top: 3px; letter-spacing: -.01em; }
+    .levelup-name { display: block; font-size: 14px; font-weight: 600; color: var(--text); margin: 7px auto 0; max-width: 240px; line-height: 1.25; }
     @keyframes levelup-pop {
       0%   { opacity: 0; transform: translateY(44px) scale(.9); }
       18%  { opacity: 1; transform: translateY(0) scale(1); }
@@ -1853,6 +1854,7 @@
       <div class="levelup-text">
         <span class="levelup-up">Aufgestiegen</span>
         <span class="levelup-bucket"></span>
+        <span class="levelup-name"></span>
       </div>
     </div>
   </div>
@@ -3455,10 +3457,12 @@
         const t = document.createElement("div"); t.className = "rank-title"; t.textContent = titleText;
         bodyEl.appendChild(t);
         if (subText) { const y = document.createElement("div"); y.className = "rank-year"; y.textContent = subText; bodyEl.appendChild(y); }
-        // R7-P6: tier label per row
-        const tierLbl = document.createElement("div"); tierLbl.className = "rank-tier" + (it.unranked ? " unranked-lbl" : "");
-        tierLbl.textContent = it.unranked ? "Ungerankt" : bucketLabel(deriveBucket(it.score));
-        bodyEl.appendChild(tierLbl);
+        // R7-P6: tier label per row — actors have no buckets, so no tier label for them (bug fix)
+        if (!isPerson) {
+          const tierLbl = document.createElement("div"); tierLbl.className = "rank-tier" + (it.unranked ? " unranked-lbl" : "");
+          tierLbl.textContent = it.unranked ? "Ungerankt" : bucketLabel(deriveBucket(it.score));
+          bodyEl.appendChild(tierLbl);
+        }
         row.appendChild(bodyEl);
 
         // R10-P3: slim up/down arrows for manual reordering (ranked rows only)
@@ -3761,19 +3765,40 @@
     // point 10: short celebration when the winner climbs into a higher tier.
     // pointer-events:none + auto-dismiss means it never blocks the next duel.
     let levelupTimer = null;
-    function playLevelUp(item, bucket) {
+    // Generic celebration overlay: small category label, big highlight text, and the title/name.
+    function playAchievement(item, smallLabel, bigText) {
       const el = document.getElementById("levelup");
       if (!el) return;
       const img = el.querySelector(".levelup-poster");
       const imgPath = item.poster || item.photo || null;
       if (imgPath) { img.src = IMG_BASE + "w185" + imgPath; img.style.display = ""; }
       else img.style.display = "none";
-      el.querySelector(".levelup-bucket").textContent = bucketLabel(bucket) + "!";
+      el.querySelector(".levelup-up").textContent = smallLabel;
+      el.querySelector(".levelup-bucket").textContent = bigText;
+      el.querySelector(".levelup-name").textContent = item.title || item.name || "";
       el.hidden = false;
       const card = el.querySelector(".levelup-card");      // restart the keyframe animation
       card.style.animation = "none"; void card.offsetWidth; card.style.animation = "";
       clearTimeout(levelupTimer);
-      levelupTimer = setTimeout(() => { el.hidden = true; }, 1400);
+      levelupTimer = setTimeout(() => { el.hidden = true; }, 1700);
+    }
+
+    // Best-first so the first crossed threshold is the most impressive one shown.
+    const RANK_MILESTONES = [
+      { t: 1,   small: "Spitzenreiter", big: "#1 🏆" },
+      { t: 3,   small: "Meilenstein",   big: "Top 3 🔥" },
+      { t: 10,  small: "Meilenstein",   big: "Top 10 ⭐" },
+      { t: 25,  small: "Meilenstein",   big: "Top 25 ✨" },
+      { t: 50,  small: "Meilenstein",   big: "Top 50" },
+      { t: 100, small: "Meilenstein",   big: "Top 100" }
+    ];
+
+    // Winner's 1-based position in the Elo-score order of the current media type
+    // (0 / Infinity-style "not ranked" handled by callers).
+    function eloRankPos(item, media) {
+      const pool = rankedPool(media).sort((a, b) => b.score - a.score);
+      const idx = pool.findIndex(x => String(x.id) === String(item.id));
+      return { pos: idx >= 0 ? idx + 1 : Infinity, total: pool.length };
     }
 
     function chooseWinner(winner) {
@@ -3786,9 +3811,11 @@
         aUn: winner.unranked, bUn: loser.unranked,
         sig: pairSig(winner, loser)
       };
+      const isPerson = rankMedia === "person";
       // point 10: winner's tier before the duel (an unranked title counts as a promotion)
       const wasUnranked = winner.unranked;
       const oldBucket = deriveBucket(winner.score);
+      const posBefore = wasUnranked ? Infinity : eloRankPos(winner, rankMedia).pos;   // before any mutation
       // A duel result places both titles: they leave the "Ungerankt" zone (P3)
       winner.unranked = false;
       loser.unranked = false;
@@ -3796,9 +3823,30 @@
       saveDB();
       updateUndoBtn();
       const newBucket = deriveBucket(winner.score);
-      if (wasUnranked || BUCKET_ORDER.indexOf(newBucket) > BUCKET_ORDER.indexOf(oldBucket)) {
-        playLevelUp(winner, newBucket);     // point 10: tier promotion
+      const after = eloRankPos(winner, rankMedia);
+      const posAfter = after.pos, total = after.total;
+
+      // Decide which single celebration to show, most rewarding first.
+      let small = null, big = null;
+      // 1) Top-N / #1 milestone — only meaningful when there are more titles than the threshold
+      for (const m of RANK_MILESTONES) {
+        if (total > m.t && posAfter <= m.t && posBefore > m.t) { small = m.small; big = m.big; break; }
       }
+      // 2) bucket / tier promotion — films & series only (actors have no buckets — bug fix)
+      if (!big && !isPerson && (wasUnranked || BUCKET_ORDER.indexOf(newBucket) > BUCKET_ORDER.indexOf(oldBucket))) {
+        small = "Aufgestiegen"; big = bucketLabel(newBucket) + "!";
+      }
+      // 3) big jump — climbed 5+ positions in this single duel
+      if (!big && isFinite(posBefore) && (posBefore - posAfter) >= 5) {
+        small = "Aufstieg"; big = (posBefore - posAfter) + " Plätze aufgestiegen!";
+      }
+      // 4) crossed into the top half of the ranking
+      if (!big && total >= 4) {
+        const half = Math.ceil(total / 2);
+        if (posAfter <= half && posBefore > half) { small = "Aufstieg"; big = "In die obere Hälfte!"; }
+      }
+      if (big) playAchievement(winner, small, big);
+
       const next = pickPair();
       if (next) showDuelPair(next); else closeDuel("Duell abgeschlossen!");
     }
