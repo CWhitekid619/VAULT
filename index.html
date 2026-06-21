@@ -622,6 +622,10 @@
       color: var(--text-dim); font-family: inherit; font-size: 13px;
       padding: 8px; margin-bottom: 6px; text-decoration: underline;
     }
+    .migrate-text {
+      font-size: 14px; line-height: 1.5; color: var(--text-dim);
+      margin: 0 0 18px;
+    }
     /* Account block in the Profil tab */
     .account-card {
       display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -2040,6 +2044,20 @@
     </div>
   </div>
 
+  <!-- ============ R4: MIGRATION (erstes Login mit lokalen Daten) ============ -->
+  <div id="migrate-backdrop" class="sheet-backdrop" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Daten hochladen">
+      <div class="sheet-handle"></div>
+      <div class="sheet-section-label">Vorhandene Daten</div>
+      <p class="migrate-text">Auf diesem Gerät sind bereits Filme, Listen und Bewertungen
+        gespeichert. Möchtest du sie in dein Konto hochladen, damit sie überall
+        verfügbar sind?</p>
+      <button id="migrate-upload" class="sheet-btn-primary" type="button">Daten hochladen</button>
+      <button id="migrate-fresh" class="sheet-btn-cancel" type="button">Neu anfangen (leeres Konto)</button>
+      <button id="migrate-later" class="auth-link" type="button">Später entscheiden</button>
+    </div>
+  </div>
+
   <!-- ============ WÜRFEL (random picker with filters) ============ -->
   <div id="wuerfel-backdrop" class="sheet-backdrop" hidden>
     <div class="sheet" role="dialog" aria-modal="true" aria-label="Würfeln">
@@ -2532,6 +2550,17 @@
       // No-op when logged out or Firebase is unavailable.
       if (typeof queueCloudSync === "function") queueCloudSync();
     }
+
+    // R2/R4: cloud-sync state lives here (not in the controller block far below)
+    // so saveDB() — which runs during early init, e.g. the trackedSeries reset
+    // right after this — can reference it without a temporal-dead-zone error.
+    const CLOUD_DEBOUNCE_MS = 2000;
+    let cloudStatus       = "idle";   // idle | loading | saving | ok | offline | pending
+    let syncTimer         = null;
+    let syncInFlight      = false;
+    let syncDirty         = false;
+    let suppressPush      = false;     // true while applying remote data, so it doesn't echo back
+    let awaitingMigration = false;     // R4: true while the first-login migration prompt is open
 
     // One-time reset (R8 follow-up): earlier builds flagged every series as tracked
     // via the old hiddenSeries logic. "Tracken" is now strictly opt-in, so wipe any
@@ -7110,18 +7139,13 @@
     //  - Offline / error: keep working from localStorage; the next saveDB() (or
     //    next login) re-pushes the full db, so the cloud self-heals.
     // onSnapshot real-time sync is intentionally deferred to a later round.
-    const CLOUD_DEBOUNCE_MS = 2000;
-    let cloudStatus  = "idle";   // idle | loading | saving | ok | offline
-    let syncTimer    = null;
-    let syncInFlight = false;
-    let syncDirty    = false;
-    let suppressPush = false;     // true while we apply remote data, so it doesn't echo back
-
+    // (Sync-state variables are declared up near saveDB() to avoid a TDZ error.)
     function cloudStatusText() {
       switch (cloudStatus) {
         case "loading": return "Lade aus Cloud …";
         case "saving":  return "Wird gespeichert …";
         case "ok":      return "Synchronisiert";
+        case "pending": return "Noch nicht synchronisiert";
         case "offline": return "Offline – lokal gespeichert";
         default:        return "Angemeldet";
       }
@@ -7137,7 +7161,9 @@
 
     // Debounced background push — called from saveDB().
     function queueCloudSync() {
-      if (suppressPush || !cloudReady()) return;
+      // suppressPush: applying remote data · awaitingMigration: user hasn't yet
+      // decided whether to upload existing local data (R4) → don't push either way.
+      if (suppressPush || awaitingMigration || !cloudReady()) return;
       syncDirty = true;
       setCloudStatus("saving");
       clearTimeout(syncTimer);
@@ -7182,9 +7208,14 @@
         setCloudStatus("ok");
         rerenderCurrent();
       } else {
-        // New account, no cloud document yet → seed it with the current local db.
-        // (R4 replaces this with an explicit migration prompt.)
-        flushCloudSync();
+        // New account, no cloud document yet.
+        if (hasLocalData()) {
+          // Existing local library → ask the user once whether to upload it (R4).
+          promptMigration();
+        } else {
+          // Nothing meaningful locally → silently seed the empty account.
+          flushCloudSync();
+        }
       }
     }
 
@@ -7316,6 +7347,67 @@
     }
     // Keep the privacy panel in step with login/logout.
     window.addEventListener("vault-auth-changed", renderPrivacy);
+
+    // ============ R4: first-login migration ============
+    // When a user logs into an account that has NO Firestore document yet but
+    // there IS existing local data, ask once whether to upload it. While the
+    // prompt is open, awaitingMigration suppresses all cloud writes so nothing
+    // leaks up before the user decides. The cloud-document's later existence is
+    // the natural "ask only once" guard — after either real choice a document
+    // exists, so the next login takes the "Firestore wins" path instead.
+    const migrateBackdrop = document.getElementById("migrate-backdrop");
+
+    function hasLocalData() {
+      return (db.items     && Object.keys(db.items).length     > 0) ||
+             (db.watchlist && Object.keys(db.watchlist).length > 0) ||
+             (db.lists     && Object.keys(db.lists).length     > 0) ||
+             (db.people    && Object.keys(db.people).length    > 0);
+    }
+    function closeMigrate() {
+      migrateBackdrop.hidden = true;
+      document.body.style.overflow = "";
+    }
+    function promptMigration() {
+      awaitingMigration = true;          // pause cloud sync until the user decides
+      setCloudStatus("pending");
+      migrateBackdrop.hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+    // "Daten hochladen" → push the current local db up as the account's start data.
+    function migrateUpload() {
+      awaitingMigration = false;
+      closeMigrate();
+      setCloudStatus("saving");
+      flushCloudSync();
+      showToast("Daten hochgeladen");
+    }
+    // "Neu anfangen" → keep a local backup of the old library (not synced) and
+    // reset the working db to a fresh empty state, which becomes the cloud seed.
+    function migrateFresh() {
+      try {
+        const cur = localStorage.getItem(DB_KEY);
+        if (cur) localStorage.setItem("reel.db.premigration", cur);
+      } catch (e) { /* ignore storage errors */ }
+      awaitingMigration = false;
+      closeMigrate();
+      try { localStorage.removeItem(DB_KEY); } catch (e) {}
+      db = loadDB();                     // fresh defaults
+      saveDB();                          // persist locally + queue cloud push
+      setCloudStatus("saving");
+      flushCloudSync();                  // seed the empty account immediately
+      rerenderCurrent();
+      showToast("Neues Konto gestartet");
+    }
+    // "Später entscheiden" → just close; sync stays paused (awaitingMigration
+    // remains true), and the next login re-asks since no document was created.
+    function migrateLater() {
+      closeMigrate();
+      setCloudStatus("pending");
+    }
+    document.getElementById("migrate-upload").addEventListener("click", migrateUpload);
+    document.getElementById("migrate-fresh").addEventListener("click", migrateFresh);
+    document.getElementById("migrate-later").addEventListener("click", migrateLater);
+    migrateBackdrop.addEventListener("click", (e) => { if (e.target === migrateBackdrop) migrateLater(); });
 
     async function renderProfile() {
       renderAccount();   // R1: account card (login/logout) at the top
