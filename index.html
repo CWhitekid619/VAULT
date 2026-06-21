@@ -695,6 +695,29 @@
     }
     .rank-year { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
 
+    /* R10-P3: manual reorder arrows (slim, right side) */
+    .rank-arrows { flex: 0 0 auto; display: flex; flex-direction: column; gap: 2px; margin-left: 4px; }
+    .rank-arrow {
+      width: 26px; height: 20px; padding: 0; cursor: pointer;
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px;
+      display: flex; align-items: center; justify-content: center; color: var(--text-dim);
+    }
+    .rank-arrow:active { background: var(--surface); }
+    .rank-arrow:disabled { opacity: .3; cursor: default; }
+    .rank-arrow svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+    .rank-manual-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+      padding: 9px 12px; margin-bottom: 12px;
+    }
+    .rank-manual-bar span { font-size: 12.5px; color: var(--text-dim); }
+    .rank-manual-reset {
+      flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px;
+      background: none; border: none; color: var(--accent); cursor: pointer;
+      font-family: inherit; font-size: 12.5px; font-weight: 600; padding: 0;
+    }
+    .rank-manual-reset svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
     /* ---------- Duel start button ---------- */
     .duel-start {
       display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -836,9 +859,33 @@
     .detail-loading, .detail-error { text-align: center; color: var(--text-mute); padding: 80px 24px; font-size: 14px; }
 
     .detail-hero { position: relative; }
-    .detail-backdrop { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: var(--surface-2); }
+    .detail-backdrop { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: var(--surface-2); cursor: zoom-in; }
     /* N4: cap the backdrop height on wider/desktop screens so the info isn't pushed far down (mobile unaffected) */
     @media (min-width: 600px) { .detail-backdrop { max-height: 360px; } }
+
+    /* R10-P5: fullscreen image lightbox */
+    .lightbox {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,.94);
+      display: flex; align-items: center; justify-content: center;
+      touch-action: pan-y; user-select: none;
+    }
+    .lightbox-img {
+      max-width: 100%; max-height: 100%; object-fit: contain; display: block;
+      -webkit-user-drag: none;
+    }
+    .lightbox-close {
+      position: absolute; top: calc(var(--safe-top) + 10px); right: 12px; z-index: 2;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(255,255,255,.12); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .lightbox-close svg { width: 22px; height: 22px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; }
+    .lightbox-count {
+      position: absolute; bottom: calc(var(--safe-bottom) + 16px); left: 0; right: 0;
+      text-align: center; color: rgba(255,255,255,.8); font-size: 13px; font-weight: 600;
+      font-variant-numeric: tabular-nums; pointer-events: none;
+    }
     .detail-hero.no-backdrop { padding-top: calc(var(--safe-top) + 60px); }
     .detail-hero-grad {
       position: absolute; left: 0; right: 0; bottom: 0; height: 70%;
@@ -907,6 +954,7 @@
       display: flex; gap: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch;
       padding-bottom: 4px; margin: 0 -16px; padding-left: 16px; padding-right: 16px;
       scrollbar-width: none;
+      touch-action: pan-x;   /* R10-P1: horizontal swipe only; vertical falls through to page scroll */
     }
     .hscroll::-webkit-scrollbar { display: none; }
 
@@ -1289,8 +1337,16 @@
       position: absolute; inset: 0;
       background: linear-gradient(180deg, rgba(8,8,10,.04) 0%, rgba(8,8,10,.42) 46%, rgba(8,8,10,.92) 100%);
     }
+    .reco-x {
+      position: absolute; top: 9px; right: 9px; z-index: 3;
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(0,0,0,.5); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+      border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+    }
+    .reco-x svg { width: 15px; height: 15px; stroke: rgba(255,255,255,.9); fill: none; stroke-width: 2.2; stroke-linecap: round; }
+    .reco-x:active { background: rgba(0,0,0,.75); }
     .reco-card-src {
-      position: absolute; top: 11px; left: 11px; max-width: calc(100% - 22px);
+      position: absolute; top: 11px; left: 11px; max-width: calc(100% - 50px);
       display: inline-flex; align-items: center; gap: 5px;
       background: rgba(0,0,0,.5); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
       color: rgba(255,255,255,.92); font-size: 10.5px; font-weight: 600;
@@ -1676,8 +1732,9 @@
       </div>
       <div id="profile-stats" class="stat-grid"></div>
       <div id="profile-note" class="profile-note"></div>
-      <div id="profile-blocked"></div>
       <div id="profile-settings"></div>
+      <!-- R10-P4: "Gesperrte Titel" lives at the very bottom (least important) -->
+      <div id="profile-blocked"></div>
     </section>
 
   </div>
@@ -2010,6 +2067,15 @@
     </div>
   </div>
 
+  <!-- ============ IMAGE LIGHTBOX (R10-P5) ============ -->
+  <div id="lightbox" class="lightbox" hidden>
+    <button id="lightbox-close" class="lightbox-close" type="button" aria-label="Schließen">
+      <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+    </button>
+    <img id="lightbox-img" class="lightbox-img" src="" alt="">
+    <div id="lightbox-count" class="lightbox-count" hidden></div>
+  </div>
+
   <!-- ============ TOAST ============ -->
   <div id="toast" class="toast" hidden></div>
   <div id="block-undo-toast" class="undo-toast" hidden>
@@ -2180,13 +2246,15 @@
             homeCustomSections: Array.isArray(parsed.homeCustomSections) ? parsed.homeCustomSections : [],  // custom list IDs pinned to Home
             people: (parsed.people && typeof parsed.people === "object") ? parsed.people : {},  // R7: ranked actors/directors
             recoExcludeLists: (parsed.recoExcludeLists && typeof parsed.recoExcludeLists === "object") ? parsed.recoExcludeLists : {},  // R9-P4: lists excluded from recommendations
-            recoExcludeTags: (parsed.recoExcludeTags && typeof parsed.recoExcludeTags === "object") ? parsed.recoExcludeTags : {}  // R9-P4: tags excluded from recommendations
+            recoExcludeTags: (parsed.recoExcludeTags && typeof parsed.recoExcludeTags === "object") ? parsed.recoExcludeTags : {},  // R9-P4: tags excluded from recommendations
+            recoSnoozed: (parsed.recoSnoozed && typeof parsed.recoSnoozed === "object") ? parsed.recoSnoozed : {},  // R10-P2: dismissed reco titles → snoozedAt timestamp
+            manualRankOrder: (parsed.manualRankOrder && typeof parsed.manualRankOrder === "object") ? parsed.manualRankOrder : {}  // R10-P3: manual ranking order per mediaType
           };
           migrateTags(out);
           return out;
         }
       } catch (e) { /* corrupted store — start fresh */ }
-      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, trackedSeries: {}, homeCustomSections: [], people: {}, recoExcludeLists: {}, recoExcludeTags: {} };
+      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, trackedSeries: {}, homeCustomSections: [], people: {}, recoExcludeLists: {}, recoExcludeTags: {}, recoSnoozed: {}, manualRankOrder: {} };
     }
     let db = loadDB();
     function saveDB() {
@@ -3360,7 +3428,7 @@
 
       const frag = document.createDocumentFragment();
 
-      const addRow = (it, num) => {
+      const addRow = (it, num, reorder) => {
         const row = document.createElement("div");
         row.className = "rank-row";
 
@@ -3393,6 +3461,25 @@
         bodyEl.appendChild(tierLbl);
         row.appendChild(bodyEl);
 
+        // R10-P3: slim up/down arrows for manual reordering (ranked rows only)
+        if (reorder) {
+          const arrows = document.createElement("div"); arrows.className = "rank-arrows";
+          const up = document.createElement("button");
+          up.className = "rank-arrow"; up.type = "button"; up.setAttribute("aria-label", "Nach oben");
+          up.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="6 15 12 9 18 15"/></svg>';
+          up.disabled = reorder.isFirst;
+          up.addEventListener("click", e => { e.stopPropagation(); moveRank(it.id, -1); });
+          const down = document.createElement("button");
+          down.className = "rank-arrow"; down.type = "button"; down.setAttribute("aria-label", "Nach unten");
+          down.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>';
+          down.disabled = reorder.isLast;
+          down.addEventListener("click", e => { e.stopPropagation(); moveRank(it.id, 1); });
+          arrows.appendChild(up); arrows.appendChild(down);
+          // don't let an arrow press trigger the row's long-press / navigation
+          ["mousedown", "touchstart"].forEach(ev => arrows.addEventListener(ev, e => e.stopPropagation(), { passive: true }));
+          row.appendChild(arrows);
+        }
+
         let pressTimer = null, longFired = false;
         const startPress = () => {
           longFired = false;
@@ -3424,22 +3511,78 @@
         frag.appendChild(lbl);
       };
 
-      const counts = {};
-      ranked.forEach(it => { const z = deriveBucket(it.score); counts[z] = (counts[z] || 0) + 1; });
+      // R10-P3: manual order overrides Elo order for display when present.
+      const filterActive = !!(genreFilter || tagFilter);
+      const manualActive = manualRankActive(rankMedia);
 
-      let rank = 0, lastZone = null;
-      for (const it of ranked) {
-        const zone = deriveBucket(it.score);
-        if (zone !== lastZone) { lastZone = zone; addZoneLabel(bucketLabel(zone), counts[zone]); }
-        rank++;
-        addRow(it, rank);
+      if (manualActive) {
+        const bar = document.createElement("div"); bar.className = "rank-manual-bar";
+        bar.innerHTML = '<span>Manuelle Reihenfolge aktiv</span>' +
+          '<button class="rank-manual-reset" type="button" id="rank-reset">' +
+          '<svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Elo-Reihenfolge wiederherstellen</button>';
+        frag.appendChild(bar);
+        // flat list in the user's chosen order — no Elo zone labels
+        const ordered = orderedRankedItems(ranked, rankMedia);
+        ordered.forEach((it, idx) =>
+          addRow(it, idx + 1, filterActive ? null : { isFirst: idx === 0, isLast: idx === ordered.length - 1 }));
+      } else {
+        const counts = {};
+        ranked.forEach(it => { const z = deriveBucket(it.score); counts[z] = (counts[z] || 0) + 1; });
+        let rank = 0, lastZone = null;
+        for (let idx = 0; idx < ranked.length; idx++) {
+          const it = ranked[idx];
+          const zone = deriveBucket(it.score);
+          if (zone !== lastZone) { lastZone = zone; addZoneLabel(bucketLabel(zone), counts[zone]); }
+          rank++;
+          addRow(it, rank, filterActive ? null : { isFirst: idx === 0, isLast: idx === ranked.length - 1 });
+        }
       }
       if (unranked.length) {
         addZoneLabel("Ungerankt", unranked.length);
-        unranked.forEach(it => addRow(it, "–"));
+        unranked.forEach(it => addRow(it, "–", null));   // Ungerankt zone is not reorderable
       }
 
       rankListEl.appendChild(frag);
+      const resetBtn = document.getElementById("rank-reset");
+      if (resetBtn) resetBtn.addEventListener("click", resetManualRank);
+    }
+
+    // R10-P3: manual ranking order helpers. db.manualRankOrder[mediaType] = [id, …].
+    function rankedPool(media) {
+      let items;
+      if (media === "person") items = Object.values(db.people || {}).filter(p => !p.unranked);
+      else items = Object.values(db.items).filter(it => it.mediaType === media && !it.unranked);
+      items.forEach(it => { if (typeof it.score !== "number") it.score = 1400; });
+      return items;
+    }
+    function orderedRankedItems(ranked, media) {
+      const manual = db.manualRankOrder && db.manualRankOrder[media];
+      if (!manual || !manual.length) return ranked;   // `ranked` is already score-sorted
+      const byId = new Map(ranked.map(it => [String(it.id), it]));
+      const out = [];
+      manual.forEach(id => { const it = byId.get(String(id)); if (it) { out.push(it); byId.delete(String(id)); } });
+      [...byId.values()].sort((a, b) => b.score - a.score).forEach(it => out.push(it));   // new titles appended by Elo
+      return out;
+    }
+    function manualRankActive(media) {
+      return !!(db.manualRankOrder && db.manualRankOrder[media] && db.manualRankOrder[media].length);
+    }
+    function moveRank(id, dir) {
+      const ranked = rankedPool(rankMedia).sort((a, b) => b.score - a.score);
+      const order = orderedRankedItems(ranked, rankMedia).map(it => String(it.id));
+      const i = order.indexOf(String(id));
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= order.length) return;
+      const tmp = order[i]; order[i] = order[j]; order[j] = tmp;
+      db.manualRankOrder = db.manualRankOrder || {};
+      db.manualRankOrder[rankMedia] = order;
+      saveDB();
+      renderRanking();
+    }
+    function resetManualRank() {
+      if (db.manualRankOrder) delete db.manualRankOrder[rankMedia];
+      saveDB();
+      renderRanking();
     }
 
     rankToggle.addEventListener("click", e => {
@@ -3675,6 +3818,58 @@
     const detailBody = document.getElementById("detail-body");
     let detailCtx = null;          // { mediaType, id, r } for the Eintragen button
     let detailReqId = 0;           // guards against out-of-order responses
+
+    // ---------- R10-P5: fullscreen image lightbox (swipeable gallery) ----------
+    const lightbox      = document.getElementById("lightbox");
+    const lightboxImg   = document.getElementById("lightbox-img");
+    const lightboxCount = document.getElementById("lightbox-count");
+    let lbImages = [], lbIndex = 0;
+    const tmdbHiRes = url => url.replace(/\/t\/p\/w\d+\//, "/t/p/w1280/");   // upgrade resolution
+
+    function lbShow() {
+      lightboxImg.src = lbImages[lbIndex];
+      if (lbImages.length > 1) { lightboxCount.hidden = false; lightboxCount.textContent = (lbIndex + 1) + " / " + lbImages.length; }
+      else lightboxCount.hidden = true;
+    }
+    function openLightbox(images, index) {
+      if (!images || !images.length) return;
+      lbImages = images; lbIndex = Math.max(0, Math.min(index || 0, images.length - 1));
+      lbShow();
+      lightbox.hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+    function lbStep(dir) {
+      if (lbImages.length < 2) return;
+      lbIndex = (lbIndex + dir + lbImages.length) % lbImages.length;
+      lbShow();
+    }
+    function closeLightbox() {
+      lightbox.hidden = true; lightboxImg.src = ""; document.body.style.overflow = "";
+    }
+    document.getElementById("lightbox-close").addEventListener("click", e => { e.stopPropagation(); closeLightbox(); });
+    // swipe to browse the gallery; a plain tap closes
+    (() => {
+      let sx = 0, sy = 0, down = false;
+      lightbox.addEventListener("pointerdown", e => { down = true; sx = e.clientX; sy = e.clientY; });
+      lightbox.addEventListener("pointerup", e => {
+        if (!down) return; down = false;
+        const dx = e.clientX - sx, dy = e.clientY - sy;
+        if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) lbStep(dx < 0 ? 1 : -1);
+        else if (Math.abs(dx) < 10 && Math.abs(dy) < 10) closeLightbox();
+      });
+      lightbox.addEventListener("pointercancel", () => { down = false; });
+    })();
+    // delegation: scene stills (gallery) and the backdrop open fullscreen
+    detailBody.addEventListener("click", e => {
+      const stillImg = e.target.closest(".still img");
+      if (stillImg) {
+        const imgs = [...detailBody.querySelectorAll(".still img")];
+        openLightbox(imgs.map(im => tmdbHiRes(im.src)), imgs.indexOf(stillImg));
+        return;
+      }
+      const backdrop = e.target.closest(".detail-backdrop");
+      if (backdrop && backdrop.src) openLightbox([tmdbHiRes(backdrop.src)], 0);
+    });
 
     const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -5553,6 +5748,24 @@
       return !!(db.items[k] || db.watchlist[k] || (db.blocklist && db.blocklist[k]));
     }
 
+    // R10-P2: snooze. Dismissed titles are hidden for 14 days (persisted) and never
+    // re-appear in the current session (session set), even after the 14 days lapse.
+    const RECO_SNOOZE_MS = 14 * 24 * 60 * 60 * 1000;
+    const recoSessionDismissed = new Set();   // tmdbIds dismissed this session
+    function recoSnoozedActive(id) {
+      const t = db.recoSnoozed && db.recoSnoozed[id];
+      return !!(t && (Date.now() - t < RECO_SNOOZE_MS));
+    }
+    function recoUnavailable(id) {
+      return recoSessionDismissed.has(id) || recoSnoozedActive(id);
+    }
+    function snoozeReco(id) {
+      db.recoSnoozed = db.recoSnoozed || {};
+      db.recoSnoozed[id] = Date.now();
+      recoSessionDismissed.add(id);
+      saveDB();
+    }
+
     async function fetchRecsFor(mediaType, id) {
       try {
         const res = await fetch("https://api.themoviedb.org/3/" + mediaType + "/" + id +
@@ -5571,7 +5784,7 @@
         const mt = r.media_type === "tv" ? "tv" : "movie";
         if (r.adult) return;
         if (!r.poster_path && !r.backdrop_path) return;
-        if (recoIsSeen(mt, r.id)) return;
+        if (recoIsSeen(mt, r.id) || recoUnavailable(r.id)) return;   // R10-P2: skip snoozed/dismissed
         const k = keyOf(mt, r.id);
         if (!tally[k]) tally[k] = { item: r, mt: mt, freq: 0 };
         tally[k].freq += 1;
@@ -5683,11 +5896,12 @@
         for (let n = 0; n < sl.candidates.length; n++) {
           const c = sl.candidates[(sl.idx + n) % sl.candidates.length];
           const k = keyOf(c._mt || (c.media_type === "tv" ? "tv" : "movie"), c.id);
-          if (!used.has(k)) { pick = c; sl.idx = (sl.idx + n) % sl.candidates.length; used.add(k); break; }
+          // skip already-shown (cross-slide) and snoozed/dismissed titles (R10-P2)
+          if (!used.has(k) && !recoUnavailable(c.id)) { pick = c; sl.idx = (sl.idx + n) % sl.candidates.length; used.add(k); break; }
         }
-        if (!pick) pick = sl.candidates[sl.idx % sl.candidates.length];
-        track.appendChild(buildRecoCard(pick, sl.label));
+        if (pick) track.appendChild(buildRecoCard(pick, sl.label));   // slide with no candidate left is dropped
       });
+      if (!track.children.length) { discRecos.hidden = true; return; }   // all sources exhausted
       discRecos.innerHTML = "";
       discRecos.appendChild(head); discRecos.appendChild(track);
       document.getElementById("reco-reshuffle").addEventListener("click", reshuffleRecos);
@@ -5708,11 +5922,19 @@
         (bgPath ? '<img class="reco-card-bg" loading="lazy" src="' + bgPath + '" alt="">' : '') +
         '<div class="reco-card-dim"></div>' +
         '<div class="reco-card-src">' + esc(label) + '</div>' +
+        '<button class="reco-x" type="button" aria-label="Nicht mehr empfehlen">' +
+          '<svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>' +
         '<div class="reco-card-body">' +
           '<div class="reco-card-title">' + esc(title || "Ohne Titel") + '</div>' +
           '<div class="reco-card-meta">' + (mt === "tv" ? "Serie" : "Film") + (year ? " · " + year : "") + rating + '</div>' +
         '</div>';
       card.addEventListener("click", () => openDetail(mt, item.id));
+      // R10-P2: X snoozes this title (14 days) and reveals the next recommendation
+      card.querySelector(".reco-x").addEventListener("click", e => {
+        e.stopPropagation();
+        snoozeReco(item.id);
+        renderRecos();
+      });
       return card;
     }
 
