@@ -604,6 +604,48 @@
       color: var(--text-mute); font-family: inherit; font-size: 15px; cursor: pointer;
     }
 
+    /* ---------- R1: Auth (login / register) ---------- */
+    .auth-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+    .auth-tab {
+      flex: 1; padding: 11px; border-radius: 10px; cursor: pointer;
+      background: var(--surface-2); border: 1px solid var(--border);
+      color: var(--text-dim); font-family: inherit; font-size: 14px; font-weight: 600;
+    }
+    .auth-tab.active { background: var(--accent); color: #1a1206; border-color: var(--accent); }
+    .auth-error {
+      background: rgba(220,70,70,.12); border: 1px solid rgba(220,70,70,.4);
+      color: #f0a6a6; font-size: 13px; line-height: 1.4;
+      padding: 10px 12px; border-radius: 10px; margin-bottom: 12px;
+    }
+    .auth-link {
+      width: 100%; background: none; border: none; cursor: pointer;
+      color: var(--text-dim); font-family: inherit; font-size: 13px;
+      padding: 8px; margin-bottom: 6px; text-decoration: underline;
+    }
+    /* Account block in the Profil tab */
+    .account-card {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px; margin-bottom: 18px;
+    }
+    .account-info { min-width: 0; }
+    .account-email {
+      font-size: 14px; font-weight: 600;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .account-sub { font-size: 12px; color: var(--text-mute); margin-top: 2px; }
+    .account-btn {
+      flex: 0 0 auto; padding: 9px 14px; border-radius: 10px; cursor: pointer;
+      background: var(--surface-2); border: 1px solid var(--border);
+      color: var(--text); font-family: inherit; font-size: 13px; font-weight: 600;
+    }
+    .account-btn.primary { background: var(--accent); color: #1a1206; border-color: var(--accent); }
+    /* R3: logged-in card stacks info + an action row of two buttons */
+    .account-card.col { flex-direction: column; align-items: stretch; gap: 12px; }
+    .account-since { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+    .account-actions { display: flex; gap: 8px; }
+    .account-actions .account-btn { flex: 1; text-align: center; }
+
     /* ---------- Undo-block snackbar (R6-P10b) ---------- */
     .undo-toast {
       position: fixed; left: 50%; transform: translateX(-50%);
@@ -1766,9 +1808,11 @@
         <h1>Profil</h1>
         <p>Deine Statistiken.</p>
       </div>
+      <div id="profile-account"></div>
       <div id="profile-stats" class="stat-grid"></div>
       <div id="profile-note" class="profile-note"></div>
       <div id="profile-settings"></div>
+      <div id="profile-privacy"></div>
       <!-- R10-P4: "Gesperrte Titel" lives at the very bottom (least important) -->
       <div id="profile-blocked"></div>
     </section>
@@ -1958,6 +2002,44 @@
     </div>
   </div>
 
+  <!-- ============ AUTH (Anmelden / Registrieren) ============ -->
+  <div id="auth-backdrop" class="sheet-backdrop" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Konto">
+      <div class="sheet-handle"></div>
+      <div class="auth-tabs">
+        <button id="auth-tab-login" class="auth-tab active" type="button">Anmelden</button>
+        <button id="auth-tab-register" class="auth-tab" type="button">Registrieren</button>
+      </div>
+      <input id="auth-email" class="modal-input" type="email" inputmode="email"
+             autocomplete="email" placeholder="E-Mail" autocapitalize="none" spellcheck="false" />
+      <input id="auth-pass" class="modal-input" type="password"
+             autocomplete="current-password" placeholder="Passwort" />
+      <input id="auth-pass2" class="modal-input" type="password"
+             autocomplete="new-password" placeholder="Passwort wiederholen" hidden />
+      <div id="auth-error" class="auth-error" hidden></div>
+      <button id="auth-submit" class="sheet-btn-primary" type="button">Anmelden</button>
+      <button id="auth-forgot" class="auth-link" type="button">Passwort vergessen?</button>
+      <button id="auth-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
+    </div>
+  </div>
+
+  <!-- ============ R3: PASSWORT ÄNDERN ============ -->
+  <div id="pwch-backdrop" class="sheet-backdrop" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Passwort ändern">
+      <div class="sheet-handle"></div>
+      <div class="sheet-section-label">Passwort ändern</div>
+      <input id="pwch-current" class="modal-input" type="password"
+             autocomplete="current-password" placeholder="Aktuelles Passwort" />
+      <input id="pwch-new" class="modal-input" type="password"
+             autocomplete="new-password" placeholder="Neues Passwort" />
+      <input id="pwch-new2" class="modal-input" type="password"
+             autocomplete="new-password" placeholder="Neues Passwort wiederholen" />
+      <div id="pwch-error" class="auth-error" hidden></div>
+      <button id="pwch-submit" class="sheet-btn-primary" type="button">Passwort ändern</button>
+      <button id="pwch-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
+    </div>
+  </div>
+
   <!-- ============ WÜRFEL (random picker with filters) ============ -->
   <div id="wuerfel-backdrop" class="sheet-backdrop" hidden>
     <div class="sheet" role="dialog" aria-modal="true" aria-label="Würfeln">
@@ -2135,6 +2217,139 @@
     <button id="block-undo-btn" class="undo-toast-btn" type="button">Rückgängig</button>
   </div>
 
+  <!-- ============ R1: Firebase Auth SDK (ES module) ============ -->
+  <!-- Loads the Firebase Auth SDK, exposes window.__vaultAuth for the classic
+       app script below, and broadcasts "vault-auth-changed" on login/logout.
+       Module scripts are deferred, so this runs after the main app script's
+       top-level code; the app only touches __vaultAuth inside event handlers,
+       by which point it exists. If Firebase is unreachable the app keeps
+       working fully from localStorage. -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import {
+      getAuth, onAuthStateChanged, setPersistence, browserLocalPersistence,
+      createUserWithEmailAndPassword, signInWithEmailAndPassword,
+      signOut, sendPasswordResetEmail,
+      updatePassword, reauthenticateWithCredential, EmailAuthProvider
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, setDoc, serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAe0_pfRaapuRwnw7Ixz1sR0GCboFE0w2k",
+      authDomain: "vault-f338d.firebaseapp.com",
+      projectId: "vault-f338d",
+      storageBucket: "vault-f338d.firebasestorage.app",
+      messagingSenderId: "1033468191931",
+      appId: "1:1033468191931:web:5dd1b4c15fefa80fec359e",
+      measurementId: "G-0WYYKYL4TZ"
+    };
+
+    let auth = null;
+    let firestore = null;
+    try {
+      const app = initializeApp(firebaseConfig);
+      auth = getAuth(app);
+      setPersistence(auth, browserLocalPersistence).catch(() => {});
+      firestore = getFirestore(app);
+    } catch (e) {
+      console.warn("[VAULT] Firebase init failed — running in local-only mode.", e);
+    }
+
+    // Map Firebase error codes to clear German messages for the auth UI.
+    function deMsg(code) {
+      const map = {
+        "auth/invalid-email":            "Ungültige E-Mail-Adresse.",
+        "auth/missing-password":         "Bitte ein Passwort eingeben.",
+        "auth/missing-email":            "Bitte eine E-Mail eingeben.",
+        "auth/wrong-password":           "Falsches Passwort.",
+        "auth/invalid-credential":       "E-Mail oder Passwort ist falsch.",
+        "auth/user-not-found":           "Kein Konto mit dieser E-Mail gefunden.",
+        "auth/user-disabled":            "Dieses Konto wurde deaktiviert.",
+        "auth/email-already-in-use":     "Diese E-Mail ist bereits registriert.",
+        "auth/weak-password":            "Passwort zu schwach (mind. 6 Zeichen).",
+        "auth/too-many-requests":        "Zu viele Versuche. Bitte später erneut.",
+        "auth/operation-not-allowed":    "E-Mail/Passwort-Login ist in Firebase noch nicht aktiviert.",
+        "auth/requires-recent-login":    "Bitte melde dich neu an und versuche es erneut.",
+        "auth/network-request-failed":   "Keine Verbindung. Du bist offline."
+      };
+      return map[code] || "Etwas ist schiefgelaufen. Bitte erneut versuchen.";
+    }
+
+    const api = {
+      available: !!auth,
+      get user() { return auth ? auth.currentUser : null; },
+      async register(email, password) {
+        if (!auth) throw new Error("Cloud-Konto nicht verfügbar.");
+        try { const c = await createUserWithEmailAndPassword(auth, email, password); return c.user; }
+        catch (e) { throw new Error(deMsg(e.code)); }
+      },
+      async login(email, password) {
+        if (!auth) throw new Error("Cloud-Konto nicht verfügbar.");
+        try { const c = await signInWithEmailAndPassword(auth, email, password); return c.user; }
+        catch (e) { throw new Error(deMsg(e.code)); }
+      },
+      async logout() { if (auth) await signOut(auth); },
+      async resetPassword(email) {
+        if (!auth) throw new Error("Cloud-Konto nicht verfügbar.");
+        try { await sendPasswordResetEmail(auth, email); }
+        catch (e) { throw new Error(deMsg(e.code)); }
+      },
+      // R3: account creation timestamp for the "Mitglied seit" line.
+      get creationTime() {
+        return (auth && auth.currentUser && auth.currentUser.metadata)
+          ? auth.currentUser.metadata.creationTime : null;
+      },
+      // R3: change password. Firebase requires a recent login for this, so we
+      // re-authenticate with the current password first, then update.
+      async changePassword(currentPassword, newPassword) {
+        if (!auth || !auth.currentUser) throw new Error("Nicht angemeldet.");
+        const u = auth.currentUser;
+        try {
+          const cred = EmailAuthProvider.credential(u.email, currentPassword);
+          await reauthenticateWithCredential(u, cred);
+          await updatePassword(u, newPassword);
+        } catch (e) { throw new Error(deMsg(e.code)); }
+      }
+    };
+    window.__vaultAuth = api;
+
+    // Firestore sync surface for the classic app script. The whole db object is
+    // stored as a single JSON string under users/{uid}/data/main so we never hit
+    // Firestore's nested-array restriction and deletes propagate cleanly.
+    // Document limit is 1 MB — fine for a personal library, flagged in the report.
+    window.__vaultDB = {
+      available: !!firestore,
+      docRef(uid) { return doc(firestore, "users", uid, "data", "main"); },
+      async load(uid) {
+        if (!firestore) throw new Error("Cloud-Speicher nicht verfügbar.");
+        const snap = await getDoc(this.docRef(uid));
+        if (!snap.exists()) return null;
+        const d = snap.data();
+        if (d && typeof d.payload === "string") {
+          try { return JSON.parse(d.payload); } catch (e) { return null; }
+        }
+        return null;
+      },
+      async save(uid, dataObj) {
+        if (!firestore) throw new Error("Cloud-Speicher nicht verfügbar.");
+        await setDoc(this.docRef(uid), {
+          payload: JSON.stringify(dataObj),
+          updatedAt: serverTimestamp(),
+          v: 1
+        }, { merge: true });
+      }
+    };
+
+    function broadcast(user) {
+      window.__vaultUser = user || null;
+      window.dispatchEvent(new CustomEvent("vault-auth-changed", { detail: { user: user || null } }));
+    }
+    if (auth) onAuthStateChanged(auth, broadcast);
+    else broadcast(null);
+  </script>
+
   <script>
     "use strict";
 
@@ -2300,18 +2515,22 @@
             recoExcludeLists: (parsed.recoExcludeLists && typeof parsed.recoExcludeLists === "object") ? parsed.recoExcludeLists : {},  // R9-P4: lists excluded from recommendations
             recoExcludeTags: (parsed.recoExcludeTags && typeof parsed.recoExcludeTags === "object") ? parsed.recoExcludeTags : {},  // R9-P4: tags excluded from recommendations
             recoSnoozed: (parsed.recoSnoozed && typeof parsed.recoSnoozed === "object") ? parsed.recoSnoozed : {},  // R10-P2: dismissed reco titles → snoozedAt timestamp
-            manualRankOrder: (parsed.manualRankOrder && typeof parsed.manualRankOrder === "object") ? parsed.manualRankOrder : {}  // R10-P3: manual ranking order per mediaType
+            manualRankOrder: (parsed.manualRankOrder && typeof parsed.manualRankOrder === "object") ? parsed.manualRankOrder : {},  // R10-P3: manual ranking order per mediaType
+            settings: (parsed.settings && typeof parsed.settings === "object") ? parsed.settings : {}  // R3: user prefs incl. settings.privacy (sharing groundwork)
           };
           migrateTags(out);
           return out;
         }
       } catch (e) { /* corrupted store — start fresh */ }
-      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, trackedSeries: {}, homeCustomSections: [], people: {}, recoExcludeLists: {}, recoExcludeTags: {}, recoSnoozed: {}, manualRankOrder: {} };
+      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, trackedSeries: {}, homeCustomSections: [], people: {}, recoExcludeLists: {}, recoExcludeTags: {}, recoSnoozed: {}, manualRankOrder: {}, settings: {} };
     }
     let db = loadDB();
     function saveDB() {
       try { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
       catch (e) { showToast("Speichern fehlgeschlagen"); }
+      // R2: mirror to Firestore in the background (debounced, never blocks the UI).
+      // No-op when logged out or Firebase is unavailable.
+      if (typeof queueCloudSync === "function") queueCloudSync();
     }
 
     // One-time reset (R8 follow-up): earlier builds flagged every series as tracked
@@ -6744,9 +6963,365 @@
       }));
     }
 
+    // ============ R1: Auth modal controller + account block ============
+    // Drives the login/register sheet and the account card in the Profil tab.
+    // All Firebase access goes through window.__vaultAuth (set by the module
+    // script above) and is only touched inside handlers, so it always exists
+    // by the time anything here runs. R2 will hook Firestore sync into the
+    // "vault-auth-changed" listener at the bottom of this block.
+    const authBackdrop = document.getElementById("auth-backdrop");
+    const authEmail    = document.getElementById("auth-email");
+    const authPass     = document.getElementById("auth-pass");
+    const authPass2    = document.getElementById("auth-pass2");
+    const authErrorEl  = document.getElementById("auth-error");
+    const authSubmit   = document.getElementById("auth-submit");
+    const authForgot   = document.getElementById("auth-forgot");
+    let authMode = "login";   // "login" | "register"
+    let authBusy = false;
+
+    function authShowError(msg) {
+      authErrorEl.textContent = msg || "";
+      authErrorEl.hidden = !msg;
+    }
+    function setAuthMode(mode) {
+      authMode = mode;
+      document.getElementById("auth-tab-login").classList.toggle("active", mode === "login");
+      document.getElementById("auth-tab-register").classList.toggle("active", mode === "register");
+      authPass2.hidden = mode !== "register";
+      authPass.setAttribute("autocomplete", mode === "register" ? "new-password" : "current-password");
+      authSubmit.textContent = mode === "register" ? "Konto erstellen" : "Anmelden";
+      authShowError("");
+    }
+    function openAuth(mode) {
+      if (!window.__vaultAuth || !window.__vaultAuth.available) {
+        showToast("Cloud-Konto derzeit nicht verfügbar");
+        return;
+      }
+      authEmail.value = ""; authPass.value = ""; authPass2.value = "";
+      setAuthMode(mode || "login");
+      authBackdrop.hidden = false;
+      document.body.style.overflow = "hidden";
+      setTimeout(() => authEmail.focus(), 60);
+    }
+    function closeAuth() {
+      authBackdrop.hidden = true;
+      document.body.style.overflow = "";
+    }
+    async function submitAuth() {
+      if (authBusy) return;
+      const email = authEmail.value.trim();
+      const pass  = authPass.value;
+      if (!email) { authShowError("Bitte E-Mail eingeben."); return; }
+      if (!pass)  { authShowError("Bitte Passwort eingeben."); return; }
+      if (authMode === "register") {
+        if (pass.length < 6) { authShowError("Passwort muss mind. 6 Zeichen haben."); return; }
+        if (pass !== authPass2.value) { authShowError("Passwörter stimmen nicht überein."); return; }
+      }
+      authBusy = true;
+      authSubmit.disabled = true;
+      authSubmit.textContent = authMode === "register" ? "Erstelle …" : "Melde an …";
+      try {
+        if (authMode === "register") await window.__vaultAuth.register(email, pass);
+        else                         await window.__vaultAuth.login(email, pass);
+        closeAuth();
+        showToast(authMode === "register" ? "Konto erstellt" : "Angemeldet");
+      } catch (e) {
+        authShowError(e.message || "Anmeldung fehlgeschlagen.");
+      } finally {
+        authBusy = false;
+        authSubmit.disabled = false;
+        setAuthMode(authMode);   // restores the button label
+      }
+    }
+    async function forgotPassword() {
+      const email = authEmail.value.trim();
+      if (!email) { authShowError("Bitte zuerst deine E-Mail eingeben."); return; }
+      try {
+        await window.__vaultAuth.resetPassword(email);
+        authShowError("");
+        showToast("E-Mail zum Zurücksetzen gesendet");
+      } catch (e) {
+        authShowError(e.message || "Konnte E-Mail nicht senden.");
+      }
+    }
+    async function logoutAccount() {
+      try { await window.__vaultAuth.logout(); showToast("Abgemeldet"); }
+      catch (e) { showToast("Abmelden fehlgeschlagen"); }
+    }
+
+    document.getElementById("auth-tab-login").addEventListener("click", () => setAuthMode("login"));
+    document.getElementById("auth-tab-register").addEventListener("click", () => setAuthMode("register"));
+    authSubmit.addEventListener("click", submitAuth);
+    authForgot.addEventListener("click", forgotPassword);
+    document.getElementById("auth-cancel").addEventListener("click", closeAuth);
+    authBackdrop.addEventListener("click", (e) => { if (e.target === authBackdrop) closeAuth(); });
+    [authPass, authPass2].forEach(inp =>
+      inp.addEventListener("keydown", e => { if (e.key === "Enter") submitAuth(); }));
+
+    // Account card at the top of the Profil tab.
+    function renderAccount() {
+      const host = document.getElementById("profile-account");
+      if (!host) return;
+      const auth = window.__vaultAuth;
+      if (!auth || !auth.available) {
+        host.innerHTML =
+          '<div class="account-card"><div class="account-info">' +
+          '<div class="account-email">Lokaler Modus</div>' +
+          '<div class="account-sub">Cloud-Sync derzeit nicht verfügbar.</div>' +
+          '</div></div>';
+        return;
+      }
+      const user = window.__vaultUser || auth.user;
+      if (user) {
+        const since = fmtMemberSince(auth.creationTime);
+        host.innerHTML =
+          '<div class="account-card col"><div class="account-info">' +
+          '<div class="account-email">' + esc(user.email || "Konto") + '</div>' +
+          '<div class="account-sub" id="account-sub">' + esc(cloudStatusText()) + '</div>' +
+          (since ? '<div class="account-since">Mitglied seit ' + esc(since) + '</div>' : '') +
+          '</div><div class="account-actions">' +
+          '<button class="account-btn" type="button" id="account-pwch">Passwort ändern</button>' +
+          '<button class="account-btn" type="button" id="account-logout">Abmelden</button>' +
+          '</div></div>';
+        document.getElementById("account-logout").addEventListener("click", logoutAccount);
+        document.getElementById("account-pwch").addEventListener("click", openPwChange);
+      } else {
+        host.innerHTML =
+          '<div class="account-card"><div class="account-info">' +
+          '<div class="account-email">Kein Konto</div>' +
+          '<div class="account-sub">Melde dich an, um deine Daten zu sichern.</div>' +
+          '</div><button class="account-btn primary" type="button" id="account-login">Anmelden</button></div>';
+        document.getElementById("account-login").addEventListener("click", () => openAuth("login"));
+      }
+    }
+
+    // Re-render the account card whenever auth state changes (login/logout,
+    // and once on initial SDK load). The cloud-sync controller below adds a
+    // second listener that loads/seeds Firestore data on the same event.
+    window.addEventListener("vault-auth-changed", renderAccount);
+
+    // ============ R2: Firestore sync ============
+    // Strategy (locked with the user):
+    //  - On login: Firestore wins completely → its document replaces the local
+    //    db (a fresh account with no document is seeded from current local db;
+    //    R4 will turn that into a one-time "upload existing data?" prompt).
+    //  - On every saveDB(): localStorage is written first (instant UI), then a
+    //    debounced (~2 s) background write mirrors the whole db to Firestore.
+    //  - Offline / error: keep working from localStorage; the next saveDB() (or
+    //    next login) re-pushes the full db, so the cloud self-heals.
+    // onSnapshot real-time sync is intentionally deferred to a later round.
+    const CLOUD_DEBOUNCE_MS = 2000;
+    let cloudStatus  = "idle";   // idle | loading | saving | ok | offline
+    let syncTimer    = null;
+    let syncInFlight = false;
+    let syncDirty    = false;
+    let suppressPush = false;     // true while we apply remote data, so it doesn't echo back
+
+    function cloudStatusText() {
+      switch (cloudStatus) {
+        case "loading": return "Lade aus Cloud …";
+        case "saving":  return "Wird gespeichert …";
+        case "ok":      return "Synchronisiert";
+        case "offline": return "Offline – lokal gespeichert";
+        default:        return "Angemeldet";
+      }
+    }
+    function setCloudStatus(s) {
+      cloudStatus = s;
+      const sub = document.getElementById("account-sub");
+      if (sub) sub.textContent = cloudStatusText();
+    }
+    function cloudReady() {
+      return !!(window.__vaultDB && window.__vaultDB.available && window.__vaultUser);
+    }
+
+    // Debounced background push — called from saveDB().
+    function queueCloudSync() {
+      if (suppressPush || !cloudReady()) return;
+      syncDirty = true;
+      setCloudStatus("saving");
+      clearTimeout(syncTimer);
+      syncTimer = setTimeout(flushCloudSync, CLOUD_DEBOUNCE_MS);
+    }
+    async function flushCloudSync() {
+      if (!cloudReady()) { syncDirty = false; return; }
+      if (syncInFlight) return;          // a write is running; it re-flushes if still dirty
+      syncInFlight = true;
+      syncDirty = false;
+      try {
+        await window.__vaultDB.save(window.__vaultUser.uid, db);
+        setCloudStatus("ok");
+      } catch (e) {
+        setCloudStatus("offline");       // keep local; next save retries
+      } finally {
+        syncInFlight = false;
+        if (syncDirty) flushCloudSync();  // changes landed during the write
+      }
+    }
+
+    // Pull the user's document on login and let Firestore win.
+    async function loadFromCloud(user) {
+      if (!window.__vaultDB || !window.__vaultDB.available) return;
+      setCloudStatus("loading");
+      let remote = null;
+      try {
+        remote = await window.__vaultDB.load(user.uid);
+      } catch (e) {
+        setCloudStatus("offline");        // stay on local data; saves will retry
+        return;
+      }
+      if (remote && typeof remote === "object") {
+        // Firestore wins: overwrite local cache, then re-normalize through loadDB
+        // so any missing fields get their defaults / migrations applied.
+        suppressPush = true;
+        try {
+          localStorage.setItem(DB_KEY, JSON.stringify(remote));
+          db = loadDB();
+        } catch (e) { /* keep current db on parse/storage failure */ }
+        suppressPush = false;
+        setCloudStatus("ok");
+        rerenderCurrent();
+      } else {
+        // New account, no cloud document yet → seed it with the current local db.
+        // (R4 replaces this with an explicit migration prompt.)
+        flushCloudSync();
+      }
+    }
+
+    function rerenderCurrent() {
+      const tab = (document.body.dataset.tab) || "log";
+      if (typeof switchTab === "function") switchTab(tab);
+    }
+
+    window.addEventListener("vault-auth-changed", (e) => {
+      const user = (e.detail && e.detail.user) || window.__vaultUser;
+      if (user) {
+        loadFromCloud(user);
+      } else {
+        clearTimeout(syncTimer);
+        syncDirty = false;
+        setCloudStatus("idle");
+      }
+    });
+
+    // ============ R3: change password + member-since + privacy ============
+    function fmtMemberSince(ts) {
+      if (!ts) return "";
+      const d = new Date(ts);
+      if (isNaN(d.getTime())) return "";
+      return d.toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" });
+    }
+
+    const pwchBackdrop = document.getElementById("pwch-backdrop");
+    const pwchCurrent  = document.getElementById("pwch-current");
+    const pwchNew      = document.getElementById("pwch-new");
+    const pwchNew2     = document.getElementById("pwch-new2");
+    const pwchErrorEl  = document.getElementById("pwch-error");
+    const pwchSubmit   = document.getElementById("pwch-submit");
+    let pwchBusy = false;
+
+    function pwchShowError(msg) { pwchErrorEl.textContent = msg || ""; pwchErrorEl.hidden = !msg; }
+    function openPwChange() {
+      if (!window.__vaultAuth || !window.__vaultUser) { showToast("Bitte zuerst anmelden"); return; }
+      pwchCurrent.value = ""; pwchNew.value = ""; pwchNew2.value = "";
+      pwchShowError("");
+      pwchBackdrop.hidden = false;
+      document.body.style.overflow = "hidden";
+      setTimeout(() => pwchCurrent.focus(), 60);
+    }
+    function closePwChange() {
+      pwchBackdrop.hidden = true;
+      document.body.style.overflow = "";
+    }
+    async function submitPwChange() {
+      if (pwchBusy) return;
+      const cur = pwchCurrent.value, nw = pwchNew.value, nw2 = pwchNew2.value;
+      if (!cur)          { pwchShowError("Bitte aktuelles Passwort eingeben."); return; }
+      if (nw.length < 6) { pwchShowError("Neues Passwort muss mind. 6 Zeichen haben."); return; }
+      if (nw !== nw2)    { pwchShowError("Neue Passwörter stimmen nicht überein."); return; }
+      if (nw === cur)    { pwchShowError("Neues Passwort entspricht dem alten."); return; }
+      pwchBusy = true; pwchSubmit.disabled = true; pwchSubmit.textContent = "Ändere …";
+      try {
+        await window.__vaultAuth.changePassword(cur, nw);
+        closePwChange();
+        showToast("Passwort geändert");
+      } catch (e) {
+        pwchShowError(e.message || "Konnte Passwort nicht ändern.");
+      } finally {
+        pwchBusy = false; pwchSubmit.disabled = false; pwchSubmit.textContent = "Passwort ändern";
+      }
+    }
+    pwchSubmit.addEventListener("click", submitPwChange);
+    document.getElementById("pwch-cancel").addEventListener("click", closePwChange);
+    pwchBackdrop.addEventListener("click", (e) => { if (e.target === pwchBackdrop) closePwChange(); });
+    [pwchCurrent, pwchNew, pwchNew2].forEach(inp =>
+      inp.addEventListener("keydown", e => { if (e.key === "Enter") submitPwChange(); }));
+
+    // Privacy (sharing groundwork). Stored in db.settings.privacy, so it rides
+    // along to Firestore via saveDB(). No sharing UI yet — just the settings.
+    const PRIVACY_DEFAULTS = {
+      profileVisible: true, shareWatched: true, shareRanking: true,
+      shareLists: true, shareWatchlist: false
+    };
+    const PRIVACY_LABELS = {
+      profileVisible: "Profil auffindbar",
+      shareWatched:   "Gesehene Filme teilen",
+      shareRanking:   "Ranking teilen",
+      shareLists:     "Eigene Listen teilen",
+      shareWatchlist: "Watchlist teilen"
+    };
+    let privacyRevealed = false;
+    function ensurePrivacy() {
+      if (!db.settings || typeof db.settings !== "object") db.settings = {};
+      db.settings.privacy = Object.assign({}, PRIVACY_DEFAULTS, db.settings.privacy || {});
+      return db.settings.privacy;
+    }
+    function renderPrivacy() {
+      const host = document.getElementById("profile-privacy");
+      if (!host) return;
+      // Privacy only matters with an account → hide it when logged out.
+      if (!window.__vaultAuth || !window.__vaultAuth.available || !window.__vaultUser) {
+        host.innerHTML = "";
+        return;
+      }
+      const p = ensurePrivacy();
+      const row = (key) =>
+        '<div class="set-row"><span class="set-row-label">' + esc(PRIVACY_LABELS[key]) + '</span>' +
+        '<label class="switch"><input type="checkbox" data-priv="' + key + '"' +
+        (p[key] ? " checked" : "") + '><span class="switch-track"></span></label></div>';
+
+      let html = '<div class="detail-section">';
+      html += '<button class="blocked-toggle" type="button" id="privacy-toggle">' +
+        '<span class="blocked-toggle-label">Datenschutz</span>' +
+        '<svg class="blocked-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>' +
+        '</button>';
+      html += '<div id="privacy-body"' + (privacyRevealed ? "" : " hidden") + ">";
+      html += '<p class="settings-sub-label">Lege fest, was andere künftig von dir sehen dürfen. Diese Einstellungen werden gespeichert — die Teilen-Funktionen folgen in einem späteren Update.</p>';
+      html += '<div class="settings-group">' + Object.keys(PRIVACY_LABELS).map(row).join("") + '</div>';
+      html += '</div></div>';
+      host.innerHTML = html;
+
+      const toggle = document.getElementById("privacy-toggle");
+      const body   = document.getElementById("privacy-body");
+      toggle.classList.toggle("open", privacyRevealed);
+      toggle.addEventListener("click", () => {
+        privacyRevealed = !privacyRevealed;
+        body.hidden = !privacyRevealed;
+        toggle.classList.toggle("open", privacyRevealed);
+      });
+      host.querySelectorAll("input[data-priv]").forEach(cb => cb.addEventListener("change", () => {
+        ensurePrivacy()[cb.dataset.priv] = cb.checked;
+        saveDB();   // persists locally + syncs to Firestore (R2)
+      }));
+    }
+    // Keep the privacy panel in step with login/logout.
+    window.addEventListener("vault-auth-changed", renderPrivacy);
+
     async function renderProfile() {
+      renderAccount();   // R1: account card (login/logout) at the top
       renderBlocked();   // point 12: always render the blocklist, even with no logged items
       renderSettings();  // R9-P4: recommendation source toggles
+      renderPrivacy();   // R3: Datenschutz toggles (only shown when logged in)
       const noteEl = document.getElementById("profile-note");
       const items = Object.values(db.items);
       const movies = items.filter(i => i.mediaType === "movie");
