@@ -453,7 +453,7 @@
       stroke: var(--text-mute); fill: none;
       stroke-width: 1.8; stroke-linecap: round;
     }
-    #log-search, #disc-search {
+    #log-search, #disc-search, #social-search {
       flex: 1;
       border: none;
       background: none;
@@ -463,9 +463,12 @@
       padding: 13px 8px;
       outline: none;
       min-width: 0;
+      -webkit-appearance: none;   /* R13-#2: drop the native search-field loupe (iOS) */
+      appearance: none;
     }
-    #log-search::placeholder, #disc-search::placeholder { color: var(--text-mute); }
-    #log-search::-webkit-search-cancel-button, #disc-search::-webkit-search-cancel-button { display: none; }
+    #log-search::placeholder, #disc-search::placeholder, #social-search::placeholder { color: var(--text-mute); }
+    #log-search::-webkit-search-cancel-button, #disc-search::-webkit-search-cancel-button, #social-search::-webkit-search-cancel-button { display: none; }
+    #social-search::-webkit-search-decoration, #social-search::-webkit-search-results-button, #social-search::-webkit-search-results-decoration { display: none; -webkit-appearance: none; }
     .search-clear {
       flex: 0 0 auto;
       border: none; background: none; cursor: pointer;
@@ -1598,6 +1601,9 @@
       border: 2px solid var(--bg); display: none;
     }
     .notif-badge.visible { display: block; }
+    /* R13-#1: when the fixed bell is shown, keep top-right content clear of it. */
+    body.has-bell #view-log .search-bar { margin-top: 26px; }
+    body.has-bell .disc-top-row { padding-right: 46px; }
 
     #notif-center {
       position: fixed; inset: 0; z-index: 150; background: var(--bg);
@@ -1626,7 +1632,6 @@
     .notif-empty { text-align: center; color: var(--text-mute); padding: 60px 24px; font-size: 14px; }
 
     .social-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-mute); margin: 0 0 10px; }
-    .social-username-sub { font-size: 13px; font-weight: 600; color: var(--accent); margin-top: 2px; }
     .social-no-username { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 12px 14px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); color: var(--text); font-size: 13px; line-height: 1.4; margin-bottom: 16px; cursor: pointer; }
     .social-no-username:active { background: var(--surface-2); }
     .social-no-username svg { flex: 0 0 auto; color: var(--text-mute); }
@@ -1972,8 +1977,6 @@
     <section class="view" id="view-social" data-view="social">
       <div class="view-head">
         <h1>Social</h1>
-        <p>Freunde und Empfehlungen.</p>
-        <p id="social-username-sub" class="social-username-sub" hidden></p>
       </div>
       <div id="social-login-hint" hidden>
         <div class="social-empty">
@@ -2021,13 +2024,11 @@
         <h1>Profil</h1>
         <p>Deine Statistiken.</p>
       </div>
-      <div id="profile-account"></div>
+      <!-- R13-#8: stats first; account area moved to the very bottom -->
       <div id="profile-stats" class="stat-grid"></div>
       <div id="profile-note" class="profile-note"></div>
-      <div id="profile-username"></div>
       <div id="profile-settings"></div>
       <div id="profile-privacy"></div>
-      <!-- R10-P4: "Gesperrte Titel" lives at the very bottom (least important) -->
       <div id="profile-blocked"></div>
       <div class="export-section">
         <button class="export-btn" onclick="exportDB()">
@@ -2035,6 +2036,9 @@
           Daten exportieren
         </button>
       </div>
+      <!-- Account-Bereich (E-Mail, Benutzername, Passwort, Sync, Logout) ganz unten -->
+      <div id="profile-account"></div>
+      <div id="profile-username"></div>
     </section>
 
   </div>
@@ -2676,17 +2680,30 @@
         await setDoc(doc(firestore, "users", uid), data, { merge: true });
       },
       async searchUsers(term) {
-        if (!term || term.length < 2) return [];
-        const t = term.trim().toLowerCase();
-        const q1 = query(collection(firestore, "users"),
-          where("username_lower", ">=", t), where("username_lower", "<=", t + ""), limit(10));
-        const q2 = query(collection(firestore, "users"), where("email", "==", t), limit(5));
-        const [s1, s2] = await Promise.allSettled([getDocs(q1), getDocs(q2)]);
+        const raw = (term || "").trim();
+        if (raw.length < 2) return [];
+        const t = raw.toLowerCase();
         const seen = new Set(); const results = [];
-        const addDocs = (snap) => { if (snap && snap.docs) snap.docs.forEach(d => { if (!seen.has(d.id)) { seen.add(d.id); results.push({ uid: d.id, ...d.data() }); } }); };
-        if (s1.status === "fulfilled") addDocs(s1.value);
-        if (s2.status === "fulfilled") addDocs(s2.value);
-        return results;
+        const add = (uid, data) => { if (!seen.has(uid)) { seen.add(uid); results.push({ uid, ...data }); } };
+        // Username: client-side "contains" match (Firestore has no substring search).
+        // Only discoverable profiles (privacy.profileVisible !== false) ever appear.
+        try {
+          const snap = await getDocs(query(collection(firestore, "users"), limit(300)));
+          snap.docs.forEach(d => {
+            const data = d.data();
+            if (data.privacy && data.privacy.profileVisible === false) return;
+            const uname = data.username_lower || (data.username || "").toLowerCase();
+            if (uname && uname.includes(t)) add(d.id, data);
+          });
+        } catch (e) { /* ignore */ }
+        // Email: exact match (by design) — a deliberate lookup by full address.
+        if (raw.includes("@")) {
+          try {
+            const es = await getDocs(query(collection(firestore, "users"), where("email", "==", t), limit(5)));
+            es.docs.forEach(d => add(d.id, d.data()));
+          } catch (e) { /* ignore */ }
+        }
+        return results.slice(0, 20);
       },
       async sendFriendRequest(fromUid, fromUsername, toUid, toUsername) {
         const batch = writeBatch(firestore);
@@ -2761,6 +2778,15 @@
           });
         });
         await batch.commit();
+        // R13-#5: record the share in the sender's history. Best-effort and OUTSIDE
+        // the batch so a missing security rule can't break the actual delivery.
+        try {
+          await addDoc(collection(firestore, "users", fromUid, "sharedItems"), {
+            toUids, itemTitle: item.title, itemPoster: item.poster || "",
+            itemType: item.type, tmdbId: item.id, note: note || "",
+            bucket: bucket || null, createdAt: serverTimestamp()
+          });
+        } catch (e) { /* sharing already succeeded; history is non-critical */ }
       },
       async createSharedList(creatorUid, friendUid, listName, items) {
         const ref = await addDoc(collection(firestore, "sharedLists"), {
@@ -8077,6 +8103,8 @@
       const wrap   = document.getElementById("notif-bell-wrap");
       if (badge) { badge.textContent = unread > 9 ? "9+" : unread; badge.classList.toggle("visible", unread > 0); }
       if (wrap)  wrap.classList.toggle("visible", !!window.__vaultUser);
+      // R13-#1: reserve top-right space so the fixed bell never overlaps content.
+      document.body.classList.toggle("has-bell", !!window.__vaultUser);
     }
 
     function startNotifSubscription(uid) {
@@ -8094,15 +8122,26 @@
       if (_notifUnsub) { _notifUnsub(); _notifUnsub = null; }
       updateNotifBadge([]);
       document.getElementById("notif-bell-wrap").classList.remove("visible");
+      document.body.classList.remove("has-bell");
+    }
+
+    // R13-#5: friends (+ own profile) must be loaded app-wide, not only when the
+    // Social tab is opened — otherwise the "Teilen" button after watching never
+    // appears unless the user happened to visit Social first this session.
+    async function preloadSocial(uid) {
+      if (!window.__vaultSocial) return;
+      try { _myProfile = await window.__vaultSocial.getProfile(uid); } catch (e) {}
+      try { await loadSocialFriends(); } catch (e) {}
+      if (typeof updateQRShareVisibility === "function") updateQRShareVisibility();
     }
 
     window.addEventListener("vault-auth-changed", e => {
       const user = e.detail.user;
-      if (user) startNotifSubscription(user.uid);
+      if (user) { startNotifSubscription(user.uid); preloadSocial(user.uid); }
       else      stopNotifSubscription();
     });
     // Start if already logged in (module fires before this script sometimes)
-    if (window.__vaultUser) startNotifSubscription(window.__vaultUser.uid);
+    if (window.__vaultUser) { startNotifSubscription(window.__vaultUser.uid); preloadSocial(window.__vaultUser.uid); }
 
     // --- notification center ---
     const notifCenter = document.getElementById("notif-center");
@@ -8259,19 +8298,15 @@
       if (window.__vaultSocial) {
         _myProfile = await window.__vaultSocial.getProfile(user.uid);
       }
-      // Username now lives under Profil. Here we only reflect its state:
-      // a non-intrusive banner when unset, otherwise the username as a subtitle.
+      // Username lives under Profil (R13-#7: no longer shown in the Social header).
+      // Here we only show a non-intrusive banner when it isn't set yet.
       const banner     = document.getElementById("social-no-username");
-      const sub        = document.getElementById("social-username-sub");
       const inviteWrap = document.getElementById("social-invite-wrap");
       if (!_myProfile || !_myProfile.username) {
         banner.hidden = false;
-        sub.hidden = true;
         inviteWrap.hidden = true;
       } else {
         banner.hidden = true;
-        sub.hidden = false;
-        sub.textContent = "@" + _myProfile.username;
         inviteWrap.hidden = false;
         document.getElementById("social-invite-url").textContent =
           location.origin + location.pathname + "?invite=" + user.uid;
@@ -8421,7 +8456,7 @@
       if (!accepted.length) {
         list.innerHTML = `<div class="social-empty">
           <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Noch keine Freunde. Suche nach einem Nutzernamen oder teile deinen Link.
+          Noch keine Freunde. Suche nach einem Nutzernamen oder teile deinen Einladungslink.
         </div>`;
         return;
       }
