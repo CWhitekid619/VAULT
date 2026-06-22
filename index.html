@@ -1113,6 +1113,16 @@
     .list-share-name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .seg-control.compact { margin-top: 0; }
     .seg-control.compact .seg-option { font-size: 11px; padding: 7px 4px; }
+    /* R13-#6: collaborative-list controls */
+    .list-share-friend-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 12px; padding: 10px 14px; background: var(--accent); color: #1a1206; border: none; border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .list-share-friend-btn:active { filter: brightness(.92); }
+    .list-share-friend-btn svg { flex: 0 0 auto; }
+    .list-unshare-btn { width: 100%; margin-top: 12px; padding: 10px 14px; background: none; color: var(--danger, #ef4444); border: 1px solid var(--border); border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .list-unshare-btn:active { background: var(--surface); }
+    .list-card-shared { display: inline-flex; vertical-align: middle; margin-left: 6px; color: var(--accent); }
+    .friendpick-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; max-height: 50vh; overflow-y: auto; }
+    .friendpick-item { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .friendpick-item:active { background: var(--surface); }
 
     /* "Already watched" checkmark badge on collection cards (point 13a) */
     .seen-badge {
@@ -1730,6 +1740,16 @@
     .social-invite-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 14px; padding: 11px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--accent); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
     .social-invite-btn:active { background: var(--surface-2); }
     .social-invite-btn svg { flex: 0 0 auto; }
+
+    /* R13-#3: invite confirmation dialog + open-in-app banner */
+    .invite-sheet-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .invite-sheet-title { font-size: 13px; color: var(--text-mute); }
+    .invite-sheet-name { font-size: 16px; font-weight: 700; color: var(--accent); }
+    .invite-sheet-text { font-size: 14px; color: var(--text-dim); line-height: 1.5; margin: 0 0 16px; }
+    .pwa-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 200; display: flex; align-items: center; gap: 10px; padding: calc(var(--safe-top) + 10px) var(--pad) 10px; background: var(--accent); color: #1a1206; font-size: 13px; font-weight: 600; }
+    .pwa-banner span { flex: 1; line-height: 1.35; }
+    .pwa-banner-btn { flex: 0 0 auto; background: #1a1206; color: var(--accent); text-decoration: none; font-weight: 700; font-size: 12px; padding: 7px 12px; border-radius: 99px; }
+    .pwa-banner-close { flex: 0 0 auto; background: none; border: none; color: #1a1206; font-size: 16px; line-height: 1; cursor: pointer; padding: 4px; }
     .list-shared-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: var(--accent); font-weight: 600; margin-left: 6px; vertical-align: middle; }
     .list-shared-badge svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   </style>
@@ -2352,6 +2372,40 @@
     </div>
   </div>
 
+  <!-- ============ R13-#3: Invite confirmation dialog ============ -->
+  <div id="invite-backdrop" class="sheet-backdrop" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Freundschaftsanfrage">
+      <div class="sheet-handle"></div>
+      <div class="invite-sheet-head">
+        <div class="friend-avatar" id="invite-avatar">?</div>
+        <div>
+          <div class="invite-sheet-title">Freundschaftsanfrage</div>
+          <div class="invite-sheet-name" id="invite-name">…</div>
+        </div>
+      </div>
+      <p class="invite-sheet-text">Möchtest du dieser Person eine Freundschaftsanfrage senden?</p>
+      <button id="invite-send" class="sheet-btn-primary" type="button">Anfrage senden</button>
+      <button id="invite-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
+    </div>
+  </div>
+
+  <!-- ============ R13-#6: friend picker for collaborative lists ============ -->
+  <div id="friendpick-backdrop" class="sheet-backdrop" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Freund auswählen">
+      <div class="sheet-handle"></div>
+      <div class="sheet-section-label">Mit Freund teilen</div>
+      <div id="friendpick-list" class="friendpick-list"></div>
+      <button id="friendpick-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
+    </div>
+  </div>
+
+  <!-- ============ R13-#3: open-in-app banner (shown in a plain browser tab) ============ -->
+  <div id="pwa-banner" class="pwa-banner" hidden>
+    <span>Öffne VAULT in der App, um die Einladung anzunehmen.</span>
+    <a id="pwa-banner-open" class="pwa-banner-btn" href="#">App öffnen</a>
+    <button id="pwa-banner-close" class="pwa-banner-close" type="button" aria-label="Schließen">✕</button>
+  </div>
+
   <!-- ============ R4: MIGRATION (erstes Login mit lokalen Daten) ============ -->
   <div id="migrate-backdrop" class="sheet-backdrop" hidden>
     <div class="sheet" role="dialog" aria-modal="true" aria-label="Daten hochladen">
@@ -2825,6 +2879,16 @@
           type, fromUid, fromUsername, listId, listName, itemTitle, read: false, createdAt: serverTimestamp()
         });
       },
+      // R13-#6 phase 2: leave a shared list (drop self from members; the last
+      // member out deletes the doc).
+      async leaveSharedList(listId, uid) {
+        const ref = doc(firestore, "sharedLists", listId);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) return;
+        const members = (snap.data().members || []).filter(u => u !== uid);
+        if (members.length) await updateDoc(ref, { members });
+        else await deleteDoc(ref);
+      },
       // R12-E: read-only snapshot of a user's shareable lists (for friend profiles).
       // Kept separate from the collaborative `sharedLists` collection above.
       async saveUserLists(uid, lists) {
@@ -2869,7 +2933,10 @@
         populateRankFilters().then(renderRanking);
       }
       // Lists tab always returns to the overview
-      if (target === "lists" && typeof showListsOverview === "function") showListsOverview();
+      if (target === "lists" && typeof showListsOverview === "function") {
+        showListsOverview();
+        if (typeof syncSharedLists === "function") syncSharedLists();   // R13-#6 phase 2: pick up newly-shared lists
+      }
       // Discover loads its curated content once
       if (target === "discover" && typeof initDiscover === "function") {
         initDiscover();
@@ -5783,13 +5850,25 @@
       const key = keyOf(r.media_type, r.id);
       const map = listItemsMap(listId);
       if (map[key]) return false;
-      map[key] = recordFrom(r, null);
+      const rec = recordFrom(r, null);
+      map[key] = rec;                 // optimistic local update (onSnapshot confirms)
       saveDB();
+      const list = db.lists[listId];
+      if (list && list.shared && list.sharedId && window.__vaultSocial) {
+        window.__vaultSocial.addToSharedList(list.sharedId, key, rec, window.__vaultUser.uid).catch(() => {});
+        notifyShared(list, "list_item_added", rec.title);
+      }
       return true;
     }
     function removeFromList(listId, key) {
       const map = listItemsMap(listId);
+      const list = db.lists[listId];
+      const title = map[key] && map[key].title;
       if (map[key]) { delete map[key]; saveDB(); }
+      if (list && list.shared && list.sharedId && window.__vaultSocial) {
+        window.__vaultSocial.removeFromSharedList(list.sharedId, key).catch(() => {});
+        notifyShared(list, "list_item_removed", title || "");
+      }
     }
     function createList(name, permanent) {
       db.listSeq = (db.listSeq || 0) + 1;
@@ -5815,6 +5894,7 @@
     const listsCards    = document.getElementById("lists-cards");
 
     function showListsOverview() {
+      stopSharedSub();
       listDetail.hidden = true;
       listsOverview.hidden = false;
       renderListsCards();
@@ -5848,6 +5928,12 @@
         const bodyEl = document.createElement("div");
         bodyEl.className = "list-card-body";
         const nm = document.createElement("div"); nm.className = "list-card-name"; nm.textContent = list.name;
+        if (list.id !== WATCHLIST_ID && db.lists[list.id] && db.lists[list.id].shared) {
+          const sh = document.createElement("span");
+          sh.className = "list-card-shared"; sh.title = "Gemeinsame Liste";
+          sh.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+          nm.appendChild(sh);
+        }
         const ct = document.createElement("div"); ct.className = "list-card-count";
         ct.textContent = items.length + (items.length === 1 ? " Titel" : " Titel");
         bodyEl.appendChild(nm); bodyEl.appendChild(ct);
@@ -5867,8 +5953,14 @@
     // ---------- List detail ----------
     let currentListId = null;
     let deleteArmed = false;
+    let _sharedUnsub = null;   // R13-#6 phase 2: live onSnapshot for the open shared list
+
+    function stopSharedSub() {
+      if (_sharedUnsub) { try { _sharedUnsub(); } catch (e) {} _sharedUnsub = null; }
+    }
 
     function openListDetail(listId) {
+      stopSharedSub();
       currentListId = listId;
       deleteArmed = false;
       listsOverview.hidden = true;
@@ -5880,6 +5972,15 @@
       delBtn.textContent = "Liste löschen";
       renderListGrid();
       renderListSettings();
+      // Live-sync a collaborative list while it's open.
+      const list = db.lists[listId];
+      if (list && list.shared && list.sharedId && window.__vaultSocial && window.__vaultSocial.subscribeSharedList) {
+        _sharedUnsub = window.__vaultSocial.subscribeSharedList(list.sharedId, items => {
+          list.items = items || {};
+          saveDB();
+          if (currentListId === listId) renderListGrid();
+        });
+      }
     }
 
     function renderListGrid() {
@@ -5957,8 +6058,39 @@
       const list = db.lists[currentListId];
       if (currentListId === WATCHLIST_ID || !list) { host.hidden = true; host.innerHTML = ""; return; }
       host.hidden = false;
-      const isPerm = !!list.permanent;
-      const mode   = listShareMode(currentListId);
+      const isPerm   = !!list.permanent;
+      const isShared = !!list.shared;
+      // Shared lists can't be "Privat" — minimum visibility is "Nur Freunde".
+      let mode = listShareMode(currentListId);
+      if (isShared && mode === "private") mode = "friends";
+      const modes = isShared ? SHARE_MODES.filter(m => m.id !== "private") : SHARE_MODES;
+      const hasFriends = (typeof _socialFriends !== "undefined") && _socialFriends.some(f => f.status === "accepted");
+
+      // "Gemeinsame Liste" section: invite a friend, or show current sharing state.
+      let collabHtml = "";
+      if (isShared) {
+        collabHtml =
+          '<div class="list-set-card col" style="margin-top:10px">' +
+            '<div class="set-row-text">' +
+              '<span class="set-row-label">Gemeinsame Liste</span>' +
+              '<span class="set-row-sub">Geteilt mit: <strong>@' + socialEsc(list.sharedWithName || "Freund") + '</strong> — beide können Titel hinzufügen und entfernen.</span>' +
+            '</div>' +
+            '<button class="list-unshare-btn" id="list-unshare" type="button">Freigabe beenden</button>' +
+          '</div>';
+      } else if (hasFriends) {
+        collabHtml =
+          '<div class="list-set-card col" style="margin-top:10px">' +
+            '<div class="set-row-text">' +
+              '<span class="set-row-label">Gemeinsame Liste</span>' +
+              '<span class="set-row-sub">Teile diese Liste mit einem Freund — ihr könnt sie gemeinsam bearbeiten.</span>' +
+            '</div>' +
+            '<button class="list-share-friend-btn" id="list-share-friend" type="button">' +
+              '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' +
+              ' Mit Freund teilen' +
+            '</button>' +
+          '</div>';
+      }
+
       host.innerHTML =
         '<p class="list-settings-title">Listen-Einstellungen</p>' +
         '<div class="list-set-card">' +
@@ -5970,13 +6102,16 @@
         '</div>' +
         '<div class="list-set-card col" style="margin-top:10px">' +
           '<div class="set-row-text">' +
-            '<span class="set-row-label">Liste teilen</span>' +
-            '<span class="set-row-sub">Wer diese Liste sehen darf, wenn er dein Profil ansieht.</span>' +
+            '<span class="set-row-label">Sichtbarkeit</span>' +
+            '<span class="set-row-sub">Wer diese Liste sehen darf, wenn er dein Profil ansieht.' +
+              (isShared ? ' Gemeinsame Listen sind mindestens für Freunde sichtbar.' : '') + '</span>' +
           '</div>' +
           '<div class="seg-control" id="list-share-seg">' +
-            SHARE_MODES.map(m => '<button type="button" class="seg-option' + (mode === m.id ? " active" : "") + '" data-mode="' + m.id + '">' + m.label + '</button>').join("") +
+            modes.map(m => '<button type="button" class="seg-option' + (mode === m.id ? " active" : "") + '" data-mode="' + m.id + '">' + m.label + '</button>').join("") +
           '</div>' +
-        '</div>';
+        '</div>' +
+        collabHtml;
+
       host.querySelector("#list-perm-toggle").addEventListener("change", e => {
         list.permanent = e.target.checked;
         saveDB();
@@ -5989,7 +6124,122 @@
           host.querySelectorAll(".seg-option").forEach(b => b.classList.toggle("active", b === btn));
         });
       });
+      const shareFriendBtn = host.querySelector("#list-share-friend");
+      if (shareFriendBtn) shareFriendBtn.addEventListener("click", () => openFriendPicker(currentListId));
+      const unshareBtn = host.querySelector("#list-unshare");
+      if (unshareBtn) unshareBtn.addEventListener("click", () => stopSharing(currentListId));
     }
+
+    // ---------- Collaborative lists (R13-#6, phase 1) ----------
+    let _pickListId = null;
+    function openFriendPicker(listId) {
+      const friends = (typeof _socialFriends !== "undefined") ? _socialFriends.filter(f => f.status === "accepted") : [];
+      if (!friends.length) { showToast("Noch keine Freunde"); return; }
+      _pickListId = listId;
+      const listEl = document.getElementById("friendpick-list");
+      listEl.innerHTML = friends.map(f =>
+        '<button class="friendpick-item" type="button" data-uid="' + socialEsc(f.uid) + '" data-name="' + socialEsc(f.username || f.uid) + '">' +
+          '<div class="friend-avatar" style="width:36px;height:36px;font-size:13px">' + avatarInitial(f.username || f.uid) + '</div>' +
+          '<span>' + socialEsc(f.username || f.uid) + '</span>' +
+        '</button>').join("");
+      listEl.querySelectorAll(".friendpick-item").forEach(btn => {
+        btn.addEventListener("click", () => {
+          closeFriendPicker();
+          convertListToShared(_pickListId, { uid: btn.dataset.uid, username: btn.dataset.name });
+        });
+      });
+      document.getElementById("friendpick-backdrop").hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+    function closeFriendPicker() {
+      document.getElementById("friendpick-backdrop").hidden = true;
+      document.body.style.overflow = "";
+    }
+
+    async function convertListToShared(listId, friend) {
+      const list = db.lists[listId];
+      if (!list || !window.__vaultUser || !window.__vaultSocial) { showToast("Teilen nicht möglich"); return; }
+      if (list.shared) { showToast("Bereits geteilt"); return; }
+      const myUid  = window.__vaultUser.uid;
+      const myName = (_myProfile && _myProfile.username) || (window.__vaultUser.email || "");
+      showToast("Liste wird geteilt …");
+      let sharedId = null;
+      try { sharedId = await window.__vaultSocial.createSharedList(myUid, friend.uid, list.name, list.items || {}); }
+      catch (e) { showToast("Teilen fehlgeschlagen"); return; }
+      list.shared = true;
+      list.sharedId = sharedId;
+      list.members = [myUid, friend.uid];
+      list.sharedWith = friend.uid;
+      list.sharedWithName = friend.username || "";
+      if (listShareMode(listId) === "private") list.shareMode = "friends";  // shared ≥ "Nur Freunde"
+      saveDB();
+      try { await window.__vaultSocial.sendSharedListNotif(friend.uid, myUid, myName, sharedId, list.name, "", "list_shared"); } catch (e) {}
+      showToast("Geteilt mit " + (friend.username || "Freund"));
+      renderListSettings();
+      renderListsCards();
+    }
+
+    async function stopSharing(listId) {
+      const list = db.lists[listId];
+      if (!list || !list.shared) return;
+      stopSharedSub();
+      // Notify the other member(s) while we still know who they are.
+      notifyShared(list, "list_unshared", "");
+      // Leave the collaboration in Firestore (drop self from members).
+      if (list.sharedId && window.__vaultSocial && window.__vaultSocial.leaveSharedList) {
+        try { await window.__vaultSocial.leaveSharedList(list.sharedId, window.__vaultUser.uid); } catch (e) {}
+      }
+      // Keep a local copy with the current items (least destructive).
+      list.shared = false;
+      delete list.sharedId; delete list.members; delete list.sharedWith; delete list.sharedWithName;
+      saveDB();
+      showToast("Freigabe beendet");
+      renderListSettings();
+      renderListsCards();
+    }
+
+    // Notify every other member of a shared list (best-effort).
+    function notifyShared(list, type, title) {
+      if (!list || !list.shared || !window.__vaultUser || !window.__vaultSocial || !window.__vaultSocial.sendSharedListNotif) return;
+      const myUid  = window.__vaultUser.uid;
+      const myName = (_myProfile && _myProfile.username) || (window.__vaultUser.email || "");
+      (list.members || []).forEach(uid => {
+        if (uid === myUid) return;
+        window.__vaultSocial.sendSharedListNotif(uid, myUid, myName, list.sharedId, list.name, title || "", type).catch(() => {});
+      });
+    }
+
+    // R13-#6 phase 2: pull shared lists I'm a member of into the local Listen tab
+    // (so a friend who was added sees the list too). Items refresh from Firestore.
+    async function syncSharedLists() {
+      if (!window.__vaultUser || !window.__vaultSocial || !window.__vaultSocial.getMySharedLists) return;
+      const myUid = window.__vaultUser.uid;
+      let remote = [];
+      try { remote = await window.__vaultSocial.getMySharedLists(myUid); } catch (e) { return; }
+      const localBySharedId = {};
+      for (const id in db.lists) if (db.lists[id].sharedId) localBySharedId[db.lists[id].sharedId] = id;
+      let changed = false;
+      for (const sl of remote) {
+        let localId = localBySharedId[sl.id];
+        if (!localId) {
+          db.listSeq = (db.listSeq || 0) + 1;
+          localId = "list" + db.listSeq;
+          db.lists[localId] = { id: localId, name: sl.name || "Geteilte Liste", items: {}, permanent: false, shareMode: "friends", shared: true, sharedId: sl.id };
+          changed = true;
+        }
+        const l = db.lists[localId];
+        const otherUid  = (sl.members || []).find(u => u !== myUid) || "";
+        const fr = (typeof _socialFriends !== "undefined") ? _socialFriends.find(f => f.uid === otherUid) : null;
+        l.shared = true; l.members = sl.members || []; l.sharedWith = otherUid;
+        l.sharedWithName = (fr && fr.username) || l.sharedWithName || "";
+        if (sl.name && l.name !== sl.name) { l.name = sl.name; changed = true; }
+        try { const full = await window.__vaultSocial.getSharedList(sl.id); if (full && full.items) { l.items = full.items; changed = true; } } catch (e) {}
+      }
+      if (changed) { saveDB(); if (document.body.dataset.tab === "lists") renderListsCards(); }
+    }
+
+    document.getElementById("friendpick-cancel").addEventListener("click", closeFriendPicker);
+    document.getElementById("friendpick-backdrop").addEventListener("click", e => { if (e.target === e.currentTarget) closeFriendPicker(); });
 
     document.getElementById("list-back").addEventListener("click", showListsOverview);
     document.getElementById("delete-list").addEventListener("click", function () {
@@ -8133,6 +8383,7 @@
       try { _myProfile = await window.__vaultSocial.getProfile(uid); } catch (e) {}
       try { await loadSocialFriends(); } catch (e) {}
       if (typeof updateQRShareVisibility === "function") updateQRShareVisibility();
+      if (typeof syncSharedLists === "function") { try { await syncSharedLists(); } catch (e) {} }
     }
 
     window.addEventListener("vault-auth-changed", e => {
@@ -8202,6 +8453,7 @@
       if (type === "friend_request" || type === "friend_accepted") return "👤";
       if (type === "item_shared") return "🎬";
       if (type === "list_item_added" || type === "list_item_removed") return "📋";
+      if (type === "list_shared" || type === "list_unshared") return "👥";
       return "🔔";
     }
     function notifText(n) {
@@ -8211,6 +8463,8 @@
       if (n.type === "item_shared")      return `${from} empfiehlt dir <b>${socialEsc(n.itemTitle || "")}</b>`;
       if (n.type === "list_item_added")  return `${from} hat <b>${socialEsc(n.itemTitle || "")}</b> zu eurer Liste <b>${socialEsc(n.listName || "")}</b> hinzugefügt`;
       if (n.type === "list_item_removed")return `${from} hat <b>${socialEsc(n.itemTitle || "")}</b> aus eurer Liste <b>${socialEsc(n.listName || "")}</b> entfernt`;
+      if (n.type === "list_shared")      return `${from} hat die Liste <b>${socialEsc(n.listName || "")}</b> mit dir geteilt`;
+      if (n.type === "list_unshared")    return `${from} hat die Freigabe der Liste <b>${socialEsc(n.listName || "")}</b> beendet`;
       return "Neue Benachrichtigung";
     }
 
@@ -8536,24 +8790,91 @@
       navigator.clipboard.writeText(url).then(() => showToast("Link kopiert!")).catch(() => showToast("Kopieren fehlgeschlagen"));
     });
 
-    // Handle ?invite= on load
+    // --- invite confirmation dialog (R13-#3) ---
+    const inviteBackdrop = document.getElementById("invite-backdrop");
+    function closeInviteDialog() {
+      inviteBackdrop.hidden = true;
+      document.body.style.overflow = "";
+      try { sessionStorage.removeItem("vault.pendingInvite"); } catch (e) {}
+    }
+    async function openInviteDialog(inviteUid) {
+      if (!inviteBackdrop || !window.__vaultSocial) return;
+      const nameEl = document.getElementById("invite-name");
+      const avEl   = document.getElementById("invite-avatar");
+      nameEl.textContent = "…"; avEl.textContent = "?";
+      inviteBackdrop.hidden = false;
+      document.body.style.overflow = "hidden";
+      let profile = null;
+      try { profile = await window.__vaultSocial.getProfile(inviteUid); } catch (e) {}
+      const uname = (profile && profile.username) || "Unbekannt";
+      nameEl.textContent = "@" + socialEsc(uname);
+      avEl.textContent = avatarInitial(uname);
+      const sendBtn = document.getElementById("invite-send");
+      sendBtn.onclick = async () => {
+        if (!window.__vaultUser) return;
+        sendBtn.disabled = true;
+        const myName = (_myProfile && _myProfile.username) || (window.__vaultUser.email || "");
+        try {
+          await window.__vaultSocial.sendFriendRequest(window.__vaultUser.uid, myName, inviteUid, uname);
+          showToast("Freundschaftsanfrage gesendet");
+        } catch (e) { showToast("Konnte Anfrage nicht senden"); }
+        sendBtn.disabled = false;
+        closeInviteDialog();
+      };
+    }
+    document.getElementById("invite-cancel").addEventListener("click", closeInviteDialog);
+    inviteBackdrop.addEventListener("click", e => { if (e.target === inviteBackdrop) closeInviteDialog(); });
+
+    // Handle ?invite= on load (and after a login round-trip via sessionStorage).
     (function handleInviteParam() {
       const params = new URLSearchParams(location.search);
-      const inviteUid = params.get("invite");
+      const fromUrl = params.get("invite");
+      let inviteUid = fromUrl;
+      if (!inviteUid) { try { inviteUid = sessionStorage.getItem("vault.pendingInvite"); } catch (e) {} }
       if (!inviteUid) return;
-      // Clean URL
-      history.replaceState({}, "", location.pathname);
-      function tryAcceptInvite() {
+
+      const originalHref = location.href;
+      try { sessionStorage.setItem("vault.pendingInvite", inviteUid); } catch (e) {}
+      history.replaceState({}, "", location.pathname);   // clean the visible URL
+
+      // Best-effort nudge: in a plain browser tab, offer to open the installed app.
+      const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+      if (!standalone && fromUrl) {
+        const banner = document.getElementById("pwa-banner");
+        if (banner) {
+          document.getElementById("pwa-banner-open").href = originalHref;
+          banner.hidden = false;
+          document.getElementById("pwa-banner-close").addEventListener("click", () => { banner.hidden = true; }, { once: true });
+        }
+      }
+
+      function proceed() {
         const user = window.__vaultUser;
         if (!user || !window.__vaultSocial) return;
-        if (user.uid === inviteUid) return;
-        const myName = (_myProfile && _myProfile.username) || "";
-        window.__vaultSocial.sendFriendRequest(user.uid, myName, inviteUid)
-          .then(() => showToast("Freundschaftsanfrage gesendet"))
-          .catch(() => {});
+        if (user.uid === inviteUid) { closeInviteDialog(); return; }  // can't friend yourself
+        openInviteDialog(inviteUid);
       }
-      if (window.__vaultUser) tryAcceptInvite();
-      else window.addEventListener("vault-auth-changed", () => { if (window.__vaultUser) tryAcceptInvite(); }, { once: true });
+
+      // Prompt sign-in at most once, and only after the auth module is ready
+      // (the deferred Firebase module runs AFTER this classic script, so
+      // window.__vaultAuth is undefined right now — calling openAuth here would
+      // no-op). We therefore react to the first vault-auth-changed event instead.
+      let promptedLogin = false;
+      function promptLoginOnce() {
+        if (promptedLogin) return;
+        if (window.__vaultAuth && window.__vaultAuth.available && typeof openAuth === "function") {
+          promptedLogin = true; openAuth("login");
+        }
+      }
+      if (window.__vaultUser) {
+        proceed();
+      } else {
+        window.addEventListener("vault-auth-changed", function onAuth() {
+          if (window.__vaultUser) { window.removeEventListener("vault-auth-changed", onAuth); proceed(); }
+          else promptLoginOnce();   // auth resolved to "logged out" → ask to sign in
+        });
+        promptLoginOnce();          // in case the module already initialised
+      }
     })();
 
     // --- friend profile ---
