@@ -8051,7 +8051,7 @@
       document.getElementById("reco-from").textContent = "Von " + (n.fromUsername || "Jemand");
       document.getElementById("reco-title").textContent = n.itemTitle || "";
       document.getElementById("reco-rating").textContent = n.bucket ? bucketToStars(n.bucket) : "";
-      document.getElementById("reco-note").textContent = n.note ? "„" + n.note + """ : "";
+      document.getElementById("reco-note").textContent = n.note ? "„" + n.note + "“" : "";
       document.getElementById("reco-note").hidden = !n.note;
       document.getElementById("reco-counter").textContent = _recoItems.length > 1 ? `${_recoCurrent + 1} / ${_recoItems.length}` : "";
       // nav dots
