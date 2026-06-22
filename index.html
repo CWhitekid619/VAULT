@@ -1094,6 +1094,23 @@
     .switch input:checked + .switch-track { background: var(--accent); border-color: var(--accent); }
     .switch input:checked + .switch-track::after { transform: translateX(18px); background: #1a1206; }
 
+    .list-settings { margin-top: 24px; }
+    .list-settings-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-mute); margin: 0 0 10px; }
+    .list-set-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+    .list-set-card.col { flex-direction: column; align-items: stretch; }
+    .set-row-text { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+    .set-row-text .set-row-label { white-space: normal; overflow: visible; font-weight: 600; }
+    .set-row-sub { font-size: 12px; color: var(--text-mute); line-height: 1.45; }
+    .seg-control { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 3px; margin-top: 12px; }
+    .seg-option { flex: 1; padding: 8px 6px; border: none; background: none; border-radius: 8px; font-family: inherit; font-size: 12px; font-weight: 600; color: var(--text-mute); cursor: pointer; transition: background .15s ease, color .15s ease; }
+    .seg-option.active { background: var(--accent); color: #1a1206; }
+    .seg-option:active { opacity: .8; }
+    .list-shares { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
+    .list-share-row { display: flex; flex-direction: column; gap: 8px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+    .list-share-name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .seg-control.compact { margin-top: 0; }
+    .seg-control.compact .seg-option { font-size: 11px; padding: 7px 4px; }
+
     /* "Already watched" checkmark badge on collection cards (point 13a) */
     .seen-badge {
       position: absolute; top: 6px; right: 6px; z-index: 3;
@@ -1609,6 +1626,24 @@
     .notif-empty { text-align: center; color: var(--text-mute); padding: 60px 24px; font-size: 14px; }
 
     .social-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-mute); margin: 0 0 10px; }
+    .social-username-sub { font-size: 13px; font-weight: 600; color: var(--accent); margin-top: 2px; }
+    .social-no-username { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 12px 14px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); color: var(--text); font-size: 13px; line-height: 1.4; margin-bottom: 16px; cursor: pointer; }
+    .social-no-username:active { background: var(--surface-2); }
+    .social-no-username svg { flex: 0 0 auto; color: var(--text-mute); }
+    .social-no-username strong { color: var(--accent); }
+
+    .username-card { padding: 14px; margin-top: 16px; }
+    .username-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .username-label { font-size: 13px; font-weight: 700; color: var(--text); }
+    .username-value-wrap { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .username-value { font-size: 14px; font-weight: 600; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .username-value.unset { color: var(--text-mute); font-weight: 500; }
+    .username-edit-btn { flex: 0 0 auto; font-size: 12px; font-weight: 700; color: var(--accent); background: none; border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+    .username-edit-btn:active { background: var(--surface-2); }
+    .username-edit { margin-top: 12px; }
+    .username-edit-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .username-edit-actions .sheet-btn-primary, .username-edit-actions .sheet-btn-ghost { flex: 1; }
+    .username-hint { font-size: 12px; color: var(--danger, #ef4444); margin: 8px 0 0; min-height: 0; }
     .friend-card { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); margin-bottom: 8px; cursor: pointer; }
     .friend-card:active { background: var(--surface-2); }
     .friend-avatar { width: 44px; height: 44px; border-radius: 50%; flex: 0 0 auto; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #1a1206; }
@@ -1634,6 +1669,15 @@
     .fprof-section-title { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
     .fprof-private { color: var(--text-mute); font-size: 13px; padding: 12px; background: var(--surface-2); border-radius: 10px; display: flex; align-items: center; gap: 8px; }
     .fprof-private svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; flex: 0 0 auto; }
+    .fprof-empty-note { color: var(--text-mute); font-size: 13px; }
+    .fprof-lists { display: flex; flex-direction: column; gap: 10px; }
+    .fprof-list-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+    .fprof-list-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+    .fprof-list-name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .fprof-list-count { font-size: 12px; color: var(--text-mute); flex: 0 0 auto; }
+    .fprof-list-thumbs { display: flex; gap: 6px; overflow: hidden; }
+    .fprof-list-thumbs img { width: 40px; height: 60px; border-radius: 6px; object-fit: cover; flex: 0 0 auto; }
+    .fprof-list-empty { font-size: 12px; color: var(--text-mute); }
 
     .share-sheet-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
     .share-sheet-poster { width: 44px; height: 66px; border-radius: 8px; object-fit: cover; flex: 0 0 auto; background: var(--surface-2); }
@@ -1676,8 +1720,11 @@
     .social-invite-url { flex: 1; font-size: 12px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .social-invite-copy { background: var(--accent); color: #1a1206; border: none; font-family: inherit; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 99px; cursor: pointer; flex: 0 0 auto; }
     .social-invite-copy:active { opacity: .7; }
-    .social-username-setup { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 20px; }
-    .social-username-setup p { color: var(--text-dim); font-size: 14px; margin: 0 0 12px; }
+    .social-search-hint { font-size: 12px; color: var(--text-mute); line-height: 1.5; margin: 8px 2px 0; }
+    .social-search-hint strong { color: var(--text-dim); font-weight: 700; }
+    .social-invite-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 14px; padding: 11px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--accent); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .social-invite-btn:active { background: var(--surface-2); }
+    .social-invite-btn svg { flex: 0 0 auto; }
     .list-shared-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: var(--accent); font-weight: 600; margin-left: 6px; vertical-align: middle; }
     .list-shared-badge svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   </style>
@@ -1759,6 +1806,7 @@
           Würfeln
         </button>
         <div id="list-detail-grid" class="poster-grid"></div>
+        <div id="list-settings" class="list-settings" hidden></div>
         <button id="delete-list" class="delete-list-btn" type="button" hidden>Liste löschen</button>
       </div>
 
@@ -1925,6 +1973,7 @@
       <div class="view-head">
         <h1>Social</h1>
         <p>Freunde und Empfehlungen.</p>
+        <p id="social-username-sub" class="social-username-sub" hidden></p>
       </div>
       <div id="social-login-hint" hidden>
         <div class="social-empty">
@@ -1933,28 +1982,27 @@
         </div>
       </div>
       <div id="social-content" hidden>
-        <div id="social-username-setup" hidden>
-          <div class="social-username-setup">
-            <p>Wähle einen Benutzernamen, damit Freunde dich finden können.</p>
-            <input id="social-username-input" class="modal-input" type="text" placeholder="Benutzername" autocorrect="off" autocapitalize="none" spellcheck="false" maxlength="32" />
-            <button id="social-username-save" class="sheet-btn-primary" type="button" style="margin-top:10px">Speichern</button>
-          </div>
-        </div>
-        <div id="social-invite-wrap" hidden>
-          <p class="social-section-title">Einladungslink</p>
-          <div class="social-invite-link">
-            <span class="social-invite-url" id="social-invite-url"></span>
-            <button class="social-invite-copy" type="button" id="social-invite-copy">Kopieren</button>
-          </div>
-        </div>
+        <button id="social-no-username" class="social-no-username" type="button" hidden>
+          <span>Kein Benutzername gesetzt — lege einen unter <strong>Profil</strong> fest, damit Freunde dich finden.</span>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
         <div class="social-search-wrap" style="margin-top:20px">
+          <p class="social-section-title">Freunde finden</p>
           <div class="search-bar">
             <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
             <input id="social-search" type="search" inputmode="search" autocomplete="off"
                    autocorrect="off" spellcheck="false" enterkeyhint="search"
-                   placeholder="Nutzer suchen (Name oder E-Mail) …" aria-label="Freunde suchen" />
+                   placeholder="Benutzername oder E-Mail …" aria-label="Freunde suchen" />
           </div>
+          <p class="social-search-hint">Suche per <strong>Benutzername</strong> oder <strong>E-Mail</strong> — oder teile deinen Einladungslink.</p>
           <div id="social-search-results"></div>
+          <div id="social-invite-wrap" hidden>
+            <button class="social-invite-btn" type="button" id="social-invite-copy">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              Einladungslink kopieren
+            </button>
+            <span class="social-invite-url" id="social-invite-url" hidden></span>
+          </div>
         </div>
         <div id="social-requests-section" hidden style="margin-top:20px">
           <p class="social-section-title">Anfragen</p>
@@ -1976,6 +2024,7 @@
       <div id="profile-account"></div>
       <div id="profile-stats" class="stat-grid"></div>
       <div id="profile-note" class="profile-note"></div>
+      <div id="profile-username"></div>
       <div id="profile-settings"></div>
       <div id="profile-privacy"></div>
       <!-- R10-P4: "Gesperrte Titel" lives at the very bottom (least important) -->
@@ -2631,7 +2680,7 @@
         const t = term.trim().toLowerCase();
         const q1 = query(collection(firestore, "users"),
           where("username_lower", ">=", t), where("username_lower", "<=", t + ""), limit(10));
-        const q2 = query(collection(firestore, "users"), where("email", "==", term.trim()), limit(5));
+        const q2 = query(collection(firestore, "users"), where("email", "==", t), limit(5));
         const [s1, s2] = await Promise.allSettled([getDocs(q1), getDocs(q2)]);
         const seen = new Set(); const results = [];
         const addDocs = (snap) => { if (snap && snap.docs) snap.docs.forEach(d => { if (!seen.has(d.id)) { seen.add(d.id); results.push({ uid: d.id, ...d.data() }); } }); };
@@ -2749,6 +2798,15 @@
         await setDoc(doc(firestore, "users", toUid, "notifications", id), {
           type, fromUid, fromUsername, listId, listName, itemTitle, read: false, createdAt: serverTimestamp()
         });
+      },
+      // R12-E: read-only snapshot of a user's shareable lists (for friend profiles).
+      // Kept separate from the collaborative `sharedLists` collection above.
+      async saveUserLists(uid, lists) {
+        await setDoc(doc(firestore, "userLists", uid), { owner: uid, lists: lists || [], updatedAt: serverTimestamp() }, { merge: true });
+      },
+      async getUserLists(uid) {
+        try { const s = await getDoc(doc(firestore, "userLists", uid)); return s.exists() ? (s.data().lists || []) : []; }
+        catch (e) { return []; }
       }
     };
 
@@ -5710,7 +5768,7 @@
     function createList(name, permanent) {
       db.listSeq = (db.listSeq || 0) + 1;
       const id = "list" + db.listSeq;
-      db.lists[id] = { id, name, items: {}, permanent: !!permanent };
+      db.lists[id] = { id, name, items: {}, permanent: !!permanent, shareMode: "private" };
       saveDB();
       return id;
     }
@@ -5795,6 +5853,7 @@
       delBtn.hidden = (listId === WATCHLIST_ID);
       delBtn.textContent = "Liste löschen";
       renderListGrid();
+      renderListSettings();
     }
 
     function renderListGrid() {
@@ -5837,6 +5896,73 @@
         frag.appendChild(cell);
       }
       grid.appendChild(frag);
+    }
+
+    // ---------- Per-list settings (R12-P3): Ewige Liste + Teilen ----------
+    const SHARE_MODES = [
+      { id: "private", label: "Privat" },
+      { id: "friends", label: "Nur Freunde" },
+      { id: "public",  label: "Öffentlich" }
+    ];
+    function listShareMode(listId) {
+      const l = db.lists[listId];
+      return (l && (l.shareMode === "friends" || l.shareMode === "public")) ? l.shareMode : "private";
+    }
+    // R12-E: compact, friend-readable snapshot of non-private lists (name, mode,
+    // count, a few posters). Published to Firestore so friends can view them.
+    function buildShareableListsSnapshot() {
+      const out = [];
+      for (const id in db.lists) {
+        const l = db.lists[id];
+        const mode = listShareMode(id);
+        if (mode === "private") continue;
+        const items = Object.values(l.items || {});
+        out.push({
+          id, name: l.name, shareMode: mode, count: items.length,
+          posters: items.filter(it => it.poster).slice(0, 6).map(it => it.poster)
+        });
+      }
+      return out;
+    }
+    function renderListSettings() {
+      const host = document.getElementById("list-settings");
+      if (!host) return;
+      // The Watchlist is a system list — no per-list permanence/share controls.
+      const list = db.lists[currentListId];
+      if (currentListId === WATCHLIST_ID || !list) { host.hidden = true; host.innerHTML = ""; return; }
+      host.hidden = false;
+      const isPerm = !!list.permanent;
+      const mode   = listShareMode(currentListId);
+      host.innerHTML =
+        '<p class="list-settings-title">Listen-Einstellungen</p>' +
+        '<div class="list-set-card">' +
+          '<div class="set-row-text">' +
+            '<span class="set-row-label">Ewige Liste</span>' +
+            '<span class="set-row-sub">Gesehene Titel bleiben in der Liste, statt automatisch entfernt zu werden.</span>' +
+          '</div>' +
+          '<label class="switch"><input type="checkbox" id="list-perm-toggle"' + (isPerm ? " checked" : "") + '><span class="switch-track"></span></label>' +
+        '</div>' +
+        '<div class="list-set-card col" style="margin-top:10px">' +
+          '<div class="set-row-text">' +
+            '<span class="set-row-label">Liste teilen</span>' +
+            '<span class="set-row-sub">Wer diese Liste sehen darf, wenn er dein Profil ansieht.</span>' +
+          '</div>' +
+          '<div class="seg-control" id="list-share-seg">' +
+            SHARE_MODES.map(m => '<button type="button" class="seg-option' + (mode === m.id ? " active" : "") + '" data-mode="' + m.id + '">' + m.label + '</button>').join("") +
+          '</div>' +
+        '</div>';
+      host.querySelector("#list-perm-toggle").addEventListener("change", e => {
+        list.permanent = e.target.checked;
+        saveDB();
+        showToast(list.permanent ? "Ewige Liste aktiviert" : "Ewige Liste deaktiviert");
+      });
+      host.querySelectorAll(".seg-option").forEach(btn => {
+        btn.addEventListener("click", () => {
+          list.shareMode = btn.dataset.mode;
+          saveDB();
+          host.querySelectorAll(".seg-option").forEach(b => b.classList.toggle("active", b === btn));
+        });
+      });
     }
 
     document.getElementById("list-back").addEventListener("click", showListsOverview);
@@ -7590,6 +7716,10 @@
       try {
         await window.__vaultDB.save(window.__vaultUser.uid, db);
         setCloudStatus("ok");
+        // R12-E: publish the shareable-lists snapshot so friends can view them.
+        if (window.__vaultSocial && window.__vaultSocial.saveUserLists) {
+          window.__vaultSocial.saveUserLists(window.__vaultUser.uid, buildShareableListsSnapshot()).catch(() => {});
+        }
       } catch (e) {
         setCloudStatus("offline");       // keep local; next save retries
       } finally {
@@ -7740,8 +7870,29 @@
         '<svg class="blocked-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>' +
         '</button>';
       html += '<div id="privacy-body"' + (privacyRevealed ? "" : " hidden") + ">";
-      html += '<p class="settings-sub-label">Lege fest, was andere künftig von dir sehen dürfen. Diese Einstellungen werden gespeichert — die Teilen-Funktionen folgen in einem späteren Update.</p>';
+      html += '<p class="settings-sub-label">Lege fest, was andere von dir sehen dürfen, wenn sie dein Profil ansehen.</p>';
       html += '<div class="settings-group">' + Object.keys(PRIVACY_LABELS).map(row).join("") + '</div>';
+
+      // R12-P4: per-list sharing overview — mirrors the controls inside each list.
+      html += '<p class="settings-group-title">Listen-Freigaben</p>';
+      html += '<p class="settings-sub-label">Lege pro Liste fest, wer sie sehen darf.</p>';
+      const customLists = Object.values(db.lists || {});
+      if (!customLists.length) {
+        html += '<p class="settings-sub-label" style="margin-bottom:0">Noch keine eigenen Listen.</p>';
+      } else {
+        html += '<div class="list-shares" id="list-shares">';
+        customLists.forEach(l => {
+          const mode = listShareMode(l.id);
+          html += '<div class="list-share-row">' +
+            '<span class="list-share-name">' + esc(l.name) + '</span>' +
+            '<div class="seg-control compact" data-list="' + esc(l.id) + '">' +
+              SHARE_MODES.map(m => '<button type="button" class="seg-option' + (mode === m.id ? " active" : "") + '" data-mode="' + m.id + '">' + m.label + '</button>').join("") +
+            '</div>' +
+          '</div>';
+        });
+        html += '</div>';
+      }
+
       html += '</div></div>';
       host.innerHTML = html;
 
@@ -7761,6 +7912,17 @@
           window.__vaultSocial.saveProfile(window.__vaultUser.uid, { privacy: ensurePrivacy() }).catch(() => {});
         }
       }));
+      // R12-P4: per-list shareMode controls — write straight to the list object
+      // (same field the in-list segmented control uses, so the two stay in sync).
+      host.querySelectorAll("#list-shares .seg-control").forEach(seg => {
+        const listId = seg.dataset.list;
+        seg.querySelectorAll(".seg-option").forEach(btn => {
+          btn.addEventListener("click", () => {
+            if (db.lists[listId]) { db.lists[listId].shareMode = btn.dataset.mode; saveDB(); }
+            seg.querySelectorAll(".seg-option").forEach(b => b.classList.toggle("active", b === btn));
+          });
+        });
+      });
     }
     // Keep the privacy panel in step with login/logout.
     window.addEventListener("vault-auth-changed", renderPrivacy);
@@ -8097,41 +8259,96 @@
       if (window.__vaultSocial) {
         _myProfile = await window.__vaultSocial.getProfile(user.uid);
       }
-      // Show username setup if no username
-      const setupEl = document.getElementById("social-username-setup");
+      // Username now lives under Profil. Here we only reflect its state:
+      // a non-intrusive banner when unset, otherwise the username as a subtitle.
+      const banner     = document.getElementById("social-no-username");
+      const sub        = document.getElementById("social-username-sub");
+      const inviteWrap = document.getElementById("social-invite-wrap");
       if (!_myProfile || !_myProfile.username) {
-        setupEl.hidden = false;
+        banner.hidden = false;
+        sub.hidden = true;
+        inviteWrap.hidden = true;
       } else {
-        setupEl.hidden = true;
-        // Show invite link
-        const inviteWrap = document.getElementById("social-invite-wrap");
-        const inviteUrl  = document.getElementById("social-invite-url");
+        banner.hidden = true;
+        sub.hidden = false;
+        sub.textContent = "@" + _myProfile.username;
         inviteWrap.hidden = false;
-        const link = location.origin + location.pathname + "?invite=" + user.uid;
-        inviteUrl.textContent = link;
+        document.getElementById("social-invite-url").textContent =
+          location.origin + location.pathname + "?invite=" + user.uid;
       }
       await loadSocialFriends();
       // Sync privacy to Firestore
       syncPrivacyToFirestore();
     }
 
-    document.getElementById("social-username-save").addEventListener("click", async () => {
-      const input = document.getElementById("social-username-input");
-      const uname = input.value.trim();
-      if (!uname || uname.length < 2) { showToast("Mindestens 2 Zeichen"); return; }
+    // "Kein Benutzername" banner → jump to Profil where the username is set.
+    document.getElementById("social-no-username").addEventListener("click", () => switchTab("profile"));
+
+    // ---- Username field (lives under Profil) ----
+    async function renderUsernameField() {
+      const host = document.getElementById("profile-username");
+      if (!host) return;
+      // Username needs an account + Firestore; hide otherwise.
+      if (!window.__vaultAuth || !window.__vaultAuth.available || !window.__vaultUser || !window.__vaultSocial) {
+        host.innerHTML = ""; return;
+      }
+      if (!_myProfile) { try { _myProfile = await window.__vaultSocial.getProfile(window.__vaultUser.uid); } catch (e) {} }
+      const uname = (_myProfile && _myProfile.username) || "";
+      host.innerHTML = `<div class="detail-section username-card">
+        <div class="username-row">
+          <span class="username-label">Benutzername</span>
+          <div class="username-value-wrap">
+            <span class="username-value${uname ? "" : " unset"}">${uname ? "@" + socialEsc(uname) : "Nicht gesetzt"}</span>
+            <button class="username-edit-btn" id="username-edit-btn" type="button">${uname ? "Ändern" : "Festlegen"}</button>
+          </div>
+        </div>
+        <div class="username-edit" id="username-edit" hidden>
+          <input id="username-input" class="modal-input" type="text" placeholder="Benutzername" maxlength="32" autocorrect="off" autocapitalize="none" spellcheck="false" value="${socialEsc(uname)}" />
+          <div class="username-edit-actions">
+            <button class="sheet-btn-primary" id="username-save" type="button">Speichern</button>
+            <button class="sheet-btn-ghost" id="username-cancel" type="button">Abbrechen</button>
+          </div>
+          <p class="username-hint" id="username-hint"></p>
+        </div>
+      </div>`;
+      const valWrap  = host.querySelector(".username-value-wrap");
+      const editWrap = host.querySelector("#username-edit");
+      const input    = host.querySelector("#username-input");
+      const hint     = host.querySelector("#username-hint");
+      host.querySelector("#username-edit-btn").addEventListener("click", () => {
+        valWrap.hidden = true; editWrap.hidden = false; input.focus(); input.select();
+      });
+      host.querySelector("#username-cancel").addEventListener("click", () => {
+        editWrap.hidden = true; valWrap.hidden = false; hint.textContent = "";
+      });
+      host.querySelector("#username-save").addEventListener("click", () => saveUsername(input.value, hint));
+      input.addEventListener("keydown", e => { if (e.key === "Enter") saveUsername(input.value, hint); });
+    }
+
+    async function saveUsername(raw, hintEl) {
+      const uname = (raw || "").trim();
+      if (uname.length < 2)  { if (hintEl) hintEl.textContent = "Mindestens 2 Zeichen."; return; }
+      if (uname.length > 32) { if (hintEl) hintEl.textContent = "Maximal 32 Zeichen.";  return; }
       if (!window.__vaultUser || !window.__vaultSocial) return;
       const uid = window.__vaultUser.uid;
-      await window.__vaultSocial.saveProfile(uid, {
-        username: uname, username_lower: uname.toLowerCase(),
-        email: window.__vaultUser.email || "",
-        joinedAt: new Date().toISOString(),
-        privacy: { profileVisible: true, shareWatched: true, shareRanking: true, shareLists: true, shareWatchlist: false },
-        notificationSettings: { friendRequests: true, sharedListUpdates: true, recommendations: true }
-      });
-      _myProfile = await window.__vaultSocial.getProfile(uid);
-      showToast("Benutzername gespeichert");
-      initSocialTab();
-    });
+      const data = { username: uname, username_lower: uname.toLowerCase() };
+      // First-time profile: seed the defaults the old setup card used to write.
+      if (!_myProfile) {
+        data.email = (window.__vaultUser.email || "").toLowerCase();
+        data.joinedAt = new Date().toISOString();
+        data.privacy = ensurePrivacy();
+        data.notificationSettings = ensureNotifSettings();
+      }
+      try {
+        await window.__vaultSocial.saveProfile(uid, data);
+        _myProfile = await window.__vaultSocial.getProfile(uid);
+        showToast("Benutzername gespeichert");
+        renderUsernameField();
+        if (document.body.dataset.tab === "social") initSocialTab();
+      } catch (e) {
+        if (hintEl) hintEl.textContent = "Speichern fehlgeschlagen.";
+      }
+    }
 
     async function syncPrivacyToFirestore() {
       if (!window.__vaultUser || !window.__vaultSocial || !_myProfile) return;
@@ -8237,7 +8454,11 @@
       const myUid   = window.__vaultUser.uid;
       const box     = document.getElementById("social-search-results");
       const filtered = results.filter(u => u.uid !== myUid);
-      if (!filtered.length) { box.innerHTML = '<div style="color:var(--text-mute);font-size:13px;padding:10px 4px">Keine Nutzer gefunden</div>'; return; }
+      if (!filtered.length) {
+        const msg = term.includes("@") ? "Kein Nutzer mit dieser E-Mail gefunden" : "Keine Nutzer gefunden";
+        box.innerHTML = '<div style="color:var(--text-mute);font-size:13px;padding:10px 4px">' + msg + '</div>';
+        return;
+      }
       box.innerHTML = filtered.map(u => {
         const rel = _socialFriends.find(f => f.uid === u.uid);
         let action = "";
@@ -8277,7 +8498,7 @@
     // --- invite link ---
     document.getElementById("social-invite-copy").addEventListener("click", () => {
       const url = document.getElementById("social-invite-url").textContent;
-      navigator.clipboard.writeText(url).then(() => showToast("Link kopiert")).catch(() => showToast("Kopieren fehlgeschlagen"));
+      navigator.clipboard.writeText(url).then(() => showToast("Link kopiert!")).catch(() => showToast("Kopieren fehlgeschlagen"));
     });
 
     // Handle ?invite= on load
@@ -8331,6 +8552,38 @@
       } else {
         html += `<div class="fprof-section"><div class="fprof-section-title">Zuletzt gesehen</div><div class="fprof-private"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Diese Info ist privat</div></div>`;
       }
+
+      // R12-E: friend's shareable lists, honouring each list's shareMode.
+      // "public" is visible to anyone viewing the profile; "friends" only to
+      // confirmed friends; "private" lists are never published (see snapshot).
+      const myUid    = window.__vaultUser ? window.__vaultUser.uid : null;
+      const isFriend = !!(myUid && typeof _socialFriends !== "undefined" &&
+                          _socialFriends.some(f => f.uid === friendUid && f.status === "accepted"));
+      let friendLists = [];
+      try { friendLists = await window.__vaultSocial.getUserLists(friendUid); } catch (e) {}
+      const visibleLists = (friendLists || []).filter(l =>
+        l.shareMode === "public" || (l.shareMode === "friends" && isFriend));
+
+      html += '<div class="fprof-section"><div class="fprof-section-title">Listen</div>';
+      if (!visibleLists.length) {
+        html += '<div class="fprof-empty-note">Keine geteilten Listen</div>';
+      } else {
+        html += '<div class="fprof-lists">';
+        visibleLists.forEach(l => {
+          const thumbs = (l.posters || []).slice(0, 5)
+            .map(p2 => '<img loading="lazy" src="' + IMG_BASE + 'w92' + p2 + '" alt="">').join("");
+          html += '<div class="fprof-list-card">' +
+            '<div class="fprof-list-head">' +
+              '<span class="fprof-list-name">' + socialEsc(l.name) + '</span>' +
+              '<span class="fprof-list-count">' + (l.count || 0) + ' Titel</span>' +
+            '</div>' +
+            '<div class="fprof-list-thumbs">' + (thumbs || '<span class="fprof-list-empty">leer</span>') + '</div>' +
+          '</div>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+
       content.innerHTML = html;
     }
 
@@ -8464,13 +8717,14 @@
 
     // Hook into the existing vault-auth-changed to refresh notif settings
     window.addEventListener("vault-auth-changed", () => {
-      if (document.body.dataset.tab === "profile") renderNotifSettings();
+      if (document.body.dataset.tab === "profile") { renderNotifSettings(); renderUsernameField(); }
     });
-    // Patch renderProfile to call renderNotifSettings
+    // Patch renderProfile to call renderNotifSettings + username field
     const _origRenderProfile = renderProfile;
     renderProfile = async function() {
       await _origRenderProfile();
       renderNotifSettings();
+      renderUsernameField();
     };
   </script>
 </body>
