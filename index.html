@@ -751,17 +751,6 @@
     .rank-arrow:active { background: var(--surface); }
     .rank-arrow:disabled { opacity: .3; cursor: default; }
     .rank-arrow svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-    .rank-manual-bar {
-      display: flex; align-items: center; justify-content: flex-end;
-      margin-bottom: 8px;
-    }
-    .rank-manual-reset {
-      flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px;
-      background: none; border: none; color: var(--text-dim); cursor: pointer;
-      font-family: inherit; font-size: 11.5px; font-weight: 600; padding: 2px 4px; opacity: .75;
-    }
-    .rank-manual-reset:active { opacity: 1; }
-    .rank-manual-reset svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
     /* ---------- Duel start button ---------- */
     .duel-start {
@@ -796,9 +785,11 @@
     }
     .duel-close svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; }
 
-    .duel-cards { flex: 1; display: flex; flex-direction: row; gap: 10px; min-height: 0; align-items: center; }
+    .duel-cards { flex: 1; display: flex; flex-direction: row; gap: 10px; min-height: 0; align-items: flex-start; }
+    .duel-card-wrap { flex: 1; display: flex; flex-direction: column; align-items: stretch; min-height: 0; }
+    .duel-card-hint { align-self: center; margin-top: 7px; font-size: 11px; color: var(--text-mute); letter-spacing: .03em; pointer-events: none; }
     .duel-card {
-      position: relative; flex: 1;
+      position: relative; width: 100%;
       display: flex; flex-direction: column; justify-content: flex-end;
       border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
       background: var(--surface-2); cursor: pointer; padding: 0;
@@ -1409,7 +1400,7 @@
     }
     .reco-track::-webkit-scrollbar { display: none; }
     .reco-card, .reco-skeleton {
-      flex: 0 0 86%; scroll-snap-align: center;
+      flex: 0 0 min(86%, 340px); scroll-snap-align: center;
       aspect-ratio: 16 / 10; border-radius: var(--radius); background: var(--surface-2);
     }
     .reco-card { position: relative; overflow: hidden; cursor: pointer; border: 1px solid var(--border); }
@@ -1683,6 +1674,7 @@
           <div class="filter-field">
             <label for="df-media">Typ</label>
             <select id="df-media" class="modal-select">
+              <option value="">Alle</option>
               <option value="movie">Film</option>
               <option value="tv">Serie</option>
             </select>
@@ -1754,9 +1746,11 @@
         <button id="df-more" class="new-list-btn" type="button" hidden>Mehr laden</button>
       </div>
 
+      <!-- Personalized recommendations (always visible, responds to Typ filter) -->
+      <div id="disc-recos" class="disc-recos" hidden></div>
+
       <!-- Curated browse content -->
       <div id="disc-browse">
-        <div id="disc-recos" class="disc-recos" hidden></div>
         <div id="disc-genre-chips" class="genre-chips"></div>
         <div id="disc-rows"></div>
       </div>
@@ -1921,17 +1915,23 @@
       <select id="df-duel-genre" class="modal-select"><option value="">Alle Genres</option></select>
     </div>
     <div class="duel-cards">
-      <button id="duel-a" class="duel-card" type="button">
-        <div class="duel-rank"></div>
-        <img class="duel-poster" alt="" />
-        <div class="duel-name"></div>
-      </button>
+      <div class="duel-card-wrap">
+        <button id="duel-a" class="duel-card" type="button">
+          <div class="duel-rank"></div>
+          <img class="duel-poster" alt="" />
+          <div class="duel-name"></div>
+        </button>
+        <div class="duel-card-hint" id="duel-hint-a" hidden>↑ Filme</div>
+      </div>
       <div class="duel-vs">oder</div>
-      <button id="duel-b" class="duel-card" type="button">
-        <div class="duel-rank"></div>
-        <img class="duel-poster" alt="" />
-        <div class="duel-name"></div>
-      </button>
+      <div class="duel-card-wrap">
+        <button id="duel-b" class="duel-card" type="button">
+          <div class="duel-rank"></div>
+          <img class="duel-poster" alt="" />
+          <div class="duel-name"></div>
+        </button>
+        <div class="duel-card-hint" id="duel-hint-b" hidden>↑ Filme</div>
+      </div>
     </div>
     <button id="duel-skip" class="duel-skip" type="button">Überspringen</button>
     <button id="duel-undo" class="duel-undo" type="button" hidden>
@@ -2408,7 +2408,7 @@
       if (target === "discover" && typeof initDiscover === "function") {
         initDiscover();
         // R9-P4: recommendation sources changed in settings → regenerate the slideshow
-        if (recoDirty && typeof buildRecos === "function") { recoDirty = false; buildRecos(); }
+        if (recoDirty && typeof buildRecos === "function") { recoDirty = false; buildRecos(dfMedia.value || null); }
       }
       // Profile recomputes stats each open
       if (target === "profile" && typeof renderProfile === "function") renderProfile();
@@ -3828,12 +3828,7 @@
       const manualActive = manualRankActive(rankMedia);
 
       if (manualActive) {
-        // R-next: no prominent banner — just a slim, subtle reset affordance, right-aligned.
-        const bar = document.createElement("div"); bar.className = "rank-manual-bar";
-        bar.innerHTML = '<button class="rank-manual-reset" type="button" id="rank-reset" title="Elo-Reihenfolge wiederherstellen">' +
-          '<svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Elo-Reihenfolge</button>';
-        frag.appendChild(bar);
-        // flat list in the user's chosen order — no Elo zone labels
+        // manual order is silently respected — no banner, no reset button
         const ordered = orderedRankedItems(ranked, rankMedia);
         ordered.forEach((it, idx) =>
           addRow(it, idx + 1, filterActive ? null : { isFirst: idx === 0, isLast: idx === ordered.length - 1 }));
@@ -3855,8 +3850,6 @@
       }
 
       rankListEl.appendChild(frag);
-      const resetBtn = document.getElementById("rank-reset");
-      if (resetBtn) resetBtn.addEventListener("click", resetManualRank);
     }
 
     // R10-P3: manual ranking order helpers. db.manualRankOrder[mediaType] = [id, …].
@@ -4035,6 +4028,7 @@
       if (qEl) qEl.textContent = isPerson ? "Wer ist dein Liebling?" : "Welcher war besser?";
       const duelFilterEl = document.getElementById("duel-filter");
       if (duelFilterEl) duelFilterEl.hidden = isPerson;
+      document.querySelectorAll(".duel-card-hint").forEach(h => { h.hidden = !isPerson; });
       showDuelPair(pair);
       duelEl.hidden = false;
       document.body.style.overflow = "hidden";
@@ -4165,28 +4159,21 @@
       const next = pickPair();
       if (next) showDuelPair(next); else closeDuel("Duell abgeschlossen!");
     });
-    // People-duel: short tap = pick winner; long-press (500ms) = show filmography sheet.
+    // People-duel: tap = pick winner; swipe up = show filmography sheet (person mode only).
     function wireDuelCard(card, idx) {
-      let lpTimer = null, lpFired = false, sx = 0, sy = 0;
-      const start = (x, y) => {
-        sx = x; sy = y; lpFired = false;
-        if (rankMedia !== "person") return;   // long-press only in people duels
-        lpTimer = setTimeout(() => {
-          lpFired = true;
-          if (duelPair) openPersonSheet(duelPair[idx]);
-        }, 500);
-      };
-      const cancel = () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } };
-      const move = (x, y) => { if (lpTimer && (Math.abs(x - sx) > 10 || Math.abs(y - sy) > 10)) cancel(); };
-      card.addEventListener("touchstart", e => start(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
-      card.addEventListener("touchmove", e => move(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
-      card.addEventListener("touchend", cancel);
-      card.addEventListener("mousedown", e => start(e.clientX, e.clientY));
-      card.addEventListener("mousemove", e => move(e.clientX, e.clientY));
-      card.addEventListener("mouseup", cancel);
-      card.addEventListener("mouseleave", cancel);
+      let touchSy = 0, swipeFired = false;
+      card.addEventListener("touchstart", e => {
+        touchSy = e.touches[0].clientY; swipeFired = false;
+      }, { passive: true });
+      card.addEventListener("touchend", e => {
+        const dy = touchSy - e.changedTouches[0].clientY;   // positive = upward swipe
+        if (dy > 40 && rankMedia === "person" && duelPair) {
+          swipeFired = true;
+          openPersonSheet(duelPair[idx]);
+        }
+      });
       card.addEventListener("click", () => {
-        if (lpFired) { lpFired = false; return; }   // long-press already handled it
+        if (swipeFired) { swipeFired = false; return; }
         if (duelPair) chooseWinner(duelPair[idx]);
       });
     }
@@ -6024,7 +6011,7 @@
     function initDiscover() {
       if (discInited) return;
       discInited = true;
-      buildRecos();
+      buildRecos(dfMedia.value || null);
       buildGenreChips();
       buildRows();
       fillDfGenres();
@@ -6263,8 +6250,8 @@
     }
 
     // Watched + ranked titles sitting in the top two buckets (taste signal).
-    function wellRatedItems() {
-      const ranked = Object.values(db.items).filter(it => !it.unranked);
+    function wellRatedItems(mediaType) {
+      const ranked = Object.values(db.items).filter(it => !it.unranked && (!mediaType || it.mediaType === mediaType));
       const top = ranked
         .map(it => ({ it: it, score: ensureScore(it), b: deriveBucket(ensureScore(it)) }))
         .filter(x => x.b === "great" || x.b === "good")
@@ -6275,12 +6262,12 @@
       return ranked.sort((a, b) => ensureScore(b) - ensureScore(a)).slice(0, 6);
     }
 
-    async function buildRecoSources() {
+    async function buildRecoSources(mediaType) {
       const names = await loadGenreNames();
       const sources = [];
 
-      // (1) genre-based slides from well-rated titles
-      const pool = wellRatedItems();
+      // (1) genre-based slides from well-rated titles (filtered by type when set)
+      const pool = wellRatedItems(mediaType);
       const gfreq = {};
       pool.forEach(it => (it.genreIds || []).forEach(g => { gfreq[g] = (gfreq[g] || 0) + 1; }));
       const topGenres = Object.keys(gfreq).sort((a, b) => gfreq[b] - gfreq[a]).slice(0, 2);
@@ -6300,6 +6287,7 @@
       const tagSeeds = {};
       Object.keys(db.items).forEach(k => {
         const it = db.items[k]; if (it.unranked) return;
+        if (mediaType && it.mediaType !== mediaType) return;
         (getMeta(k).tags || []).forEach(t => {
           if (exclTags[t]) return;
           (tagSeeds[t] = tagSeeds[t] || []).push({ id: it.id, mediaType: it.mediaType });
@@ -6316,7 +6304,7 @@
         const lst = db.lists[lid];
         const seeds = Object.values(lst.items || {})
           .map(r => ({ id: r.id, mediaType: r.mediaType || r.media_type || "movie" }))
-          .filter(s => s.id).slice(0, 2);
+          .filter(s => s.id && (!mediaType || s.mediaType === mediaType)).slice(0, 2);
         if (!seeds.length) return;
         sources.push({ label: "Anhand deiner Liste: " + lst.name, seeds: seeds });
       });
@@ -6324,7 +6312,7 @@
       return sources.slice(0, 7);
     }
 
-    async function buildRecos() {
+    async function buildRecos(mediaType) {
       if (recoBuilding) return;
       recoBuilding = true;
       discRecos.hidden = false;
@@ -6332,7 +6320,7 @@
         '<div class="disc-recos-head"><h2>Für dich empfohlen</h2></div>' +
         '<div class="reco-track"><div class="reco-skeleton"></div><div class="reco-skeleton"></div></div>';
       try {
-        const sources = await buildRecoSources();
+        const sources = await buildRecoSources(mediaType || null);
         if (!sources.length) { discRecos.hidden = true; recoBuilding = false; return; }
         const pools = await Promise.all(sources.map(s => aggregateRecs(s.seeds)));
         const slides = [];
@@ -6634,7 +6622,7 @@
     function personFilterActive() { return !!(dfCastPerson || dfCrewPerson); }
 
     async function fillDfGenres() {
-      const media = dfMedia.value;
+      const media = dfMedia.value || "movie";
       if (dfGenresFilled === media) return;
       try {
         const res = await fetch("https://api.themoviedb.org/3/genre/" + media + "/list?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
@@ -6664,7 +6652,7 @@
     fillYearSelects();
 
     function buildFilterUrl() {
-      const media = dfMedia.value;
+      const media = dfMedia.value || "movie";
       const minRt = parseInt(document.getElementById("df-rt-min").value, 10) || 0;
       const maxRt = parseInt(document.getElementById("df-rt-max").value, 10) || 0;
       const yrMin = document.getElementById("df-yr-min").value;
@@ -6696,6 +6684,7 @@
     }
 
     function applyFilterBrowse() {
+      if (!dfMedia.value) { showDiscBrowse(); return; }   // "Alle" → stay in browse
       dfGrid.innerHTML = "";
       showDiscFiltered();
       discFiltered.scrollTop = 0;
@@ -6851,7 +6840,7 @@
     // R6-P7: reset all Discover filters and return to the curated home view
     function resetDiscoverFilters() {
       const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
-      set("df-media", "movie"); set("df-genre", ""); set("df-studio", ""); set("df-rt-min", "0"); set("df-rt-max", "0");
+      set("df-media", ""); set("df-genre", ""); set("df-studio", ""); set("df-rt-min", "0"); set("df-rt-max", "0");
       set("df-rating", "0"); set("df-cast", ""); set("df-crew", "");
       const yrMin = document.getElementById("df-yr-min"); if (yrMin) yrMin.selectedIndex = 0;
       const yrMax = document.getElementById("df-yr-max"); if (yrMax) yrMax.selectedIndex = 0;
@@ -6866,7 +6855,14 @@
     }
     ["df-genre", "df-studio", "df-rt-min", "df-rt-max", "df-yr-min", "df-yr-max", "df-rating"]
       .forEach(id => document.getElementById(id).addEventListener("change", scheduleFilter));
-    dfMedia.addEventListener("change", async () => { await fillDfGenres(); scheduleFilter(); });
+    dfMedia.addEventListener("change", async () => {
+      const mt = dfMedia.value;
+      recoState = null; recoBuilding = false;
+      buildRecos(mt || null);
+      if (!mt) { showDiscBrowse(); return; }
+      await fillDfGenres();
+      scheduleFilter();
+    });
     dfToggle.addEventListener("click", () => {
       dfAdvanced.hidden = !dfAdvanced.hidden;
       dfToggle.classList.toggle("on", !dfAdvanced.hidden);
