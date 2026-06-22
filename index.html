@@ -930,6 +930,9 @@
       display: flex; align-items: center; justify-content: center; cursor: pointer;
     }
     .detail-back svg { width: 22px; height: 22px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    /* R14-#4: when the detail is opened from a Duell, the back button carries a label */
+    .detail-back.with-text { width: auto; border-radius: 19px; gap: 5px; padding: 0 14px 0 9px; }
+    .detail-back-text { font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap; }
 
     .detail-body { padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 24px); }
     .detail-loading, .detail-error { text-align: center; color: var(--text-mute); padding: 80px 24px; font-size: 14px; }
@@ -1613,7 +1616,9 @@
     .notif-badge.visible { display: block; }
     /* R13-#1: when the fixed bell is shown, keep top-right content clear of it. */
     body.has-bell #view-log .search-bar { margin-top: 26px; }
-    body.has-bell .disc-top-row { padding-right: 46px; }
+    /* R14-#5: drop the Entdecken top row below the fixed bell so they never
+       overlap, and let "Würfeln" use the full width (no right-edge clipping). */
+    body.has-bell .disc-top-row { margin-top: 40px; }
 
     #notif-center {
       position: fixed; inset: 0; z-index: 150; background: var(--bg);
@@ -2056,9 +2061,10 @@
           Daten exportieren
         </button>
       </div>
-      <!-- Account-Bereich (E-Mail, Benutzername, Passwort, Sync, Logout) ganz unten -->
-      <div id="profile-account"></div>
+      <!-- R14-#1: Benutzername direkt über dem Account-Block; Account ganz unten -->
       <div id="profile-username"></div>
+      <!-- Account-Bereich (E-Mail, Sync, Passwort, Logout) als absolut letztes Element -->
+      <div id="profile-account"></div>
     </section>
 
   </div>
@@ -4558,6 +4564,17 @@
       if (b) b.hidden = !lastDuel;
     }
 
+    // R14-#4: swipe up on a film duel card -> open its detail page as an overlay
+    // ON TOP of the Duell. The Duell is only hidden (not closed), so duelPair and
+    // the whole comparison state survive; closing the detail re-shows it untouched.
+    let duelDetailReturn = false;
+    function openDuelDetail(item) {
+      if (!item || rankMedia === "person") return;
+      duelDetailReturn = true;
+      duelEl.hidden = true;                 // .detail is z-95, .duel is z-110 — hide the duel so detail shows
+      openDetail(rankMedia, item.id);       // rankMedia is "movie" | "tv"
+    }
+
     function openDuel() {
       duelSeenPairs = new Set();
       lastDuel = null;
@@ -4569,7 +4586,9 @@
       if (qEl) qEl.textContent = isPerson ? "Wer ist dein Liebling?" : "Welcher war besser?";
       const duelFilterEl = document.getElementById("duel-filter");
       if (duelFilterEl) duelFilterEl.hidden = isPerson;
-      document.querySelectorAll(".duel-card-hint").forEach(h => { h.hidden = !isPerson; });
+      // R14-#4: hint to swipe up — "Filme" for people, "Details" for film duels
+      const hintText = isPerson ? "↑ Filme" : "↑ Details";
+      document.querySelectorAll(".duel-card-hint").forEach(h => { h.hidden = false; h.textContent = hintText; });
       showDuelPair(pair);
       duelEl.hidden = false;
       document.body.style.overflow = "hidden";
@@ -4708,9 +4727,10 @@
       }, { passive: true });
       card.addEventListener("touchend", e => {
         const dy = touchSy - e.changedTouches[0].clientY;   // positive = upward swipe
-        if (dy > 40 && rankMedia === "person" && duelPair) {
+        if (dy > 40 && duelPair) {
           swipeFired = true;
-          openPersonSheet(duelPair[idx]);
+          if (rankMedia === "person") openPersonSheet(duelPair[idx]);  // filmography sheet
+          else openDuelDetail(duelPair[idx]);                          // R14-#4: film detail overlay
         }
       });
       card.addEventListener("click", () => {
@@ -4887,6 +4907,7 @@
       detailEl.hidden = false;
       detailEl.scrollTop = 0;
       document.body.style.overflow = "hidden";
+      updateDetailBackLabel();   // R14-#4: reflect duel-return state on the back button
       detailBody.innerHTML = '<div class="detail-loading">Lädt …</div>';
       const reqId = ++detailReqId;
 
@@ -4930,9 +4951,34 @@
       navStack = [];
       detailEl.hidden = true;
       detailCtx = null;
-      document.body.style.overflow = "";
       detailBody.innerHTML = "";
       refreshAllCardActions();   // P9: sync card button states to db after detail changes
+      // R14-#4: if this detail was opened from a Duell, return to it untouched.
+      if (duelDetailReturn) {
+        duelDetailReturn = false;
+        updateDetailBackLabel();
+        if (duelPair) { duelEl.hidden = false; document.body.style.overflow = "hidden"; return; }
+      }
+      document.body.style.overflow = "";
+    }
+
+    // R14-#4: show "Zurück zum Duell" on the back button only while the topmost
+    // detail (navStack depth 1) was reached by swiping up from a Duell.
+    function updateDetailBackLabel() {
+      const btn = document.getElementById("detail-back");
+      if (!btn) return;
+      const showText = duelDetailReturn && navStack.length <= 1;
+      let lab = btn.querySelector(".detail-back-text");
+      if (showText) {
+        if (!lab) { lab = document.createElement("span"); lab.className = "detail-back-text"; btn.appendChild(lab); }
+        lab.textContent = "Zurück zum Duell";
+        btn.classList.add("with-text");
+        btn.setAttribute("aria-label", "Zurück zum Duell");
+      } else {
+        if (lab) lab.remove();
+        btn.classList.remove("with-text");
+        btn.setAttribute("aria-label", "Zurück");
+      }
     }
 
     // P9: update watch/watchlist button states on all visible Discover cards from db (single source of truth)
@@ -5317,6 +5363,7 @@
       detailEl.hidden = false;
       detailEl.scrollTop = 0;
       document.body.style.overflow = "hidden";
+      updateDetailBackLabel();   // R14-#4: hide the duel-return label one level deep
       detailCtx = null; // no logging context on a person page
       detailBody.innerHTML = '<div class="detail-loading">' + esc(name || "Lädt …") + "</div>";
       const reqId = ++detailReqId;
@@ -8766,20 +8813,38 @@
       }).join("");
       box.querySelectorAll("[data-uid]").forEach(btn => {
         btn.addEventListener("click", async () => {
-          const toUid = btn.dataset.uid;
-          const toUname = btn.dataset.uname || "";
-          const myUid   = window.__vaultUser.uid;
-          const myUname = (_myProfile && _myProfile.username) || "";
-          if (btn.dataset.action === "accept") {
-            await window.__vaultSocial.acceptFriendRequest(myUid, myUname, toUid, toUname);
-            showToast("Freund hinzugefügt");
-          } else {
-            await window.__vaultSocial.sendFriendRequest(myUid, myUname, toUid, toUname);
-            showToast("Anfrage gesendet");
+          const toUid    = btn.dataset.uid;
+          const toUname  = btn.dataset.uname || "";
+          const myUid    = window.__vaultUser.uid;
+          const myUname  = (_myProfile && _myProfile.username) || "";
+          const isAccept = btn.dataset.action === "accept";
+          // R14-#3: guard the Firestore write so a failure (e.g. blocked rules)
+          // gives clear feedback instead of silently doing nothing.
+          const prevText = btn.textContent;
+          btn.disabled = true;
+          btn.textContent = "…";
+          try {
+            if (isAccept) {
+              await window.__vaultSocial.acceptFriendRequest(myUid, myUname, toUid, toUname);
+              showToast("Freund hinzugefügt");
+              document.getElementById("social-search").value = "";
+              document.getElementById("social-search-results").innerHTML = "";
+            } else {
+              await window.__vaultSocial.sendFriendRequest(myUid, myUname, toUid, toUname);
+              showToast("Anfrage gesendet!");
+              // Keep the result on screen; just reflect the new "pending" state.
+              btn.outerHTML = '<span style="font-size:12px;color:var(--text-mute)">Ausstehend</span>';
+            }
+            await loadSocialFriends();
+          } catch (e) {
+            console.warn("[VAULT] friend request failed", e);
+            const denied = e && (e.code === "permission-denied" || /permission/i.test(e.message || ""));
+            showToast(denied
+              ? "Keine Berechtigung — Firestore-Regeln prüfen"
+              : "Anfrage fehlgeschlagen — bitte erneut versuchen");
+            btn.disabled = false;
+            btn.textContent = prevText;
           }
-          document.getElementById("social-search").value = "";
-          document.getElementById("social-search-results").innerHTML = "";
-          await loadSocialFriends();
         });
       });
     }
@@ -9041,6 +9106,7 @@
 
     // Extend renderSettings to include notification settings
     const _origRenderSettings = typeof renderSettings === "function" ? renderSettings : null;
+    let notifSettingsRevealed = false;   // R14-#2: collapsed by default (session-only state)
     function renderNotifSettings() {
       if (!window.__vaultUser) return;
       const host = document.getElementById("profile-settings");
@@ -9052,14 +9118,28 @@
       const block = document.createElement("div");
       block.className = "notif-settings-block detail-section";
       block.style.marginTop = "16px";
-      block.innerHTML = `<div class="detail-section-title" style="font-size:14px;font-weight:700;margin-bottom:10px">Benachrichtigungen</div>
-        <div class="settings-group">
-          ${Object.entries(NOTIF_SETTING_LABELS).map(([k, label]) =>
-            `<div class="set-row"><span class="set-row-label">${socialEsc(label)}</span>
-            <label class="switch"><input type="checkbox" data-notif="${k}"${ns[k] !== false ? " checked" : ""}><span class="switch-track"></span></label></div>`
-          ).join("")}
-        </div>`;
+      block.innerHTML =
+        '<button class="blocked-toggle" type="button" id="notif-settings-toggle">' +
+          '<span class="blocked-toggle-label">Benachrichtigungen</span>' +
+          '<svg class="blocked-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>' +
+        '</button>' +
+        '<div id="notif-settings-body"' + (notifSettingsRevealed ? "" : " hidden") + '>' +
+          '<div class="settings-group">' +
+            Object.entries(NOTIF_SETTING_LABELS).map(([k, label]) =>
+              '<div class="set-row"><span class="set-row-label">' + socialEsc(label) + '</span>' +
+              '<label class="switch"><input type="checkbox" data-notif="' + k + '"' + (ns[k] !== false ? " checked" : "") + '><span class="switch-track"></span></label></div>'
+            ).join("") +
+          '</div>' +
+        '</div>';
       host.appendChild(block);
+      const ntoggle = document.getElementById("notif-settings-toggle");
+      const nbody   = document.getElementById("notif-settings-body");
+      ntoggle.classList.toggle("open", notifSettingsRevealed);
+      ntoggle.addEventListener("click", () => {
+        notifSettingsRevealed = !notifSettingsRevealed;
+        nbody.hidden = !notifSettingsRevealed;
+        ntoggle.classList.toggle("open", notifSettingsRevealed);
+      });
       host.querySelectorAll("input[data-notif]").forEach(cb => {
         cb.addEventListener("change", () => {
           ensureNotifSettings()[cb.dataset.notif] = cb.checked;
