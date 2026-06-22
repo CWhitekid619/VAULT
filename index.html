@@ -91,6 +91,7 @@
     body[data-tab="lists"]    { --mood: rgba(168,120,255,.13); } /* violet     */
     body[data-tab="discover"] { --mood: rgba(56,160,255,.14); }  /* cool blue  */
     body[data-tab="ranking"]  { --mood: rgba(239,68,68,.14); }   /* red carpet */
+    body[data-tab="social"]   { --mood: rgba(56,189,248,.13); }  /* sky blue   */
     body[data-tab="profile"]  { --mood: rgba(34,197,94,.12); }   /* green      */
     body::before {                 /* soft cinematic spotlight at the top */
       content: ""; position: fixed; left: 50%; top: -12%; transform: translateX(-50%);
@@ -1564,6 +1565,121 @@
     /* Duel pre-filter */
     .duel-filter { display: flex; gap: 8px; margin-bottom: 10px; }
     .duel-filter select { flex: 1; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 7px 10px; font-size: 13px; font-family: inherit; }
+
+    /* ===== SOCIAL TAB ===== */
+    .notif-bell-wrap { position: fixed; top: calc(var(--safe-top) + 14px); right: var(--pad); z-index: 60; display: none; }
+    .notif-bell-wrap.visible { display: inline-flex; }
+    .notif-bell {
+      width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      background: var(--surface-2); border: 1px solid var(--border); color: var(--text-mute); cursor: pointer;
+    }
+    .notif-bell svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .notif-badge {
+      position: absolute; top: -4px; right: -4px;
+      background: #ef4444; color: #fff; font-size: 10px; font-weight: 700; line-height: 1;
+      padding: 2px 5px; border-radius: 99px; min-width: 17px; text-align: center;
+      border: 2px solid var(--bg); display: none;
+    }
+    .notif-badge.visible { display: block; }
+
+    #notif-center {
+      position: fixed; inset: 0; z-index: 150; background: var(--bg);
+      display: flex; flex-direction: column; overflow: hidden;
+      padding-top: calc(var(--safe-top) + 12px); animation: fade-in .22s ease;
+    }
+    .notif-center-head {
+      display: flex; align-items: center; gap: 12px;
+      padding: 0 var(--pad) 12px; border-bottom: 1px solid var(--border); flex: 0 0 auto;
+    }
+    .notif-center-back { width: 36px; height: 36px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .notif-center-back svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .notif-center-title { font-size: 20px; font-weight: 700; flex: 1; }
+    .notif-mark-all { background: none; border: none; color: var(--accent); font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap; }
+    .notif-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: calc(var(--nav-h) + var(--safe-bottom)); }
+    .notif-item { display: flex; gap: 12px; align-items: flex-start; padding: 14px var(--pad); border-bottom: 1px solid var(--border); cursor: pointer; }
+    .notif-item.unread { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+    .notif-item:active { background: var(--surface); }
+    .notif-icon { width: 40px; height: 40px; border-radius: 50%; flex: 0 0 auto; background: var(--surface-2); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .notif-icon-img { width: 40px; height: 60px; border-radius: 6px; object-fit: cover; flex: 0 0 auto; background: var(--surface-2); }
+    .notif-body { flex: 1; min-width: 0; }
+    .notif-text { font-size: 14px; line-height: 1.4; color: var(--text); }
+    .notif-text b { color: var(--accent); }
+    .notif-time { font-size: 12px; color: var(--text-mute); margin-top: 3px; }
+    .notif-unread-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: 0 0 auto; margin-top: 6px; }
+    .notif-empty { text-align: center; color: var(--text-mute); padding: 60px 24px; font-size: 14px; }
+
+    .social-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-mute); margin: 0 0 10px; }
+    .friend-card { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); margin-bottom: 8px; cursor: pointer; }
+    .friend-card:active { background: var(--surface-2); }
+    .friend-avatar { width: 44px; height: 44px; border-radius: 50%; flex: 0 0 auto; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #1a1206; }
+    .friend-info { flex: 1; min-width: 0; }
+    .friend-name { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .friend-sub { font-size: 12px; color: var(--text-mute); margin-top: 2px; }
+    .friend-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+    .friend-action-btn { padding: 6px 12px; border-radius: 99px; font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; border: 1px solid var(--border); background: none; color: var(--text-dim); }
+    .friend-action-btn.accept { background: var(--accent); color: #1a1206; border-color: var(--accent); }
+    .friend-action-btn.add { background: var(--accent); color: #1a1206; border-color: var(--accent); }
+    .friend-action-btn:active { opacity: .7; }
+
+    #friend-profile { position: fixed; inset: 0; z-index: 140; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; padding: calc(var(--safe-top) + 12px) var(--pad) calc(var(--nav-h) + var(--safe-bottom) + var(--pad)); animation: fade-in .22s ease; }
+    .fprof-back { width: 36px; height: 36px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+    .fprof-back svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .fprof-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+    .fprof-avatar { width: 64px; height: 64px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: #1a1206; flex: 0 0 auto; }
+    .fprof-username { font-size: 22px; font-weight: 700; }
+    .fprof-stats { display: flex; gap: 16px; margin-top: 6px; flex-wrap: wrap; }
+    .fprof-stat { font-size: 13px; color: var(--text-dim); }
+    .fprof-stat b { color: var(--text); font-weight: 700; }
+    .fprof-section { margin-bottom: 24px; }
+    .fprof-section-title { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
+    .fprof-private { color: var(--text-mute); font-size: 13px; padding: 12px; background: var(--surface-2); border-radius: 10px; display: flex; align-items: center; gap: 8px; }
+    .fprof-private svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; flex: 0 0 auto; }
+
+    .share-sheet-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .share-sheet-poster { width: 44px; height: 66px; border-radius: 8px; object-fit: cover; flex: 0 0 auto; background: var(--surface-2); }
+    .share-sheet-info { flex: 1; min-width: 0; }
+    .share-sheet-title { font-size: 15px; font-weight: 700; }
+    .share-sheet-sub { font-size: 13px; color: var(--text-mute); }
+    .share-friends-list { max-height: 180px; overflow-y: auto; margin-bottom: 10px; }
+    .share-friend-check { display: flex; align-items: center; gap: 12px; padding: 9px; border-radius: 10px; cursor: pointer; }
+    .share-friend-check:active { background: var(--surface); }
+    .share-friend-check input[type=checkbox] { accent-color: var(--accent); width: 17px; height: 17px; flex: 0 0 auto; cursor: pointer; }
+    .share-note-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: inherit; font-size: 14px; padding: 10px 12px; resize: none; outline: none; margin-bottom: 10px; }
+    .share-note-input:focus { border-color: var(--accent); }
+    .share-stars { display: flex; gap: 6px; margin-bottom: 12px; }
+    .share-star { background: none; border: none; font-size: 22px; cursor: pointer; opacity: .35; transition: opacity .15s; padding: 0; }
+    .share-star.active { opacity: 1; }
+    .share-no-friends { color: var(--text-mute); font-size: 14px; text-align: center; padding: 20px 0; }
+
+    #reco-popup { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.85); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; animation: fade-in .3s ease; }
+    .reco-card { background: var(--surface); border-radius: 20px; overflow: hidden; width: 100%; max-width: 340px; box-shadow: 0 24px 60px rgba(0,0,0,.6); }
+    .reco-poster-wrap { position: relative; }
+    .reco-poster { width: 100%; height: 200px; object-fit: cover; display: block; }
+    .reco-poster-ph { width: 100%; height: 200px; background: var(--surface-2); }
+    .reco-from { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,.7); color: #fff; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 99px; }
+    .reco-body { padding: 14px; }
+    .reco-title { font-size: 17px; font-weight: 700; margin-bottom: 3px; }
+    .reco-rating { color: var(--accent); font-size: 13px; margin-bottom: 5px; }
+    .reco-note { color: var(--text-dim); font-size: 13px; font-style: italic; margin-bottom: 12px; line-height: 1.4; }
+    .reco-actions { display: flex; gap: 10px; }
+    .reco-actions button { flex: 1; padding: 11px; border-radius: 12px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
+    .reco-watchlist-btn { background: var(--accent); color: #1a1206; }
+    .reco-skip-btn { background: var(--surface-2); color: var(--text-dim); }
+    .reco-nav { display: flex; gap: 8px; margin-top: 12px; }
+    .reco-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.3); }
+    .reco-dot.active { background: var(--accent); }
+
+    .social-empty { text-align: center; padding: 40px 24px; color: var(--text-mute); font-size: 14px; line-height: 1.6; }
+    .social-empty svg { width: 44px; height: 44px; stroke: var(--text-mute); fill: none; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; display: block; margin: 0 auto 14px; }
+    .social-invite-wrap { margin-top: 20px; }
+    .social-invite-link { display: flex; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin-top: 8px; }
+    .social-invite-url { flex: 1; font-size: 12px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .social-invite-copy { background: var(--accent); color: #1a1206; border: none; font-family: inherit; font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 99px; cursor: pointer; flex: 0 0 auto; }
+    .social-invite-copy:active { opacity: .7; }
+    .social-username-setup { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 20px; }
+    .social-username-setup p { color: var(--text-dim); font-size: 14px; margin: 0 0 12px; }
+    .list-shared-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: var(--accent); font-weight: 600; margin-left: 6px; vertical-align: middle; }
+    .list-shared-badge svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   </style>
 </head>
 <body data-tab="log">
@@ -1804,7 +1920,54 @@
       <div id="rank-list" class="rank-list"></div>
     </section>
 
-    <!-- ============ TAB 5: PROFIL ============ -->
+    <!-- ============ TAB 5: SOCIAL ============ -->
+    <section class="view" id="view-social" data-view="social">
+      <div class="view-head">
+        <h1>Social</h1>
+        <p>Freunde und Empfehlungen.</p>
+      </div>
+      <div id="social-login-hint" hidden>
+        <div class="social-empty">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Melde dich an, um Freunde hinzuzufügen und Empfehlungen zu teilen.
+        </div>
+      </div>
+      <div id="social-content" hidden>
+        <div id="social-username-setup" hidden>
+          <div class="social-username-setup">
+            <p>Wähle einen Benutzernamen, damit Freunde dich finden können.</p>
+            <input id="social-username-input" class="modal-input" type="text" placeholder="Benutzername" autocorrect="off" autocapitalize="none" spellcheck="false" maxlength="32" />
+            <button id="social-username-save" class="sheet-btn-primary" type="button" style="margin-top:10px">Speichern</button>
+          </div>
+        </div>
+        <div id="social-invite-wrap" hidden>
+          <p class="social-section-title">Einladungslink</p>
+          <div class="social-invite-link">
+            <span class="social-invite-url" id="social-invite-url"></span>
+            <button class="social-invite-copy" type="button" id="social-invite-copy">Kopieren</button>
+          </div>
+        </div>
+        <div class="social-search-wrap" style="margin-top:20px">
+          <div class="search-bar">
+            <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+            <input id="social-search" type="search" inputmode="search" autocomplete="off"
+                   autocorrect="off" spellcheck="false" enterkeyhint="search"
+                   placeholder="Nutzer suchen (Name oder E-Mail) …" aria-label="Freunde suchen" />
+          </div>
+          <div id="social-search-results"></div>
+        </div>
+        <div id="social-requests-section" hidden style="margin-top:20px">
+          <p class="social-section-title">Anfragen</p>
+          <div id="social-requests-list"></div>
+        </div>
+        <div id="social-friends-section" style="margin-top:20px">
+          <p class="social-section-title">Freunde</p>
+          <div id="social-friends-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TAB 6: PROFIL ============ -->
     <section class="view" id="view-profile" data-view="profile">
       <div class="view-head">
         <h1>Profil</h1>
@@ -1827,6 +1990,14 @@
 
   </div>
 
+  <!-- Bell notification button (fixed, all tabs) -->
+  <div class="notif-bell-wrap" id="notif-bell-wrap">
+    <button class="notif-bell" id="notif-bell" type="button" aria-label="Benachrichtigungen">
+      <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    </button>
+    <span class="notif-badge" id="notif-badge"></span>
+  </div>
+
   <!-- ============ BOTTOM NAVIGATION ============ -->
   <nav class="nav" id="nav">
     <button class="nav-btn active" data-target="log" aria-label="Home">
@@ -1844,6 +2015,10 @@
     <button class="nav-btn" data-target="ranking" aria-label="Ranking">
       <svg viewBox="0 0 24 24"><line x1="5" y1="20" x2="5" y2="11"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="19" y1="20" x2="19" y2="14"/></svg>
       <span class="nav-label">Ranking</span>
+    </button>
+    <button class="nav-btn" data-target="social" aria-label="Social">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span class="nav-label">Social</span>
     </button>
     <button class="nav-btn" data-target="profile" aria-label="Profil">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21c0-3.5 3-6 7-6s7 2.5 7 6"/></svg>
@@ -1891,6 +2066,10 @@
       <div class="sheet-handle"></div>
       <div class="sheet-section-label">Wie war's?</div>
       <div id="qr-buckets" class="bucket-list"></div>
+      <button id="qr-share" class="sheet-btn-ghost" type="button" hidden>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        Freunden empfehlen
+      </button>
       <button id="qr-skip" class="sheet-btn-cancel" type="button">Überspringen</button>
     </div>
   </div>
@@ -1938,6 +2117,69 @@
       <svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg>
       Rückgängig
     </button>
+  </div>
+
+  <!-- ============ NOTIFICATION CENTER ============ -->
+  <div id="notif-center" hidden>
+    <div class="notif-center-head">
+      <button class="notif-center-back" id="notif-center-back" type="button" aria-label="Zurück">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span class="notif-center-title">Benachrichtigungen</span>
+      <button class="notif-mark-all" id="notif-mark-all" type="button">Alle gelesen</button>
+    </div>
+    <div class="notif-list" id="notif-list"></div>
+  </div>
+
+  <!-- ============ FRIEND PROFILE VIEW ============ -->
+  <div id="friend-profile" hidden>
+    <button class="fprof-back" id="fprof-back" type="button" aria-label="Zurück">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div id="fprof-content"></div>
+  </div>
+
+  <!-- ============ SHARE SHEET (Empfehlen) ============ -->
+  <div id="share-backdrop" class="sheet-backdrop" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Empfehlen">
+      <div class="sheet-handle"></div>
+      <div class="sheet-section-label">Empfehlen</div>
+      <div class="share-sheet-head">
+        <img id="share-poster" class="share-sheet-poster" alt="" />
+        <div class="share-sheet-info">
+          <div id="share-title" class="share-sheet-title"></div>
+          <div id="share-sub" class="share-sheet-sub"></div>
+        </div>
+      </div>
+      <div id="share-friends-list" class="share-friends-list"></div>
+      <div class="sheet-section-label" style="margin-top:0">Bewertung (optional)</div>
+      <div class="share-stars" id="share-stars"></div>
+      <textarea class="share-note-input" id="share-note" placeholder="Notiz (optional) …" rows="2"></textarea>
+      <button id="share-submit" class="sheet-btn-primary" type="button">Empfehlen</button>
+      <button id="share-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
+    </div>
+  </div>
+
+  <!-- ============ RECOMMENDATION POPUP ============ -->
+  <div id="reco-popup" hidden>
+    <div class="reco-card">
+      <div class="reco-poster-wrap">
+        <img id="reco-poster" class="reco-poster" alt="" style="display:none" />
+        <div class="reco-poster-ph" id="reco-poster-ph"></div>
+        <div class="reco-from" id="reco-from"></div>
+      </div>
+      <div class="reco-body">
+        <div class="reco-title" id="reco-title"></div>
+        <div class="reco-rating" id="reco-rating"></div>
+        <div class="reco-note" id="reco-note"></div>
+        <div class="reco-counter" id="reco-counter"></div>
+        <div class="reco-actions">
+          <button class="reco-watchlist-btn" id="reco-watchlist" type="button">Auf Watchlist</button>
+          <button class="reco-skip-btn" id="reco-skip-btn" type="button">Überspringen</button>
+        </div>
+      </div>
+    </div>
+    <div class="reco-nav" id="reco-nav"></div>
   </div>
 
   <!-- ============ PERSON FILMOGRAPHY SHEET (people duel long-press) ============ -->
@@ -2030,6 +2272,9 @@
              autocomplete="current-password" placeholder="Passwort" />
       <input id="auth-pass2" class="modal-input" type="password"
              autocomplete="new-password" placeholder="Passwort wiederholen" hidden />
+      <input id="auth-username" class="modal-input" type="text"
+             autocomplete="username" placeholder="Benutzername (für Social-Funktionen)"
+             autocorrect="off" autocapitalize="none" spellcheck="false" maxlength="32" hidden />
       <div id="auth-error" class="auth-error" hidden></div>
       <button id="auth-submit" class="sheet-btn-primary" type="button">Anmelden</button>
       <button id="auth-forgot" class="auth-link" type="button">Passwort vergessen?</button>
@@ -2261,7 +2506,9 @@
       updatePassword, reauthenticateWithCredential, EmailAuthProvider
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import {
-      getFirestore, doc, getDoc, setDoc, serverTimestamp
+      getFirestore, doc, getDoc, setDoc, serverTimestamp,
+      collection, addDoc, getDocs, updateDoc, deleteDoc,
+      query, where, orderBy, limit, onSnapshot, writeBatch
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -2370,6 +2617,141 @@
       }
     };
 
+    // Social API — null when Firestore is unavailable
+    window.__vaultSocial = !firestore ? null : {
+      async getProfile(uid) {
+        try { const s = await getDoc(doc(firestore, "users", uid)); return s.exists() ? s.data() : null; }
+        catch (e) { return null; }
+      },
+      async saveProfile(uid, data) {
+        await setDoc(doc(firestore, "users", uid), data, { merge: true });
+      },
+      async searchUsers(term) {
+        if (!term || term.length < 2) return [];
+        const t = term.trim().toLowerCase();
+        const q1 = query(collection(firestore, "users"),
+          where("username_lower", ">=", t), where("username_lower", "<=", t + ""), limit(10));
+        const q2 = query(collection(firestore, "users"), where("email", "==", term.trim()), limit(5));
+        const [s1, s2] = await Promise.allSettled([getDocs(q1), getDocs(q2)]);
+        const seen = new Set(); const results = [];
+        const addDocs = (snap) => { if (snap && snap.docs) snap.docs.forEach(d => { if (!seen.has(d.id)) { seen.add(d.id); results.push({ uid: d.id, ...d.data() }); } }); };
+        if (s1.status === "fulfilled") addDocs(s1.value);
+        if (s2.status === "fulfilled") addDocs(s2.value);
+        return results;
+      },
+      async sendFriendRequest(fromUid, fromUsername, toUid, toUsername) {
+        const batch = writeBatch(firestore);
+        batch.set(doc(firestore, "users", fromUid, "friends", toUid), { status: "pending_sent", since: serverTimestamp(), username: toUsername || "" });
+        batch.set(doc(firestore, "users", toUid, "friends", fromUid), { status: "pending_received", since: serverTimestamp(), username: fromUsername || "" });
+        batch.set(doc(firestore, "users", toUid, "notifications", "fr_" + fromUid), {
+          type: "friend_request", fromUid, fromUsername, read: false, createdAt: serverTimestamp()
+        });
+        await batch.commit();
+      },
+      async acceptFriendRequest(myUid, myUsername, friendUid, friendUsername) {
+        const batch = writeBatch(firestore);
+        batch.set(doc(firestore, "users", myUid, "friends", friendUid), { status: "accepted", since: serverTimestamp(), username: friendUsername || "" });
+        batch.set(doc(firestore, "users", friendUid, "friends", myUid), { status: "accepted", since: serverTimestamp(), username: myUsername || "" });
+        batch.set(doc(firestore, "users", friendUid, "notifications", "fa_" + myUid), {
+          type: "friend_accepted", fromUid: myUid, fromUsername: myUsername, read: false, createdAt: serverTimestamp()
+        });
+        await batch.commit();
+      },
+      async declineFriendRequest(myUid, friendUid) {
+        const batch = writeBatch(firestore);
+        batch.delete(doc(firestore, "users", myUid, "friends", friendUid));
+        batch.delete(doc(firestore, "users", friendUid, "friends", myUid));
+        await batch.commit();
+      },
+      async cancelFriendRequest(myUid, friendUid) {
+        const batch = writeBatch(firestore);
+        batch.delete(doc(firestore, "users", myUid, "friends", friendUid));
+        batch.delete(doc(firestore, "users", friendUid, "friends", myUid));
+        await batch.commit();
+      },
+      async removeFriend(myUid, friendUid) {
+        const batch = writeBatch(firestore);
+        batch.delete(doc(firestore, "users", myUid, "friends", friendUid));
+        batch.delete(doc(firestore, "users", friendUid, "friends", myUid));
+        await batch.commit();
+      },
+      async getFriends(uid) {
+        const snap = await getDocs(collection(firestore, "users", uid, "friends"));
+        return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+      },
+      async getNotifications(uid, maxN) {
+        const q = query(collection(firestore, "users", uid, "notifications"), orderBy("createdAt", "desc"), limit(maxN || 40));
+        const snap = await getDocs(q);
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      },
+      async markNotificationRead(uid, notifId) {
+        try { await updateDoc(doc(firestore, "users", uid, "notifications", notifId), { read: true }); } catch(e) {}
+      },
+      async markAllRead(uid) {
+        const snap = await getDocs(query(collection(firestore, "users", uid, "notifications"), where("read", "==", false)));
+        const batch = writeBatch(firestore);
+        snap.docs.forEach(d => batch.update(d.ref, { read: true }));
+        await batch.commit();
+      },
+      subscribeNotifications(uid, cb) {
+        return onSnapshot(
+          query(collection(firestore, "users", uid, "notifications"), orderBy("createdAt", "desc"), limit(50)),
+          snap => cb(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+        );
+      },
+      async shareItem(fromUid, fromUsername, toUids, item, note, bucket) {
+        const batch = writeBatch(firestore);
+        toUids.forEach(toUid => {
+          const id = "share_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+          batch.set(doc(firestore, "users", toUid, "notifications", id), {
+            type: "item_shared", fromUid, fromUsername,
+            itemTitle: item.title, itemPoster: item.poster || "",
+            itemType: item.type, tmdbId: item.id,
+            note: note || "", bucket: bucket || null,
+            read: false, createdAt: serverTimestamp()
+          });
+        });
+        await batch.commit();
+      },
+      async createSharedList(creatorUid, friendUid, listName, items) {
+        const ref = await addDoc(collection(firestore, "sharedLists"), {
+          name: listName, createdBy: creatorUid, members: [creatorUid, friendUid], createdAt: serverTimestamp()
+        });
+        if (items && Object.keys(items).length) {
+          const batch = writeBatch(firestore);
+          Object.entries(items).forEach(([k, v]) => batch.set(doc(firestore, "sharedLists", ref.id, "items", k), { ...v, addedBy: creatorUid, addedAt: serverTimestamp() }));
+          await batch.commit();
+        }
+        return ref.id;
+      },
+      async getSharedList(listId) {
+        const [ms, is] = await Promise.all([getDoc(doc(firestore, "sharedLists", listId)), getDocs(collection(firestore, "sharedLists", listId, "items"))]);
+        if (!ms.exists()) return null;
+        const items = {}; is.docs.forEach(d => { items[d.id] = { id: d.id, ...d.data() }; });
+        return { id: listId, ...ms.data(), items };
+      },
+      subscribeSharedList(listId, cb) {
+        return onSnapshot(collection(firestore, "sharedLists", listId, "items"),
+          snap => { const items = {}; snap.docs.forEach(d => { items[d.id] = { id: d.id, ...d.data() }; }); cb(items); });
+      },
+      async addToSharedList(listId, key, item, byUid) {
+        await setDoc(doc(firestore, "sharedLists", listId, "items", key), { ...item, addedBy: byUid, addedAt: serverTimestamp() });
+      },
+      async removeFromSharedList(listId, key) {
+        await deleteDoc(doc(firestore, "sharedLists", listId, "items", key));
+      },
+      async getMySharedLists(uid) {
+        const q = query(collection(firestore, "sharedLists"), where("members", "array-contains", uid));
+        const snap = await getDocs(q); return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      },
+      async sendSharedListNotif(toUid, fromUid, fromUsername, listId, listName, itemTitle, type) {
+        const id = "sln_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+        await setDoc(doc(firestore, "users", toUid, "notifications", id), {
+          type, fromUid, fromUsername, listId, listName, itemTitle, read: false, createdAt: serverTimestamp()
+        });
+      }
+    };
+
     function broadcast(user) {
       window.__vaultUser = user || null;
       window.dispatchEvent(new CustomEvent("vault-auth-changed", { detail: { user: user || null } }));
@@ -2410,6 +2792,8 @@
         // R9-P4: recommendation sources changed in settings → regenerate the slideshow
         if (recoDirty && typeof buildRecos === "function") { recoDirty = false; buildRecos(dfMedia.value || null); }
       }
+      // Social tab loads friend/request data each open
+      if (target === "social" && typeof initSocialTab === "function") initSocialTab();
       // Profile recomputes stats each open
       if (target === "profile" && typeof renderProfile === "function") renderProfile();
     }
@@ -3586,6 +3970,12 @@
         el.addEventListener("click", () => { logItem(r, b.id); closeQuickRate(); });
         qrBuckets.appendChild(el);
       });
+      // Show share button only when logged in and has friends
+      const qrShareBtn = document.getElementById("qr-share");
+      if (qrShareBtn) {
+        const hasFriends = !!(window.__vaultUser && typeof _socialFriends !== "undefined" && _socialFriends.some(f => f.status === "accepted"));
+        qrShareBtn.hidden = !hasFriends;
+      }
       qrBackdrop.hidden = false;
       document.body.style.overflow = "hidden";
     }
@@ -7004,13 +7394,14 @@
     // script above) and is only touched inside handlers, so it always exists
     // by the time anything here runs. R2 will hook Firestore sync into the
     // "vault-auth-changed" listener at the bottom of this block.
-    const authBackdrop = document.getElementById("auth-backdrop");
-    const authEmail    = document.getElementById("auth-email");
-    const authPass     = document.getElementById("auth-pass");
-    const authPass2    = document.getElementById("auth-pass2");
-    const authErrorEl  = document.getElementById("auth-error");
-    const authSubmit   = document.getElementById("auth-submit");
-    const authForgot   = document.getElementById("auth-forgot");
+    const authBackdrop  = document.getElementById("auth-backdrop");
+    const authEmail     = document.getElementById("auth-email");
+    const authPass      = document.getElementById("auth-pass");
+    const authPass2     = document.getElementById("auth-pass2");
+    const authUsername  = document.getElementById("auth-username");
+    const authErrorEl   = document.getElementById("auth-error");
+    const authSubmit    = document.getElementById("auth-submit");
+    const authForgot    = document.getElementById("auth-forgot");
     let authMode = "login";   // "login" | "register"
     let authBusy = false;
 
@@ -7023,6 +7414,7 @@
       document.getElementById("auth-tab-login").classList.toggle("active", mode === "login");
       document.getElementById("auth-tab-register").classList.toggle("active", mode === "register");
       authPass2.hidden = mode !== "register";
+      authUsername.hidden = mode !== "register";
       authPass.setAttribute("autocomplete", mode === "register" ? "new-password" : "current-password");
       authSubmit.textContent = mode === "register" ? "Konto erstellen" : "Anmelden";
       authShowError("");
@@ -7032,7 +7424,7 @@
         showToast("Cloud-Konto derzeit nicht verfügbar");
         return;
       }
-      authEmail.value = ""; authPass.value = ""; authPass2.value = "";
+      authEmail.value = ""; authPass.value = ""; authPass2.value = ""; authUsername.value = "";
       setAuthMode(mode || "login");
       authBackdrop.hidden = false;
       document.body.style.overflow = "hidden";
@@ -7056,8 +7448,23 @@
       authSubmit.disabled = true;
       authSubmit.textContent = authMode === "register" ? "Erstelle …" : "Melde an …";
       try {
-        if (authMode === "register") await window.__vaultAuth.register(email, pass);
-        else                         await window.__vaultAuth.login(email, pass);
+        if (authMode === "register") {
+          const user = await window.__vaultAuth.register(email, pass);
+          // Save user profile to Firestore for social features
+          const uname = (authUsername.value || "").trim();
+          if (window.__vaultSocial && user) {
+            await window.__vaultSocial.saveProfile(user.uid, {
+              email: email.toLowerCase(),
+              username: uname || "",
+              username_lower: (uname || "").toLowerCase(),
+              joinedAt: new Date().toISOString(),
+              privacy: { profileVisible: true, shareWatched: true, shareRanking: true, shareLists: true, shareWatchlist: false },
+              notificationSettings: { friendRequests: true, sharedListUpdates: true, recommendations: true }
+            });
+          }
+        } else {
+          await window.__vaultAuth.login(email, pass);
+        }
         closeAuth();
         showToast(authMode === "register" ? "Konto erstellt" : "Angemeldet");
       } catch (e) {
@@ -7349,6 +7756,10 @@
       host.querySelectorAll("input[data-priv]").forEach(cb => cb.addEventListener("change", () => {
         ensurePrivacy()[cb.dataset.priv] = cb.checked;
         saveDB();   // persists locally + syncs to Firestore (R2)
+        // Also write to users/{uid} so friends can read privacy settings
+        if (window.__vaultSocial && window.__vaultUser) {
+          window.__vaultSocial.saveProfile(window.__vaultUser.uid, { privacy: ensurePrivacy() }).catch(() => {});
+        }
       }));
     }
     // Keep the privacy panel in step with login/logout.
@@ -7471,6 +7882,596 @@
     searchInput.focus();
 
     window.VAULT = { TMDB_KEY, TMDB_LANG, TMDB_REGION, db };
+
+    // ============================================================
+    // SOCIAL TAB — Round 11
+    // ============================================================
+
+    // --- helpers ---
+    function socialEsc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+    function avatarInitial(name) { return (name || "?").charAt(0).toUpperCase(); }
+    function relativeTime(ts) {
+      if (!ts) return "";
+      const d = ts.toDate ? ts.toDate() : new Date(ts);
+      const diff = Date.now() - d.getTime();
+      if (diff < 60000)  return "Gerade eben";
+      if (diff < 3600000) return Math.floor(diff/60000) + " Min. ago";
+      if (diff < 86400000) return Math.floor(diff/3600000) + " Std. ago";
+      return Math.floor(diff/86400000) + " Tagen ago";
+    }
+    function bucketToStars(b) {
+      const m = { great: "★★★★★", good: "★★★★", watchable: "★★★", meh: "★★", bad: "★" };
+      return m[b] || "";
+    }
+
+    // --- notification badge & subscription ---
+    let _notifUnsub = null;
+    let _notifCache = [];
+
+    function updateNotifBadge(notifs) {
+      _notifCache = notifs || [];
+      const unread = _notifCache.filter(n => !n.read).length;
+      const badge  = document.getElementById("notif-badge");
+      const wrap   = document.getElementById("notif-bell-wrap");
+      if (badge) { badge.textContent = unread > 9 ? "9+" : unread; badge.classList.toggle("visible", unread > 0); }
+      if (wrap)  wrap.classList.toggle("visible", !!window.__vaultUser);
+    }
+
+    function startNotifSubscription(uid) {
+      if (_notifUnsub) { _notifUnsub(); _notifUnsub = null; }
+      if (!window.__vaultSocial) return;
+      _notifUnsub = window.__vaultSocial.subscribeNotifications(uid, notifs => {
+        updateNotifBadge(notifs);
+        // Show recommendation popup if needed
+        const unreadRecos = notifs.filter(n => n.type === "item_shared" && !n.read);
+        if (unreadRecos.length && !_recoPopupShown) { _recoPopupShown = true; showRecoPopup(unreadRecos); }
+      });
+    }
+
+    function stopNotifSubscription() {
+      if (_notifUnsub) { _notifUnsub(); _notifUnsub = null; }
+      updateNotifBadge([]);
+      document.getElementById("notif-bell-wrap").classList.remove("visible");
+    }
+
+    window.addEventListener("vault-auth-changed", e => {
+      const user = e.detail.user;
+      if (user) startNotifSubscription(user.uid);
+      else      stopNotifSubscription();
+    });
+    // Start if already logged in (module fires before this script sometimes)
+    if (window.__vaultUser) startNotifSubscription(window.__vaultUser.uid);
+
+    // --- notification center ---
+    const notifCenter = document.getElementById("notif-center");
+    document.getElementById("notif-bell").addEventListener("click", openNotifCenter);
+    document.getElementById("notif-center-back").addEventListener("click", closeNotifCenter);
+    document.getElementById("notif-mark-all").addEventListener("click", async () => {
+      if (!window.__vaultUser || !window.__vaultSocial) return;
+      await window.__vaultSocial.markAllRead(window.__vaultUser.uid);
+    });
+
+    function openNotifCenter() {
+      notifCenter.hidden = false;
+      document.body.style.overflow = "hidden";
+      renderNotifList(_notifCache);
+    }
+    function closeNotifCenter() {
+      notifCenter.hidden = true;
+      document.body.style.overflow = "";
+    }
+
+    function renderNotifList(notifs) {
+      const list = document.getElementById("notif-list");
+      if (!notifs || !notifs.length) {
+        list.innerHTML = '<div class="notif-empty">Keine Benachrichtigungen</div>';
+        return;
+      }
+      list.innerHTML = notifs.map(n => {
+        const icon = n.itemPoster
+          ? `<img class="notif-icon-img" src="https://image.tmdb.org/t/p/w92${n.itemPoster}" alt="" loading="lazy" />`
+          : `<div class="notif-icon">${notifTypeIcon(n.type)}</div>`;
+        const text = notifText(n);
+        return `<div class="notif-item${n.read ? "" : " unread"}" data-id="${socialEsc(n.id)}" data-type="${socialEsc(n.type)}" data-from="${socialEsc(n.fromUid||"")}">
+          ${icon}
+          <div class="notif-body">
+            <div class="notif-text">${text}</div>
+            <div class="notif-time">${relativeTime(n.createdAt)}</div>
+          </div>
+          ${n.read ? "" : '<div class="notif-unread-dot"></div>'}
+        </div>`;
+      }).join("");
+
+      list.querySelectorAll(".notif-item").forEach(el => {
+        el.addEventListener("click", async () => {
+          const uid  = window.__vaultUser?.uid;
+          const nid  = el.dataset.id;
+          if (uid && nid && window.__vaultSocial) window.__vaultSocial.markNotificationRead(uid, nid);
+          el.classList.remove("unread");
+          el.querySelector(".notif-unread-dot")?.remove();
+          if (el.dataset.type === "friend_request" || el.dataset.type === "friend_accepted") {
+            closeNotifCenter();
+            switchTab("social");
+          }
+        });
+      });
+    }
+
+    function notifTypeIcon(type) {
+      if (type === "friend_request" || type === "friend_accepted") return "👤";
+      if (type === "item_shared") return "🎬";
+      if (type === "list_item_added" || type === "list_item_removed") return "📋";
+      return "🔔";
+    }
+    function notifText(n) {
+      const from = `<b>${socialEsc(n.fromUsername || "Jemand")}</b>`;
+      if (n.type === "friend_request")   return `${from} möchte dein Freund sein`;
+      if (n.type === "friend_accepted")  return `${from} hat deine Anfrage angenommen`;
+      if (n.type === "item_shared")      return `${from} empfiehlt dir <b>${socialEsc(n.itemTitle || "")}</b>`;
+      if (n.type === "list_item_added")  return `${from} hat <b>${socialEsc(n.itemTitle || "")}</b> zu eurer Liste <b>${socialEsc(n.listName || "")}</b> hinzugefügt`;
+      if (n.type === "list_item_removed")return `${from} hat <b>${socialEsc(n.itemTitle || "")}</b> aus eurer Liste <b>${socialEsc(n.listName || "")}</b> entfernt`;
+      return "Neue Benachrichtigung";
+    }
+
+    // --- recommendation popup ---
+    let _recoPopupShown = false;
+    let _recoItems = [];
+    let _recoCurrent = 0;
+
+    window.addEventListener("vault-auth-changed", () => { _recoPopupShown = false; });
+
+    function showRecoPopup(recos) {
+      const notifSettings = (db.settings && db.settings.notificationSettings) || {};
+      if (notifSettings.recommendations === false) return;
+      _recoItems = recos;
+      _recoCurrent = 0;
+      renderRecoCard();
+      document.getElementById("reco-popup").hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+    function closeRecoPopup() {
+      document.getElementById("reco-popup").hidden = true;
+      document.body.style.overflow = "";
+      // Mark all shown recos as read
+      if (window.__vaultUser && window.__vaultSocial) {
+        _recoItems.forEach(n => window.__vaultSocial.markNotificationRead(window.__vaultUser.uid, n.id));
+      }
+    }
+    function renderRecoCard() {
+      const n = _recoItems[_recoCurrent];
+      if (!n) { closeRecoPopup(); return; }
+      const posterEl = document.getElementById("reco-poster");
+      const phEl = document.getElementById("reco-poster-ph");
+      if (n.itemPoster) {
+        posterEl.src = "https://image.tmdb.org/t/p/w500" + n.itemPoster;
+        posterEl.style.display = "block"; phEl.style.display = "none";
+      } else {
+        posterEl.style.display = "none"; phEl.style.display = "block";
+      }
+      document.getElementById("reco-from").textContent = "Von " + (n.fromUsername || "Jemand");
+      document.getElementById("reco-title").textContent = n.itemTitle || "";
+      document.getElementById("reco-rating").textContent = n.bucket ? bucketToStars(n.bucket) : "";
+      document.getElementById("reco-note").textContent = n.note ? "„" + n.note + """ : "";
+      document.getElementById("reco-note").hidden = !n.note;
+      document.getElementById("reco-counter").textContent = _recoItems.length > 1 ? `${_recoCurrent + 1} / ${_recoItems.length}` : "";
+      // nav dots
+      const navEl = document.getElementById("reco-nav");
+      navEl.innerHTML = _recoItems.length > 1 ? _recoItems.map((_, i) =>
+        `<div class="reco-dot${i === _recoCurrent ? " active" : ""}"></div>`).join("") : "";
+    }
+    document.getElementById("reco-watchlist").addEventListener("click", () => {
+      const n = _recoItems[_recoCurrent];
+      if (n && n.tmdbId && n.itemType) {
+        const key = n.itemType + ":" + n.tmdbId;
+        if (!db.watchlist[key]) {
+          db.watchlist[key] = { id: n.tmdbId, mediaType: n.itemType, title: n.itemTitle, poster: n.itemPoster, addedAt: Date.now() };
+          saveDB(); showToast("Auf Watchlist gespeichert");
+        }
+      }
+      advanceReco();
+    });
+    document.getElementById("reco-skip-btn").addEventListener("click", advanceReco);
+    document.getElementById("reco-popup").addEventListener("click", e => { if (e.target === e.currentTarget) closeRecoPopup(); });
+    function advanceReco() {
+      if (window.__vaultUser && window.__vaultSocial && _recoItems[_recoCurrent]) {
+        window.__vaultSocial.markNotificationRead(window.__vaultUser.uid, _recoItems[_recoCurrent].id);
+      }
+      _recoCurrent++;
+      if (_recoCurrent >= _recoItems.length) closeRecoPopup();
+      else renderRecoCard();
+    }
+
+    // --- social tab ---
+    let _socialFriends = [];
+    let _myProfile = null;
+
+    async function initSocialTab() {
+      const user = window.__vaultUser;
+      const loginHint = document.getElementById("social-login-hint");
+      const content   = document.getElementById("social-content");
+      if (!user) {
+        loginHint.hidden = false; content.hidden = true; return;
+      }
+      loginHint.hidden = true; content.hidden = false;
+      // Load own profile
+      if (window.__vaultSocial) {
+        _myProfile = await window.__vaultSocial.getProfile(user.uid);
+      }
+      // Show username setup if no username
+      const setupEl = document.getElementById("social-username-setup");
+      if (!_myProfile || !_myProfile.username) {
+        setupEl.hidden = false;
+      } else {
+        setupEl.hidden = true;
+        // Show invite link
+        const inviteWrap = document.getElementById("social-invite-wrap");
+        const inviteUrl  = document.getElementById("social-invite-url");
+        inviteWrap.hidden = false;
+        const link = location.origin + location.pathname + "?invite=" + user.uid;
+        inviteUrl.textContent = link;
+      }
+      await loadSocialFriends();
+      // Sync privacy to Firestore
+      syncPrivacyToFirestore();
+    }
+
+    document.getElementById("social-username-save").addEventListener("click", async () => {
+      const input = document.getElementById("social-username-input");
+      const uname = input.value.trim();
+      if (!uname || uname.length < 2) { showToast("Mindestens 2 Zeichen"); return; }
+      if (!window.__vaultUser || !window.__vaultSocial) return;
+      const uid = window.__vaultUser.uid;
+      await window.__vaultSocial.saveProfile(uid, {
+        username: uname, username_lower: uname.toLowerCase(),
+        email: window.__vaultUser.email || "",
+        joinedAt: new Date().toISOString(),
+        privacy: { profileVisible: true, shareWatched: true, shareRanking: true, shareLists: true, shareWatchlist: false },
+        notificationSettings: { friendRequests: true, sharedListUpdates: true, recommendations: true }
+      });
+      _myProfile = await window.__vaultSocial.getProfile(uid);
+      showToast("Benutzername gespeichert");
+      initSocialTab();
+    });
+
+    async function syncPrivacyToFirestore() {
+      if (!window.__vaultUser || !window.__vaultSocial || !_myProfile) return;
+      const p = ensurePrivacy();
+      await window.__vaultSocial.saveProfile(window.__vaultUser.uid, { privacy: p });
+    }
+
+    async function loadSocialFriends() {
+      if (!window.__vaultUser || !window.__vaultSocial) return;
+      _socialFriends = await window.__vaultSocial.getFriends(window.__vaultUser.uid);
+      renderFriendRequests();
+      renderFriendsList();
+    }
+
+    function renderFriendRequests() {
+      const received = _socialFriends.filter(f => f.status === "pending_received");
+      const sent     = _socialFriends.filter(f => f.status === "pending_sent");
+      const section  = document.getElementById("social-requests-section");
+      const list     = document.getElementById("social-requests-list");
+      if (!received.length && !sent.length) { section.hidden = true; return; }
+      section.hidden = false;
+      let html = "";
+      received.forEach(f => {
+        html += `<div class="friend-card">
+          <div class="friend-avatar">${avatarInitial(f.username || f.uid)}</div>
+          <div class="friend-info">
+            <div class="friend-name">${socialEsc(f.username || f.uid)}</div>
+            <div class="friend-sub">Anfrage erhalten</div>
+          </div>
+          <div class="friend-actions">
+            <button class="friend-action-btn accept" data-uid="${socialEsc(f.uid)}" data-uname="${socialEsc(f.username||"")}" data-action="accept">Annehmen</button>
+            <button class="friend-action-btn" data-uid="${socialEsc(f.uid)}" data-action="decline">Ablehnen</button>
+          </div>
+        </div>`;
+      });
+      sent.forEach(f => {
+        html += `<div class="friend-card">
+          <div class="friend-avatar">${avatarInitial(f.username || f.uid)}</div>
+          <div class="friend-info">
+            <div class="friend-name">${socialEsc(f.username || f.uid)}</div>
+            <div class="friend-sub">Anfrage gesendet</div>
+          </div>
+          <div class="friend-actions">
+            <button class="friend-action-btn" data-uid="${socialEsc(f.uid)}" data-action="cancel">Abbrechen</button>
+          </div>
+        </div>`;
+      });
+      list.innerHTML = html;
+      list.querySelectorAll("[data-action]").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          const friendUid  = btn.dataset.uid;
+          const friendName = btn.dataset.uname || "";
+          const action     = btn.dataset.action;
+          const myUid      = window.__vaultUser.uid;
+          const myName     = (_myProfile && _myProfile.username) || "";
+          btn.disabled = true;
+          if (action === "accept") await window.__vaultSocial.acceptFriendRequest(myUid, myName, friendUid, friendName);
+          else if (action === "decline") await window.__vaultSocial.declineFriendRequest(myUid, friendUid);
+          else if (action === "cancel")  await window.__vaultSocial.cancelFriendRequest(myUid, friendUid);
+          showToast(action === "accept" ? "Freund hinzugefügt" : "Anfrage abgebrochen");
+          await loadSocialFriends();
+        });
+      });
+    }
+
+    function renderFriendsList() {
+      const accepted = _socialFriends.filter(f => f.status === "accepted");
+      const list     = document.getElementById("social-friends-list");
+      if (!accepted.length) {
+        list.innerHTML = `<div class="social-empty">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Noch keine Freunde. Suche nach einem Nutzernamen oder teile deinen Link.
+        </div>`;
+        return;
+      }
+      list.innerHTML = accepted.map(f => `
+        <div class="friend-card" data-uid="${socialEsc(f.uid)}">
+          <div class="friend-avatar">${avatarInitial(f.username || f.uid)}</div>
+          <div class="friend-info">
+            <div class="friend-name">${socialEsc(f.username || f.uid)}</div>
+            <div class="friend-sub">Freund</div>
+          </div>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--text-mute)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>`).join("");
+      list.querySelectorAll(".friend-card").forEach(card => {
+        card.addEventListener("click", () => openFriendProfile(card.dataset.uid));
+      });
+    }
+
+    // --- user search ---
+    let _searchTimer = null;
+    document.getElementById("social-search").addEventListener("input", e => {
+      clearTimeout(_searchTimer);
+      const term = e.target.value.trim();
+      if (!term) { document.getElementById("social-search-results").innerHTML = ""; return; }
+      _searchTimer = setTimeout(() => runUserSearch(term), 400);
+    });
+
+    async function runUserSearch(term) {
+      if (!window.__vaultUser || !window.__vaultSocial) return;
+      const results = await window.__vaultSocial.searchUsers(term);
+      const myUid   = window.__vaultUser.uid;
+      const box     = document.getElementById("social-search-results");
+      const filtered = results.filter(u => u.uid !== myUid);
+      if (!filtered.length) { box.innerHTML = '<div style="color:var(--text-mute);font-size:13px;padding:10px 4px">Keine Nutzer gefunden</div>'; return; }
+      box.innerHTML = filtered.map(u => {
+        const rel = _socialFriends.find(f => f.uid === u.uid);
+        let action = "";
+        if (!rel)                          action = `<button class="friend-action-btn add" data-uid="${socialEsc(u.uid)}" data-uname="${socialEsc(u.username||"")}">Hinzufügen</button>`;
+        else if (rel.status === "accepted")  action = `<span style="font-size:12px;color:var(--text-mute)">Befreundet</span>`;
+        else if (rel.status === "pending_sent") action = `<span style="font-size:12px;color:var(--text-mute)">Ausstehend</span>`;
+        else if (rel.status === "pending_received") action = `<button class="friend-action-btn accept" data-uid="${socialEsc(u.uid)}" data-action="accept">Annehmen</button>`;
+        return `<div class="friend-card">
+          <div class="friend-avatar">${avatarInitial(u.username || u.uid)}</div>
+          <div class="friend-info">
+            <div class="friend-name">${socialEsc(u.username || u.uid)}</div>
+            <div class="friend-sub">${socialEsc(u.email || "")}</div>
+          </div>
+          <div class="friend-actions">${action}</div>
+        </div>`;
+      }).join("");
+      box.querySelectorAll("[data-uid]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const toUid = btn.dataset.uid;
+          const toUname = btn.dataset.uname || "";
+          const myUid   = window.__vaultUser.uid;
+          const myUname = (_myProfile && _myProfile.username) || "";
+          if (btn.dataset.action === "accept") {
+            await window.__vaultSocial.acceptFriendRequest(myUid, myUname, toUid, toUname);
+            showToast("Freund hinzugefügt");
+          } else {
+            await window.__vaultSocial.sendFriendRequest(myUid, myUname, toUid, toUname);
+            showToast("Anfrage gesendet");
+          }
+          document.getElementById("social-search").value = "";
+          document.getElementById("social-search-results").innerHTML = "";
+          await loadSocialFriends();
+        });
+      });
+    }
+
+    // --- invite link ---
+    document.getElementById("social-invite-copy").addEventListener("click", () => {
+      const url = document.getElementById("social-invite-url").textContent;
+      navigator.clipboard.writeText(url).then(() => showToast("Link kopiert")).catch(() => showToast("Kopieren fehlgeschlagen"));
+    });
+
+    // Handle ?invite= on load
+    (function handleInviteParam() {
+      const params = new URLSearchParams(location.search);
+      const inviteUid = params.get("invite");
+      if (!inviteUid) return;
+      // Clean URL
+      history.replaceState({}, "", location.pathname);
+      function tryAcceptInvite() {
+        const user = window.__vaultUser;
+        if (!user || !window.__vaultSocial) return;
+        if (user.uid === inviteUid) return;
+        const myName = (_myProfile && _myProfile.username) || "";
+        window.__vaultSocial.sendFriendRequest(user.uid, myName, inviteUid)
+          .then(() => showToast("Freundschaftsanfrage gesendet"))
+          .catch(() => {});
+      }
+      if (window.__vaultUser) tryAcceptInvite();
+      else window.addEventListener("vault-auth-changed", () => { if (window.__vaultUser) tryAcceptInvite(); }, { once: true });
+    })();
+
+    // --- friend profile ---
+    const friendProfileEl = document.getElementById("friend-profile");
+    document.getElementById("fprof-back").addEventListener("click", closeFriendProfile);
+
+    function closeFriendProfile() {
+      friendProfileEl.hidden = true;
+      document.body.style.overflow = "";
+    }
+
+    async function openFriendProfile(friendUid) {
+      if (!window.__vaultSocial) return;
+      friendProfileEl.hidden = false;
+      document.body.style.overflow = "hidden";
+      const content = document.getElementById("fprof-content");
+      content.innerHTML = '<div style="color:var(--text-mute);padding:40px;text-align:center">Lade …</div>';
+      const profile = await window.__vaultSocial.getProfile(friendUid);
+      if (!profile) { content.innerHTML = '<div style="color:var(--text-mute);padding:40px;text-align:center">Profil nicht gefunden</div>'; return; }
+      const p       = profile.privacy || {};
+      const initial = avatarInitial(profile.username || friendUid);
+      let html = `<div class="fprof-header">
+        <div class="fprof-avatar">${initial}</div>
+        <div>
+          <div class="fprof-username">${socialEsc(profile.username || "Unbekannt")}</div>
+          <div class="fprof-stats" id="fprof-stats-row"></div>
+        </div>
+      </div>`;
+      if (p.shareWatched !== false) {
+        html += `<div class="fprof-section"><div class="fprof-section-title">Zuletzt gesehen</div><div id="fprof-watched"></div></div>`;
+      } else {
+        html += `<div class="fprof-section"><div class="fprof-section-title">Zuletzt gesehen</div><div class="fprof-private"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Diese Info ist privat</div></div>`;
+      }
+      content.innerHTML = html;
+    }
+
+    // --- share sheet (Empfehlen) ---
+    const shareBackdrop = document.getElementById("share-backdrop");
+    let _shareItem = null;
+    let _shareRating = null;
+
+    document.getElementById("share-cancel").addEventListener("click", closeShareSheet);
+    shareBackdrop.addEventListener("click", e => { if (e.target === shareBackdrop) closeShareSheet(); });
+
+    function closeShareSheet() {
+      shareBackdrop.hidden = true;
+      document.body.style.overflow = "";
+      _shareItem = null; _shareRating = null;
+    }
+
+    function openShareSheet(itemRecord) {
+      if (!window.__vaultUser || !window.__vaultSocial) { showToast("Bitte anmelden, um zu teilen"); return; }
+      const friends = _socialFriends.filter(f => f.status === "accepted");
+      if (!friends.length) { showToast("Noch keine Freunde hinzugefügt"); return; }
+      _shareItem   = itemRecord;
+      _shareRating = itemRecord.bucket || null;
+      const posterSrc = itemRecord.poster ? "https://image.tmdb.org/t/p/w92" + itemRecord.poster : "";
+      document.getElementById("share-poster").src = posterSrc;
+      document.getElementById("share-poster").hidden = !posterSrc;
+      document.getElementById("share-title").textContent = itemRecord.title || "";
+      document.getElementById("share-sub").textContent   = itemRecord.mediaType === "tv" ? "Serie" : "Film";
+      document.getElementById("share-note").value = "";
+      // Friends checkboxes
+      document.getElementById("share-friends-list").innerHTML = friends.map(f =>
+        `<label class="share-friend-check">
+          <input type="checkbox" value="${socialEsc(f.uid)}" />
+          <div class="friend-avatar" style="width:32px;height:32px;font-size:12px">${avatarInitial(f.username || f.uid)}</div>
+          <span>${socialEsc(f.username || f.uid)}</span>
+        </label>`).join("");
+      // Stars (mapped from buckets)
+      const BUCKET_IDS = ["bad","meh","watchable","good","great"];
+      const stars = document.getElementById("share-stars");
+      stars.innerHTML = BUCKET_IDS.map((b, i) => `<button class="share-star${_shareRating === b ? " active" : ""}" type="button" data-bucket="${b}">${"★"}</button>`).join("");
+      stars.querySelectorAll(".share-star").forEach((btn, i) => {
+        btn.addEventListener("click", () => {
+          _shareRating = btn.dataset.bucket;
+          stars.querySelectorAll(".share-star").forEach((s, j) => s.classList.toggle("active", j <= i));
+        });
+      });
+      // Pre-fill if already rated
+      if (_shareRating) {
+        const idx = BUCKET_IDS.indexOf(_shareRating);
+        stars.querySelectorAll(".share-star").forEach((s, j) => s.classList.toggle("active", j <= idx));
+      }
+      shareBackdrop.hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+
+    document.getElementById("share-submit").addEventListener("click", async () => {
+      if (!_shareItem || !window.__vaultUser || !window.__vaultSocial) return;
+      const toUids = [...shareBackdrop.querySelectorAll("input[type=checkbox]:checked")].map(cb => cb.value);
+      if (!toUids.length) { showToast("Mindestens einen Freund auswählen"); return; }
+      const note = document.getElementById("share-note").value.trim();
+      const myName = (_myProfile && _myProfile.username) || (window.__vaultUser.email || "");
+      await window.__vaultSocial.shareItem(window.__vaultUser.uid, myName, toUids, {
+        title: _shareItem.title, poster: _shareItem.poster,
+        type: _shareItem.mediaType, id: _shareItem.id
+      }, note, _shareRating);
+      closeShareSheet();
+      showToast("Empfehlung gesendet");
+    });
+
+    // Wire "Teilen" button in quick-rate popup
+    document.getElementById("qr-share").addEventListener("click", () => {
+      if (!qrItem) return;
+      const key = keyOf(qrItem.media_type, qrItem.id);
+      const rec = db.items[key] || { title: qrItem.title || qrItem.name, mediaType: qrItem.media_type, id: qrItem.id, poster: qrItem.poster_path };
+      closeQuickRate();
+      openShareSheet(rec);
+    });
+
+    // Show share button in QR popup if user is logged in and has friends
+    function updateQRShareVisibility() {
+      const btn = document.getElementById("qr-share");
+      if (!btn) return;
+      const hasFriends = window.__vaultUser && _socialFriends.some(f => f.status === "accepted");
+      btn.hidden = !hasFriends;
+    }
+    window.addEventListener("vault-auth-changed", updateQRShareVisibility);
+
+    // --- notification settings in profile ---
+    const NOTIF_SETTING_LABELS = {
+      friendRequests:      "Freundschaftsanfragen",
+      sharedListUpdates:   "Geteilte Listen Updates",
+      recommendations:     "Empfehlungen (Pop-up beim Öffnen)"
+    };
+    function ensureNotifSettings() {
+      if (!db.settings) db.settings = {};
+      if (!db.settings.notificationSettings) db.settings.notificationSettings = { friendRequests: true, sharedListUpdates: true, recommendations: true };
+      return db.settings.notificationSettings;
+    }
+
+    // Extend renderSettings to include notification settings
+    const _origRenderSettings = typeof renderSettings === "function" ? renderSettings : null;
+    function renderNotifSettings() {
+      if (!window.__vaultUser) return;
+      const host = document.getElementById("profile-settings");
+      if (!host) return;
+      // Remove any previously-injected block to avoid duplicates
+      const old = host.querySelector(".notif-settings-block");
+      if (old) old.remove();
+      const ns = ensureNotifSettings();
+      const block = document.createElement("div");
+      block.className = "notif-settings-block detail-section";
+      block.style.marginTop = "16px";
+      block.innerHTML = `<div class="detail-section-title" style="font-size:14px;font-weight:700;margin-bottom:10px">Benachrichtigungen</div>
+        <div class="settings-group">
+          ${Object.entries(NOTIF_SETTING_LABELS).map(([k, label]) =>
+            `<div class="set-row"><span class="set-row-label">${socialEsc(label)}</span>
+            <label class="switch"><input type="checkbox" data-notif="${k}"${ns[k] !== false ? " checked" : ""}><span class="switch-track"></span></label></div>`
+          ).join("")}
+        </div>`;
+      host.appendChild(block);
+      host.querySelectorAll("input[data-notif]").forEach(cb => {
+        cb.addEventListener("change", () => {
+          ensureNotifSettings()[cb.dataset.notif] = cb.checked;
+          saveDB();
+          if (window.__vaultSocial && window.__vaultUser) {
+            window.__vaultSocial.saveProfile(window.__vaultUser.uid, { notificationSettings: ensureNotifSettings() }).catch(() => {});
+          }
+        });
+      });
+    }
+
+    // Hook into the existing vault-auth-changed to refresh notif settings
+    window.addEventListener("vault-auth-changed", () => {
+      if (document.body.dataset.tab === "profile") renderNotifSettings();
+    });
+    // Patch renderProfile to call renderNotifSettings
+    const _origRenderProfile = renderProfile;
+    renderProfile = async function() {
+      await _origRenderProfile();
+      renderNotifSettings();
+    };
   </script>
 </body>
 </html>
