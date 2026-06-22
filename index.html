@@ -6098,6 +6098,53 @@
       }
       return out;
     }
+
+    // R15-#4: read-only profile snapshot published into the user's own `users/{uid}`
+    // document so friends can render the profile page (stats, recently watched, top
+    // ranked) without reading the full library. Privacy mirrors db.settings.privacy.
+    // Hours use whatever runtimes are already cached locally (best-effort — they
+    // become exact once the user has opened their own Profil tab, which enriches).
+    function buildProfileSnapshot() {
+      const items  = Object.values(db.items);
+      const movies = items.filter(i => i.mediaType === "movie");
+      const series = items.filter(i => i.mediaType === "tv");
+      let mins = 0;
+      movies.forEach(m => { if (m.runtime) mins += m.runtime; });
+      series.forEach(s => { if (s.runtime) mins += watchedCount(keyOf("tv", s.id)) * s.runtime; });
+      const stats = {
+        films: movies.length,
+        series: series.length,
+        hours: Math.round(mins / 60),
+        episodes: episodesWatchedTotal()
+      };
+      const priv = ensurePrivacy();
+      const privacy = {
+        profileVisible: priv.profileVisible !== false,
+        shareWatched:   priv.shareWatched   !== false,
+        shareRanking:   priv.shareRanking   !== false,
+        shareLists:     priv.shareLists     !== false
+      };
+      // Zuletzt gesehen — newest first, max 20.
+      const recentlyWatched = items
+        .filter(it => it.loggedAt)
+        .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0))
+        .slice(0, 20)
+        .map(it => ({
+          id: it.id, title: it.title || "", posterPath: it.poster || null,
+          mediaType: it.mediaType, bucket: it.bucket || null, watchedAt: it.loggedAt || 0
+        }));
+      // Top ranked — movies + series merged, honouring manual order, by Elo, max 20.
+      const rankMovies = orderedRankedItems(rankedPool("movie").sort((a, b) => b.score - a.score), "movie");
+      const rankSeries = orderedRankedItems(rankedPool("tv").sort((a, b) => b.score - a.score), "tv");
+      const topRanked = [...rankMovies, ...rankSeries]
+        .sort((a, b) => (b.score || 0) - (a.score || 0))
+        .slice(0, 20)
+        .map((it, i) => ({
+          id: it.id, title: it.title || "", posterPath: it.poster || null,
+          mediaType: it.mediaType, rank: i + 1
+        }));
+      return { stats, privacy, recentlyWatched, topRanked, profileUpdatedAt: Date.now() };
+    }
     function renderListSettings() {
       const host = document.getElementById("list-settings");
       if (!host) return;
@@ -8043,6 +8090,11 @@
         if (window.__vaultSocial && window.__vaultSocial.saveUserLists) {
           window.__vaultSocial.saveUserLists(window.__vaultUser.uid, buildShareableListsSnapshot()).catch(() => {});
         }
+        // R15-#4: publish the profile snapshot (stats / recently watched / top ranked)
+        // into users/{uid} so friend profiles can render it. Merged, best-effort.
+        if (window.__vaultSocial && window.__vaultSocial.saveProfile) {
+          window.__vaultSocial.saveProfile(window.__vaultUser.uid, buildProfileSnapshot()).catch(() => {});
+        }
       } catch (e) {
         setCloudStatus("offline");       // keep local; next save retries
       } finally {
@@ -8073,6 +8125,11 @@
         suppressPush = false;
         setCloudStatus("ok");
         rerenderCurrent();
+        // R15-#4: seed the profile snapshot once on login so an existing user's
+        // friends see fresh stats / watched / ranking without waiting for the next edit.
+        if (window.__vaultSocial && window.__vaultSocial.saveProfile) {
+          try { window.__vaultSocial.saveProfile(user.uid, buildProfileSnapshot()).catch(() => {}); } catch (e) {}
+        }
       } else {
         // New account, no cloud document yet.
         if (hasLocalData()) {
