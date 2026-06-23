@@ -822,7 +822,7 @@
     .duel-close svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; }
 
     .duel-cards { flex: 1; display: flex; flex-direction: row; gap: 10px; min-height: 0; align-items: flex-start; }
-    .duel-card-wrap { flex: 1; display: flex; flex-direction: column; align-items: stretch; min-height: 0; }
+    .duel-card-wrap { position: relative; flex: 1; display: flex; flex-direction: column; align-items: stretch; min-height: 0; }
     .duel-card-hint { align-self: center; margin-top: 7px; font-size: 11px; color: var(--text-mute); letter-spacing: .03em; pointer-events: none; }
     .duel-card {
       position: relative; width: 100%;
@@ -910,6 +910,23 @@
     }
     .duel-undo svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .duel-undo:active { background: var(--surface); }
+
+    /* Info button: opens film detail from the duel card (desktop alternative to swipe-up) */
+    .duel-info {
+      position: absolute; top: 8px; right: 8px; z-index: 3;
+      width: 30px; height: 30px; border-radius: 50%; padding: 0;
+      background: rgba(0,0,0,.65); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(3px); color: rgba(255,255,255,.85);
+      transition: background .15s ease;
+    }
+    .duel-info:active { background: rgba(0,0,0,.85); }
+    .duel-info svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+    @media (min-width: 600px) {
+      .duel { max-width: 780px; margin: 0 auto; }
+      .duel-card { max-height: 52vh; }
+    }
 
     /* point 10: brief level-up celebration when a film climbs a tier */
     .levelup {
@@ -2357,6 +2374,9 @@
           <img class="duel-poster" alt="" />
           <div class="duel-name"></div>
         </button>
+        <button id="duel-info-a" class="duel-info" type="button" aria-label="Details anzeigen" hidden>
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </button>
         <div class="duel-card-hint" id="duel-hint-a" hidden>↑ Filme</div>
       </div>
       <div class="duel-vs">oder</div>
@@ -2365,6 +2385,9 @@
           <div class="duel-rank"></div>
           <img class="duel-poster" alt="" />
           <div class="duel-name"></div>
+        </button>
+        <button id="duel-info-b" class="duel-info" type="button" aria-label="Details anzeigen" hidden>
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         </button>
         <div class="duel-card-hint" id="duel-hint-b" hidden>↑ Filme</div>
       </div>
@@ -5043,6 +5066,8 @@
     const duelEl    = document.getElementById("duel");
     const duelCardA = document.getElementById("duel-a");
     const duelCardB = document.getElementById("duel-b");
+    const duelInfoA = document.getElementById("duel-info-a");
+    const duelInfoB = document.getElementById("duel-info-b");
     let duelPair = null;
     let duelSeenPairs = new Set(); // canonical "smallerId|largerId" — resets per session
 
@@ -5177,6 +5202,9 @@
       // R14-#4: hint to swipe up — "Filme" for people, "Details" for film duels
       const hintText = isPerson ? "↑ Filme" : "↑ Details";
       document.querySelectorAll(".duel-card-hint").forEach(h => { h.hidden = false; h.textContent = hintText; });
+      // info buttons only for film duels (not person); provide desktop access to detail view
+      if (duelInfoA) duelInfoA.hidden = isPerson;
+      if (duelInfoB) duelInfoB.hidden = isPerson;
       showDuelPair(pair);
       duelEl.hidden = false;
       document.body.style.overflow = "hidden";
@@ -5328,6 +5356,8 @@
     }
     wireDuelCard(duelCardA, 0);
     wireDuelCard(duelCardB, 1);
+    if (duelInfoA) duelInfoA.addEventListener("click", e => { e.stopPropagation(); if (duelPair) openDuelDetail(duelPair[0]); });
+    if (duelInfoB) duelInfoB.addEventListener("click", e => { e.stopPropagation(); if (duelPair) openDuelDetail(duelPair[1]); });
     document.getElementById("duel-undo").addEventListener("click", undoDuel);   // point 11
 
     // ---------- Person filmography sheet (people-duel long-press) ----------
