@@ -1670,6 +1670,7 @@
     .notif-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: calc(var(--nav-h) + var(--safe-bottom)); }
     .notif-item { display: flex; gap: 12px; align-items: flex-start; padding: 14px var(--pad); border-bottom: 1px solid var(--border); cursor: pointer; }
     .notif-item.unread { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+    .notif-item:not(.unread) { opacity: .6; }   /* C3 (R18): read notifications dim */
     .notif-item:active { background: var(--surface); }
     .notif-icon { width: 40px; height: 40px; border-radius: 50%; flex: 0 0 auto; background: var(--surface-2); display: flex; align-items: center; justify-content: center; font-size: 18px; }
     .notif-icon-img { width: 40px; height: 60px; border-radius: 6px; object-fit: cover; flex: 0 0 auto; background: var(--surface-2); }
@@ -3072,10 +3073,12 @@
         const q = query(collection(firestore, "sharedLists"), where("members", "array-contains", uid));
         const snap = await getDocs(q); return snap.docs.map(d => ({ id: d.id, ...d.data() }));
       },
-      async sendSharedListNotif(toUid, fromUid, fromUsername, listId, listName, itemTitle, type) {
+      async sendSharedListNotif(toUid, fromUid, fromUsername, listId, listName, itemTitle, type, tmdbId, itemType, itemPoster) {
         const id = "sln_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
         await setDoc(doc(firestore, "users", toUid, "notifications", id), {
-          type, fromUid, fromUsername, listId, listName, itemTitle, read: false, createdAt: serverTimestamp()
+          type, fromUid, fromUsername, listId, listName, itemTitle,
+          tmdbId: tmdbId || null, itemType: itemType || null, itemPoster: itemPoster || null,
+          read: false, createdAt: serverTimestamp()
         });
       },
       // R13-#6 phase 2: leave a shared list (drop self from members; the last
@@ -6346,18 +6349,18 @@
       const list = db.lists[listId];
       if (list && list.shared && list.sharedId && window.__vaultSocial) {
         window.__vaultSocial.addToSharedList(list.sharedId, key, rec, window.__vaultUser.uid).catch(() => {});
-        notifyShared(list, "list_item_added", rec.title);
+        notifyShared(list, "list_item_added", rec);
       }
       return true;
     }
     function removeFromList(listId, key) {
       const map = listItemsMap(listId);
       const list = db.lists[listId];
-      const title = map[key] && map[key].title;
+      const removed = map[key];           // capture id/type/title for the notification before deletion
       if (map[key]) { delete map[key]; saveDB(); }
       if (list && list.shared && list.sharedId && window.__vaultSocial) {
         window.__vaultSocial.removeFromSharedList(list.sharedId, key).catch(() => {});
-        notifyShared(list, "list_item_removed", title || "");
+        notifyShared(list, "list_item_removed", removed || null);
       }
     }
     function createList(name, permanent) {
@@ -6723,7 +6726,7 @@
       if (!list || !list.shared) return;
       stopSharedSub();
       // Notify the other member(s) while we still know who they are.
-      notifyShared(list, "list_unshared", "");
+      notifyShared(list, "list_unshared", null);
       // Leave the collaboration in Firestore (drop self from members).
       if (list.sharedId && window.__vaultSocial && window.__vaultSocial.leaveSharedList) {
         try { await window.__vaultSocial.leaveSharedList(list.sharedId, window.__vaultUser.uid); } catch (e) {}
@@ -6738,14 +6741,38 @@
     }
 
     // Notify every other member of a shared list (best-effort).
-    function notifyShared(list, type, title) {
+    // `item` may be the local record (id/mediaType/title/poster) or null (e.g. unshare).
+    function notifyShared(list, type, item) {
       if (!list || !list.shared || !window.__vaultUser || !window.__vaultSocial || !window.__vaultSocial.sendSharedListNotif) return;
       const myUid  = window.__vaultUser.uid;
       const myName = (_myProfile && _myProfile.username) || (window.__vaultUser.email || "");
+      const title      = item ? (item.title || "") : "";
+      const tmdbId     = item ? (item.id || null) : null;
+      const itemType   = item ? (item.mediaType || null) : null;
+      const itemPoster = item ? (item.poster || null) : null;
       (list.members || []).forEach(uid => {
         if (uid === myUid) return;
-        window.__vaultSocial.sendSharedListNotif(uid, myUid, myName, list.sharedId, list.name, title || "", type).catch(() => {});
+        window.__vaultSocial.sendSharedListNotif(uid, myUid, myName, list.sharedId, list.name, title, type, tmdbId, itemType, itemPoster).catch(() => {});
       });
+    }
+
+    // C1 (R18): a shared-list notification stores the Firestore sharedId, but
+    // openListDetail needs the LOCAL list id. Resolve it (syncing first if the
+    // list hasn't been pulled into the local tab yet) so the link opens the real,
+    // populated list instead of an empty/wrong one.
+    async function openSharedListByShared(sharedId) {
+      if (!sharedId) return;
+      const findLocal = () => {
+        for (const id in db.lists) if (db.lists[id].sharedId === sharedId) return id;
+        return null;
+      };
+      let localId = findLocal();
+      if (!localId && typeof syncSharedLists === "function") {
+        try { await syncSharedLists(); } catch (e) {}
+        localId = findLocal();
+      }
+      if (localId) openListDetail(localId);
+      else showToast("Liste nicht gefunden");
     }
 
     // R13-#6 phase 2: pull shared lists I'm a member of into the local Listen tab
@@ -8952,6 +8979,10 @@
       if (!window.__vaultSocial) return;
       _notifUnsub = window.__vaultSocial.subscribeNotifications(uid, notifs => {
         updateNotifBadge(notifs);
+        // C3 (R18): keep the open notification center in sync with the live data
+        // (read-state changes, new arrivals) so marking read always reflects.
+        const nc = document.getElementById("notif-center");
+        if (nc && !nc.hidden) renderNotifList(_notifCache);
         // Show recommendation popup if needed
         const unreadRecos = notifs.filter(n => n.type === "item_shared" && !n.read);
         if (unreadRecos.length && !_recoPopupShown) { _recoPopupShown = true; showRecoPopup(unreadRecos); }
@@ -8990,6 +9021,11 @@
     document.getElementById("notif-center-back").addEventListener("click", closeNotifCenter);
     document.getElementById("notif-mark-all").addEventListener("click", async () => {
       if (!window.__vaultUser || !window.__vaultSocial) return;
+      // C3 (R18): optimistic — flip the local cache, re-render and refresh the
+      // badge right away so it feels reliable; the snapshot confirms afterwards.
+      _notifCache = _notifCache.map(n => ({ ...n, read: true }));
+      updateNotifBadge(_notifCache);
+      renderNotifList(_notifCache);
       await window.__vaultSocial.markAllRead(window.__vaultUser.uid);
     });
 
@@ -9032,6 +9068,10 @@
           const uid  = window.__vaultUser?.uid;
           const nid  = el.dataset.id;
           if (uid && nid && window.__vaultSocial) window.__vaultSocial.markNotificationRead(uid, nid);
+          // C3 (R18): reflect read-state locally (cache + badge) right away.
+          const cached = _notifCache.find(n => n.id === nid);
+          if (cached) cached.read = true;
+          updateNotifBadge(_notifCache);
           el.classList.remove("unread");
           el.querySelector(".notif-unread-dot")?.remove();
           if (el.dataset.type === "friend_request" || el.dataset.type === "friend_accepted") {
@@ -9056,8 +9096,8 @@
           } else if (tap === "list") {
             closeNotifCenter();
             switchTab("lists");
-            const listId = span.dataset.listid;
-            if (listId) setTimeout(() => { if (typeof openListDetail === "function") openListDetail(listId); }, 80);
+            const sharedId = span.dataset.listid;
+            if (sharedId) setTimeout(() => openSharedListByShared(sharedId), 80);
           }
         });
       });
