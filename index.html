@@ -1670,6 +1670,7 @@
     .notif-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: calc(var(--nav-h) + var(--safe-bottom)); }
     .notif-item { display: flex; gap: 12px; align-items: flex-start; padding: 14px var(--pad); border-bottom: 1px solid var(--border); cursor: pointer; }
     .notif-item.unread { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+    .notif-item:not(.unread) { opacity: .6; }   /* C3 (R18): read notifications dim */
     .notif-item:active { background: var(--surface); }
     .notif-icon { width: 40px; height: 40px; border-radius: 50%; flex: 0 0 auto; background: var(--surface-2); display: flex; align-items: center; justify-content: center; font-size: 18px; }
     .notif-icon-img { width: 40px; height: 60px; border-radius: 6px; object-fit: cover; flex: 0 0 auto; background: var(--surface-2); }
@@ -1856,22 +1857,33 @@
     .social-pane[hidden] { display: none !important; }
 
     /* R17-B: Activity feed cards */
-    .feed-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 14px; }
-    .feed-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-    .feed-card-meta { flex: 1; min-width: 0; }
-    .feed-card-author { font-size: 14px; font-weight: 700; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .feed-card-time { font-size: 12px; color: var(--text-mute); margin-top: 1px; }
-    .feed-card-body { display: flex; gap: 12px; }
-    .feed-card-poster { flex: 0 0 64px; width: 64px; height: 96px; border-radius: 8px; object-fit: cover; background: var(--surface-2); cursor: pointer; -webkit-tap-highlight-color: transparent; }
-    .feed-card-info { flex: 1; min-width: 0; }
-    .feed-card-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .feed-card-sub { font-size: 12px; color: var(--text-mute); margin-bottom: 5px; }
-    .feed-card-stars { font-size: 14px; color: var(--accent); margin-bottom: 5px; letter-spacing: .05em; }
-    .feed-card-note { font-size: 13px; color: var(--text-dim); font-style: italic; line-height: 1.4; margin-bottom: 7px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-    .feed-card-btns { display: flex; gap: 8px; margin-top: 10px; }
-    .feed-card-btn { flex: 1; padding: 8px 10px; border-radius: 8px; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: none; color: var(--text-dim); }
-    .feed-card-btn.primary { background: var(--accent); color: #1a1206; border-color: var(--accent); }
-    .feed-card-btn:active { opacity: .7; }
+    /* R18-A: Instagram-style activity feed */
+    .feed-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; margin-bottom: 16px; overflow: hidden; }
+    .feed-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+    .feed-av { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: #1a1206; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .feed-author { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+    .feed-time { flex: 0 0 auto; font-size: 12px; color: var(--text-mute); }
+    .feed-poster-wrap { width: 100%; cursor: pointer; background: var(--surface-2); -webkit-tap-highlight-color: transparent; }
+    .feed-poster { display: block; width: 100%; height: auto; }
+    .feed-poster-ph { aspect-ratio: 2 / 3; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; color: var(--text-dim); font-weight: 700; font-size: 18px; line-height: 1.3; }
+    .feed-engage { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 4px; }
+    .feed-stars { font-size: 17px; color: var(--accent); letter-spacing: .06em; }
+    .feed-icons { display: flex; gap: 4px; }
+    .feed-icon-btn { background: none; border: none; padding: 6px; cursor: pointer; color: var(--text-dim); display: flex; align-items: center; border-radius: 8px; -webkit-tap-highlight-color: transparent; }
+    .feed-icon-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .feed-icon-btn:active { color: var(--accent); }
+    .feed-bm.on { color: var(--accent); }
+    .feed-bm.on svg { fill: var(--accent); }
+    .feed-note { padding: 2px 14px 4px; font-size: 14px; color: var(--text-dim); font-style: italic; line-height: 1.45; }
+    .feed-titleline { padding: 2px 14px 12px; font-size: 13px; color: var(--text-mute); }
+    .feed-alsoseen { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; padding: 0 14px 14px; }
+    .feed-alsoseen-ic { display: inline-flex; color: var(--text-mute); }
+    .feed-alsoseen-ic svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    .feed-alsoseen-lbl { font-size: 12px; color: var(--text-mute); }
+    .feed-alsoseen-avs { display: flex; }
+    .feed-mini-av { width: 24px; height: 24px; margin-left: -6px; border-radius: 50%; background: var(--accent); color: #1a1206; font-weight: 700; font-size: 11px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--surface); cursor: pointer; }
+    .feed-mini-av:first-child { margin-left: 0; }
+    .feed-mini-av.self { background: var(--surface-2); color: var(--text-dim); cursor: default; }
     .feed-empty { text-align: center; padding: 48px 24px; color: var(--text-mute); font-size: 14px; line-height: 1.6; }
     .feed-empty svg { width: 42px; height: 42px; stroke: var(--text-mute); fill: none; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; display: block; margin: 0 auto 14px; }
 
@@ -1899,12 +1911,8 @@
     .prof-friends-invite svg { flex: 0 0 auto; }
     #prof-invite-url { display: none; }
 
-    /* R17-D: Home dynamic sections – refresh button */
     .lh-home-head { display: flex; align-items: center; gap: 8px; }
     .lh-home-head h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
-    .lh-refresh-btn { margin-left: auto; background: none; border: none; padding: 6px; cursor: pointer; color: var(--text-mute); display: flex; align-items: center; border-radius: 8px; }
-    .lh-refresh-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .lh-refresh-btn:active { color: var(--accent); }
   </style>
 </head>
 <body data-tab="log">
@@ -1932,9 +1940,6 @@
       <div id="log-home">
         <div id="log-hero" hidden></div>
         <div id="lh-edit-bar" hidden>
-          <button id="lh-refresh-btn" class="lh-refresh-btn" type="button" aria-label="Abschnitte neu laden">
-            <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-          </button>
           <button id="lh-edit-toggle" class="lh-edit-btn" type="button">
             <svg viewBox="0 0 24 24"><polyline points="8 9 12 5 16 9"/><polyline points="8 15 12 19 16 15"/></svg>
             <span>Bearbeiten</span>
@@ -2932,6 +2937,10 @@
       async saveProfile(uid, data) {
         await setDoc(doc(firestore, "users", uid), data, { merge: true });
       },
+      // R18-A: live profile updates for the activity feed.
+      subscribeProfile(uid, cb) {
+        return onSnapshot(doc(firestore, "users", uid), s => cb(s.exists() ? s.data() : null));
+      },
       async searchUsers(term) {
         const raw = (term || "").trim();
         if (raw.length < 2) return [];
@@ -3072,10 +3081,12 @@
         const q = query(collection(firestore, "sharedLists"), where("members", "array-contains", uid));
         const snap = await getDocs(q); return snap.docs.map(d => ({ id: d.id, ...d.data() }));
       },
-      async sendSharedListNotif(toUid, fromUid, fromUsername, listId, listName, itemTitle, type) {
+      async sendSharedListNotif(toUid, fromUid, fromUsername, listId, listName, itemTitle, type, tmdbId, itemType, itemPoster) {
         const id = "sln_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
         await setDoc(doc(firestore, "users", toUid, "notifications", id), {
-          type, fromUid, fromUsername, listId, listName, itemTitle, read: false, createdAt: serverTimestamp()
+          type, fromUid, fromUsername, listId, listName, itemTitle,
+          tmdbId: tmdbId || null, itemType: itemType || null, itemPoster: itemPoster || null,
+          read: false, createdAt: serverTimestamp()
         });
       },
       // R13-#6 phase 2: leave a shared list (drop self from members; the last
@@ -3119,6 +3130,8 @@
       if (target !== "log" && document.body.dataset.tab === "log") {
         history.pushState({ vaultTab: target }, "");
       }
+      // R18-A: tear down the feed's live profile listeners when leaving Social.
+      if (target !== "social" && document.body.dataset.tab === "social" && typeof stopFeedSubs === "function") stopFeedSubs();
       views.forEach(v => v.classList.toggle("active", v.dataset.view === target));
       navButtons.forEach(b => b.classList.toggle("active", b.dataset.target === target));
       document.body.dataset.tab = target;   // drives the per-tab cinematic mood glow (C)
@@ -3282,6 +3295,7 @@
             epRatings: parsed.epRatings || {},
             tagDefs: parsed.tagDefs || null,
             homeOrder: Array.isArray(parsed.homeOrder) ? parsed.homeOrder : null,
+            homeSections: Array.isArray(parsed.homeSections) ? parsed.homeSections : null,   // R18-B2: curated, persistent home rows
             hideWatched: typeof parsed.hideWatched === "boolean" ? parsed.hideWatched : true,   // point 6: default ON
             hideWatchlist: typeof parsed.hideWatchlist === "boolean" ? parsed.hideWatchlist : false,  // R6-P8: default OFF
             blocklist: (parsed.blocklist && typeof parsed.blocklist === "object") ? parsed.blocklist : {},   // point 12
@@ -3300,7 +3314,7 @@
           return out;
         }
       } catch (e) { /* corrupted store — start fresh */ }
-      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, trackedSeries: {}, homeCustomSections: [], people: {}, recoExcludeLists: {}, recoExcludeTags: {}, recoSnoozed: {}, manualRankOrder: {}, settings: {}, recentlyWatchedExcluded: {} };
+      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, trackedSeries: {}, homeCustomSections: [], homeSections: null, people: {}, recoExcludeLists: {}, recoExcludeTags: {}, recoSnoozed: {}, manualRankOrder: {}, settings: {}, recentlyWatchedExcluded: {} };
     }
     let db = loadDB();
     function saveDB() {
@@ -3881,6 +3895,14 @@
       }, true);
     }
 
+    // R18 (B1): human German duration like "3 Monaten" / "2 Jahren" for hero labels.
+    function durSince(ts) {
+      const d = Date.now() - ts, day = 86400000;
+      if (d >= 365 * day) { const y = Math.floor(d / (365 * day)); return y + (y === 1 ? " Jahr" : " Jahren"); }
+      if (d >= 30 * day)  { const m = Math.floor(d / (30 * day));  return m + (m === 1 ? " Monat" : " Monaten"); }
+      const w = Math.max(1, Math.floor(d / (7 * day)));            return w + (w === 1 ? " Woche" : " Wochen");
+    }
+
     async function buildHero() {
       const heroEl = document.getElementById("log-hero");
       if (!heroEl) return;
@@ -3901,12 +3923,68 @@
         usedIds.add(it.id);
         candidates.push({ it, label });
       };
-      tryAdd(sortedMovies[0], "Dein #1 Film");
-      tryAdd(sortedTv[0], "Deine #1 Serie");
-      tryAdd(sortedMovies[1], "Dein #2 Film");
-      tryAdd(sortedRecent[0], "Zuletzt gesehen");
-      tryAdd(sortedTv[1], "Deine #2 Serie");
-      tryAdd(sortedMovies[2], "Dein #3 Film");
+
+      // R18 (B1): build a varied candidate pool, then show a fresh random mix on
+      // each app open (instead of the same fixed ~5 slides every time).
+      const pool = [];
+      const pushIf = (it, label) => { if (it) pool.push({ it, label }); };
+
+      pushIf(sortedMovies[0], "Dein #1 Film");
+      pushIf(sortedMovies[1], "Dein #2 Film");
+      pushIf(sortedTv[0], "Deine #1 Serie");
+      pushIf(sortedTv[1], "Deine #2 Serie");
+      pushIf(sortedRecent[0], "Zuletzt gesehen");
+
+      // Favourite-genre picks — best-scored title in a random well-rated genre.
+      const topGenreOf = (arr) => {
+        const tally = {};
+        arr.filter(it => !it.unranked && (it.bucket === "great" || it.bucket === "good"))
+           .forEach(it => (it.genreIds || []).forEach(g => { tally[g] = (tally[g] || 0) + 1; }));
+        const ranked = Object.keys(tally).sort((a, b) => tally[b] - tally[a]);
+        if (!ranked.length) return null;
+        return parseInt(ranked[Math.floor(Math.random() * Math.min(3, ranked.length))], 10);
+      };
+      const favMovieGenre = topGenreOf(sortedMovies);
+      if (favMovieGenre != null) {
+        const top = sortedMovies.find(it => (it.genreIds || []).includes(favMovieGenre));
+        const gname = (genreMapById && genreMapById[favMovieGenre]) || "";
+        if (top && gname) pushIf(top, "Dein Lieblings-" + gname + "-Film");
+      }
+      const favTvGenre = topGenreOf(sortedTv);
+      if (favTvGenre != null) {
+        const top = sortedTv.find(it => (it.genreIds || []).includes(favTvGenre));
+        const gname = (genreMapById && genreMapById[favTvGenre]) || "";
+        if (top && gname) pushIf(top, "Deine Lieblings-" + gname + "-Serie");
+      }
+
+      // Longest-waiting watchlist title (older than ~3 weeks to be meaningful).
+      const wl = Object.values(db.watchlist || {})
+        .map(it => ({ it, ts: it.loggedAt || it.addedAt || 0 }))
+        .filter(x => x.ts && (Date.now() - x.ts) > 21 * 86400000)
+        .sort((a, b) => a.ts - b.ts);
+      if (wl.length) {
+        const o = wl[0].it;
+        pushIf({ id: o.id, mediaType: o.mediaType, title: o.title, poster: o.poster, year: o.year, rating: o.rating || 0 },
+               "Liegt seit " + durSince(wl[0].ts) + " in deiner Watchlist");
+      }
+
+      // Best TMDB-rated title across the watched library.
+      const bestRated = all.filter(it => !it.unranked && (it.rating || 0) > 0)
+        .sort((a, b) => (b.rating || 0) - (a.rating || 0))[0];
+      pushIf(bestRated, "Am besten bewertet");
+
+      // Hidden gem — a highly rated but older watched title (≥15 years old).
+      const curYear = new Date().getFullYear();
+      const gems = all.filter(it => !it.unranked && (it.bucket === "great" || it.bucket === "good")
+        && it.year && (curYear - parseInt(it.year, 10)) >= 15);
+      if (gems.length) pushIf(gems[Math.floor(Math.random() * gems.length)], "Versteckte Perle");
+
+      // Shuffle the pool, then take up to 7 unique titles for this session.
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      pool.forEach(({ it, label }) => { if (candidates.length < 7) tryAdd(it, label); });
 
       if (!candidates.length) { heroEl.hidden = true; return; }
 
@@ -4030,10 +4108,8 @@
       const longUnseen = all.filter(it => it.loggedAt && (now - it.loggedAt) > sixMo);
       if (longUnseen.length >= 3) pool.push({ id: "lh-long-unseen" });
 
-      // Recently added (last 30 days)
-      const recentItems = all.sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0)).slice(0, 20)
-        .filter(it => (now - (it.loggedAt || 0)) < 30 * 24 * 3600 * 1000);
-      if (recentItems.length >= 3) pool.push({ id: "lh-recently-added" });
+      // R18 (B2): "Kürzlich hinzugefügt" no longer auto-appears — it duplicated
+      // "Zuletzt gesehen". The buildDynamicSections case is kept for manual adds.
 
       // Shuffle pool and take 1-3
       for (let i = pool.length - 1; i > 0; i--) {
@@ -4049,37 +4125,12 @@
       if (hint) hint.hidden = all.length > 0;
 
       maybeRebuildHero();
-      buildProgressSection();
 
-      const excluded = db.recentlyWatchedExcluded || {};
-      const recent = all.filter(it => !excluded[(it.mediaType || it.media_type) + ":" + it.id])
-        .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0)).slice(0, 10);
-      const topMovies = all.filter(it => it.mediaType === "movie" && !it.unranked)
-        .sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10);
-      const topSeries = all.filter(it => it.mediaType === "tv" && !it.unranked)
-        .sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10);
+      // R18-B2: every home row is now a curated, persistent, fully-editable section.
+      // Hide all existing rows, then (re)build the ones in the saved section list.
+      document.querySelectorAll("#log-home .log-home-row").forEach(el => { el.hidden = true; });
+      getHomeSections().forEach(s => buildSection(s, all));
 
-      // P4: titles currently on the Watchlist (newest first). Hidden when empty.
-      const watchlist = Object.values(db.watchlist)
-        .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0));
-
-      buildHomeRow("lh-recent", "Zuletzt gesehen", recent, false, true);
-      buildHomeRow("lh-watchlist", "Meine Watchlist", watchlist, false);
-      buildHomeRow("lh-movies", "Top Filme", topMovies, true);
-      buildHomeRow("lh-series", "Top Serien", topSeries, true);
-
-      // R17-D: dynamic optional sections (randomized once per session)
-      if (!_homeSessionDynamic) _homeSessionDynamic = pickDynamicSections();
-      buildDynamicSections(_homeSessionDynamic, all);
-
-      // R6-P4: render pinned custom list sections as Home rows
-      (db.homeCustomSections || []).forEach(listId => {
-        if (!db.lists[listId]) return;
-        ensureCustomHomeRow(listId);
-        buildCustomHomeRow(listId);
-      });
-
-      // N5: apply the user's saved section order; show the reorder toggle only with content
       applyHomeOrder();
       const editBar = document.getElementById("lh-edit-bar");
       if (editBar) editBar.hidden =
@@ -4102,7 +4153,7 @@
               .sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10);
             if (!items.length) return;
             const gname = (genreMapById && genreMapById[gid]) || "Genre";
-            buildHomeRow("lh-genre-film", "Bester " + gname + "-Film", items, true);
+            buildHomeRow("lh-genre-film", "Beste " + gname, items, true);
             break;
           }
           case "lh-genre-serie": {
@@ -4111,7 +4162,7 @@
               .sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10);
             if (!items.length) return;
             const gname = (genreMapById && genreMapById[gid]) || "Genre";
-            buildHomeRow("lh-genre-serie", "Beste " + gname + "-Serie", items, true);
+            buildHomeRow("lh-genre-serie", "Beste " + gname, items, true);
             break;
           }
           case "lh-from-list": {
@@ -4142,13 +4193,8 @@
       });
     }
 
-    // Refresh button — pick new sections for this session and re-render
-    document.getElementById("lh-refresh-btn").addEventListener("click", () => {
-      _homeSessionDynamic = null;   // force re-pick
-      renderLogHome();
-    });
-
     // ---------- Home section reordering (N5) + custom list sections (R6-P4) ----------
+    // Used by openHomeSectionFull's overlay title (legacy ids).
     const SECTION_LABELS = {
       "lh-progress":  "Aktuelle Serien",
       "lh-recent":    "Zuletzt gesehen",
@@ -4156,122 +4202,260 @@
       "lh-movies":    "Top Filme",
       "lh-series":    "Top Serien"
     };
-    function getSectionLabel(id) { return SECTION_LABELS[id] || (db.lists[id] ? db.lists[id].name : id); }
     const DEFAULT_HOME_ORDER = ["lh-progress", "lh-recent", "lh-watchlist", "lh-movies", "lh-series"];
 
-    function getHomeOrder() {
-      const custom = (db.homeCustomSections || []).filter(id => db.lists[id]);
-      let o = Array.isArray(db.homeOrder)
-        ? db.homeOrder.filter(id => DEFAULT_HOME_ORDER.includes(id) || custom.includes(id))
-        : [];
-      DEFAULT_HOME_ORDER.forEach(id => { if (!o.includes(id)) o.push(id); });
-      custom.forEach(id => { if (!o.includes(id)) o.push(id); });
-      return o;
+    // R18-B2: home rows are a curated, persistent, fully-editable list of section
+    // descriptors. Each descriptor: { type, genreId?|tag?|listId? }.
+    function getHomeSections() {
+      if (Array.isArray(db.homeSections)) return db.homeSections;
+      // One-time migration from the old homeOrder + homeCustomSections model.
+      const order = Array.isArray(db.homeOrder) ? db.homeOrder : DEFAULT_HOME_ORDER.slice();
+      const ID2TYPE = { "lh-progress": "progress", "lh-recent": "recent", "lh-watchlist": "watchlist", "lh-movies": "top-movies", "lh-series": "top-series" };
+      const secs = [];
+      order.forEach(id => {
+        if (ID2TYPE[id]) secs.push({ type: ID2TYPE[id] });
+        else if (db.lists && db.lists[id]) secs.push({ type: "list", listId: id });
+      });
+      // Ensure the default singletons are present (heals a missing/short order).
+      ["progress", "recent", "watchlist", "top-movies", "top-series"].forEach(t => {
+        if (!secs.some(s => s.type === t)) secs.push({ type: t });
+      });
+      // Pinned custom lists not already covered by the order above.
+      (db.homeCustomSections || []).forEach(lid => {
+        if (db.lists[lid] && !secs.some(s => s.type === "list" && s.listId === lid)) secs.push({ type: "list", listId: lid });
+      });
+      db.homeSections = secs; saveDB();
+      return db.homeSections;
     }
 
-    // Reorder the section elements (between hero and the empty-state hint) to match the saved order.
+    function sectionKey(s) {
+      switch (s.type) {
+        case "progress":    return "lh-progress";
+        case "recent":      return "lh-recent";
+        case "watchlist":   return "lh-watchlist";
+        case "top-movies":  return "lh-movies";
+        case "top-series":  return "lh-series";
+        case "genre-film":  return "lh-sec-gf-" + s.genreId;
+        case "genre-serie": return "lh-sec-gs-" + s.genreId;
+        case "tag":         return "lh-sec-tag-" + String(s.tag).replace(/[^a-z0-9]/gi, "_");
+        case "list":        return s.listId;
+      }
+      return "lh-sec-unknown";
+    }
+
+    function sectionLabel(s) {
+      switch (s.type) {
+        case "progress":    return "Aktuelle Serien";
+        case "recent":      return "Zuletzt gesehen";
+        case "watchlist":   return "Meine Watchlist";
+        case "top-movies":  return "Top Filme";
+        case "top-series":  return "Top Serien";
+        case "genre-film":
+        case "genre-serie": return "Beste " + ((genreMapById && genreMapById[s.genreId]) || "Genre");
+        case "tag":         return s.tag;
+        case "list":        return (db.lists[s.listId] && db.lists[s.listId].name) || "Liste";
+      }
+      return "Abschnitt";
+    }
+
+    // Make sure a container element exists for this section key (creates dynamic ones).
+    function ensureSectionEl(key) {
+      let el = document.getElementById(key);
+      if (!el) {
+        el = document.createElement("div"); el.id = key; el.className = "log-home-row"; el.hidden = true;
+        const home = document.getElementById("log-home");
+        const hint = document.getElementById("log-hint");
+        if (hint) home.insertBefore(el, hint); else home.appendChild(el);
+      }
+      return el;
+    }
+
+    function buildSection(s, all) {
+      const key = sectionKey(s);
+      ensureSectionEl(key);
+      switch (s.type) {
+        case "progress": buildProgressSection(); break;
+        case "recent": {
+          const excluded = db.recentlyWatchedExcluded || {};
+          const recent = all.filter(it => !excluded[(it.mediaType || it.media_type) + ":" + it.id])
+            .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0)).slice(0, 10);
+          buildHomeRow("lh-recent", "Zuletzt gesehen", recent, false, true); break;
+        }
+        case "watchlist": {
+          const watchlist = Object.values(db.watchlist).sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0));
+          buildHomeRow("lh-watchlist", "Meine Watchlist", watchlist, false); break;
+        }
+        case "top-movies": {
+          const items = all.filter(it => it.mediaType === "movie" && !it.unranked)
+            .sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10);
+          buildHomeRow("lh-movies", "Top Filme", items, true); break;
+        }
+        case "top-series": {
+          const items = all.filter(it => it.mediaType === "tv" && !it.unranked)
+            .sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10);
+          buildHomeRow("lh-series", "Top Serien", items, true); break;
+        }
+        case "genre-film": {
+          const items = all.filter(it => it.mediaType === "movie" && !it.unranked && (it.genreIds || []).includes(s.genreId))
+            .sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10);
+          buildHomeRow(key, sectionLabel(s), items, true); break;
+        }
+        case "genre-serie": {
+          const items = all.filter(it => it.mediaType === "tv" && !it.unranked && (it.genreIds || []).includes(s.genreId))
+            .sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10);
+          buildHomeRow(key, sectionLabel(s), items, true); break;
+        }
+        case "tag": {
+          const items = all.filter(it => {
+            const m = db.meta[(it.mediaType || it.media_type) + ":" + it.id];
+            return m && (m.tags || []).includes(s.tag);
+          }).sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 12);
+          buildHomeRow(key, s.tag, items, false); break;
+        }
+        case "list": {
+          const lst = db.lists[s.listId];
+          if (!lst) { const el = document.getElementById(key); if (el) el.hidden = true; break; }
+          const items = Object.values(lst.items).reverse().map(r => ({
+            id: r.id, mediaType: r.media_type || r.mediaType || "movie", title: r.title || r.name,
+            poster: r.poster_path || r.poster,
+            year: String(r.release_date || r.first_air_date || r.year || "").slice(0, 4), score: 0
+          }));
+          buildHomeRow(key, lst.name, items, false); break;
+        }
+      }
+    }
+
+    // Reorder the row elements (between hero and the empty-state hint) to match the saved order.
     function applyHomeOrder() {
       const home = document.getElementById("log-home");
       const hint = document.getElementById("log-hint");
       if (!home) return;
-      getHomeOrder().forEach(id => {
-        const el = document.getElementById(id);
+      getHomeSections().forEach(s => {
+        const el = document.getElementById(sectionKey(s));
         if (el) home.insertBefore(el, hint);
       });
     }
 
     const CHEVRON_UP   = '<svg viewBox="0 0 24 24"><polyline points="6 15 12 9 18 15"/></svg>';
     const CHEVRON_DOWN = '<svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>';
+    const X_ICON       = '<svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
 
     function renderReorderPanel() {
       const panel = document.getElementById("lh-reorder");
       if (!panel) return;
-      const o = getHomeOrder();
+      const secs = getHomeSections();
       panel.innerHTML = "";
-      o.forEach((id, idx) => {
+      secs.forEach((s, idx) => {
         const row = document.createElement("div"); row.className = "reorder-row";
-        const name = document.createElement("span"); name.className = "reorder-name"; name.textContent = getSectionLabel(id);
+        const name = document.createElement("span"); name.className = "reorder-name"; name.textContent = sectionLabel(s);
         const ctrls = document.createElement("div"); ctrls.className = "reorder-ctrls";
         const up = document.createElement("button"); up.type = "button"; up.className = "reorder-arrow";
         up.setAttribute("aria-label", "Nach oben"); up.innerHTML = CHEVRON_UP; up.disabled = idx === 0;
-        up.addEventListener("click", () => moveSection(id, -1));
+        up.addEventListener("click", () => moveSection(idx, -1));
         const down = document.createElement("button"); down.type = "button"; down.className = "reorder-arrow";
-        down.setAttribute("aria-label", "Nach unten"); down.innerHTML = CHEVRON_DOWN; down.disabled = idx === o.length - 1;
-        down.addEventListener("click", () => moveSection(id, +1));
-        ctrls.appendChild(up); ctrls.appendChild(down);
-        // custom sections get a remove button
-        if (!DEFAULT_HOME_ORDER.includes(id)) {
-          const rmv = document.createElement("button"); rmv.type = "button"; rmv.className = "reorder-arrow reorder-remove-btn";
-          rmv.setAttribute("aria-label", "Entfernen");
-          rmv.innerHTML = '<svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
-          rmv.addEventListener("click", () => {
-            db.homeCustomSections = (db.homeCustomSections || []).filter(s => s !== id);
-            db.homeOrder = getHomeOrder().filter(s => s !== id);
-            saveDB();
-            const el = document.getElementById(id); if (el) el.remove();
-            renderReorderPanel();
-          });
-          ctrls.appendChild(rmv);
-        }
+        down.setAttribute("aria-label", "Nach unten"); down.innerHTML = CHEVRON_DOWN; down.disabled = idx === secs.length - 1;
+        down.addEventListener("click", () => moveSection(idx, +1));
+        // R18-B2: every row is removable now.
+        const rmv = document.createElement("button"); rmv.type = "button"; rmv.className = "reorder-arrow reorder-remove-btn";
+        rmv.setAttribute("aria-label", "Entfernen"); rmv.innerHTML = X_ICON;
+        rmv.addEventListener("click", () => removeSection(idx));
+        ctrls.appendChild(up); ctrls.appendChild(down); ctrls.appendChild(rmv);
         row.appendChild(name); row.appendChild(ctrls);
         panel.appendChild(row);
       });
+      panel.appendChild(buildAddPicker());
+    }
 
-      // "+ Abschnitt hinzufügen" — lists not yet on Home
-      const available = Object.values(db.lists).filter(l => !(db.homeCustomSections || []).includes(l.id));
-      if (available.length) {
-        const addRow = document.createElement("div"); addRow.className = "reorder-add-row";
-        const addBtn = document.createElement("button"); addBtn.type = "button"; addBtn.className = "reorder-add-btn";
-        addBtn.textContent = "+ Abschnitt hinzufügen";
-        addBtn.addEventListener("click", () => {
-          const picker = panel.querySelector(".reorder-picker");
-          if (picker) { picker.remove(); return; }
-          const pick = document.createElement("div"); pick.className = "reorder-picker";
-          available.forEach(l => {
-            const item = document.createElement("button"); item.type = "button"; item.className = "reorder-pick-item";
-            item.textContent = l.name;
-            item.addEventListener("click", () => {
-              if (!db.homeCustomSections) db.homeCustomSections = [];
-              if (!db.homeCustomSections.includes(l.id)) db.homeCustomSections.push(l.id);
-              db.homeOrder = getHomeOrder();
-              saveDB();
-              ensureCustomHomeRow(l.id);
-              buildCustomHomeRow(l.id);
-              applyHomeOrder();
-              renderReorderPanel();
-            });
-            pick.appendChild(item);
-          });
-          addRow.appendChild(pick);
-        });
-        addRow.appendChild(addBtn);
-        panel.appendChild(addRow);
+    // "+ Abschnitt hinzufügen" with a type chooser (and genre/tag/list sub-pickers).
+    function buildAddPicker() {
+      const wrap = document.createElement("div"); wrap.className = "reorder-add-row";
+      const addBtn = document.createElement("button"); addBtn.type = "button"; addBtn.className = "reorder-add-btn";
+      addBtn.textContent = "+ Abschnitt hinzufügen";
+      const host = document.createElement("div");
+      const clear = () => { host.innerHTML = ""; };
+      const mkItem = (label, onClick) => {
+        const b = document.createElement("button"); b.type = "button"; b.className = "reorder-pick-item";
+        b.textContent = label; b.addEventListener("click", onClick); return b;
+      };
+      const mkPicker = () => { const p = document.createElement("div"); p.className = "reorder-picker"; return p; };
+
+      function showTypes() {
+        host.innerHTML = "";
+        const p = mkPicker();
+        const secs = getHomeSections();
+        const has = t => secs.some(s => s.type === t);
+        [["recent", "Zuletzt gesehen"], ["watchlist", "Meine Watchlist"], ["progress", "Aktuelle Serien"], ["top-movies", "Top Filme"], ["top-series", "Top Serien"]]
+          .forEach(([t, lbl]) => { if (!has(t)) p.appendChild(mkItem(lbl, () => { addSection({ type: t }); })); });
+        p.appendChild(mkItem("Genre · Film …",  () => showGenres("genre-film")));
+        p.appendChild(mkItem("Genre · Serie …", () => showGenres("genre-serie")));
+        p.appendChild(mkItem("Tag …",           showTags));
+        p.appendChild(mkItem("Liste …",         showLists));
+        host.appendChild(p);
       }
+      function showGenres(type) {
+        host.innerHTML = "";
+        const p = mkPicker();
+        const media = type === "genre-film" ? "movie" : "tv";
+        const gids = new Set();
+        Object.values(db.items).filter(it => it.mediaType === media && !it.unranked)
+          .forEach(it => (it.genreIds || []).forEach(g => gids.add(g)));
+        const secs = getHomeSections();
+        const list = [...gids].map(g => [g, (genreMapById && genreMapById[g]) || ("Genre " + g)])
+          .filter(([g]) => !secs.some(s => s.type === type && s.genreId === g))
+          .sort((a, b) => a[1].localeCompare(b[1]));
+        if (!list.length) p.appendChild(mkItem("Keine Genres verfügbar", () => {}));
+        list.forEach(([g, name]) => p.appendChild(mkItem("Beste " + name, () => addSection({ type, genreId: g }))));
+        host.appendChild(p);
+      }
+      function showTags() {
+        host.innerHTML = "";
+        const p = mkPicker();
+        const secs = getHomeSections();
+        const tags = (db.tagDefs || []).filter(t => !secs.some(s => s.type === "tag" && s.tag === t));
+        if (!tags.length) p.appendChild(mkItem("Keine Tags verfügbar", () => {}));
+        tags.forEach(t => p.appendChild(mkItem(t, () => addSection({ type: "tag", tag: t }))));
+        host.appendChild(p);
+      }
+      function showLists() {
+        host.innerHTML = "";
+        const p = mkPicker();
+        const secs = getHomeSections();
+        const lists = Object.values(db.lists).filter(l => !secs.some(s => s.type === "list" && s.listId === l.id));
+        if (!lists.length) p.appendChild(mkItem("Keine Listen verfügbar", () => {}));
+        lists.forEach(l => p.appendChild(mkItem(l.name, () => addSection({ type: "list", listId: l.id }))));
+        host.appendChild(p);
+      }
+
+      addBtn.addEventListener("click", () => { if (host.childElementCount) clear(); else showTypes(); });
+      wrap.appendChild(addBtn); wrap.appendChild(host);
+      return wrap;
     }
 
-    function ensureCustomHomeRow(listId) {
-      if (document.getElementById(listId)) return;
-      const el = document.createElement("div"); el.id = listId; el.className = "log-home-row"; el.hidden = true;
-      const home = document.getElementById("log-home");
-      const hint = document.getElementById("log-hint");
-      if (hint) home.insertBefore(el, hint); else home.appendChild(el);
+    function addSection(desc) {
+      const secs = getHomeSections();
+      secs.push(desc);
+      db.homeSections = secs; saveDB();
+      renderLogHome();
+      renderReorderPanel();
     }
 
-    function buildCustomHomeRow(listId) {
-      const lst = db.lists[listId]; if (!lst) return;
-      const items = Object.values(lst.items).reverse().map(r => ({
-        id: r.id, mediaType: r.media_type || "movie", title: r.title || r.name,
-        poster: r.poster_path, year: (r.release_date || r.first_air_date || "").slice(0, 4), score: 0
-      }));
-      buildHomeRow(listId, lst.name, items, false);
+    function removeSection(idx) {
+      const secs = getHomeSections();
+      if (idx < 0 || idx >= secs.length) return;
+      const [removed] = secs.splice(idx, 1);
+      db.homeSections = secs; saveDB();
+      const el = document.getElementById(sectionKey(removed));
+      if (el) el.hidden = true;
+      applyHomeOrder();
+      renderReorderPanel();
     }
 
-    function moveSection(id, dir) {
-      const o = getHomeOrder();
-      const i = o.indexOf(id), j = i + dir;
-      if (j < 0 || j >= o.length) return;
-      const tmp = o[i]; o[i] = o[j]; o[j] = tmp;
-      db.homeOrder = o; saveDB();
+    function moveSection(idx, dir) {
+      const secs = getHomeSections();
+      const j = idx + dir;
+      if (j < 0 || j >= secs.length) return;
+      const tmp = secs[idx]; secs[idx] = secs[j]; secs[j] = tmp;
+      db.homeSections = secs; saveDB();
       applyHomeOrder();        // live feedback on the real rows
       renderReorderPanel();
     }
@@ -4297,7 +4481,11 @@
     function onHomeSectionHeaderClick(id) {
       if (id === "lh-watchlist") { switchTab("lists"); setTimeout(() => openListDetail("watchlist"), 60); return; }
       if (id === "lh-movies" || id === "lh-series") { switchTab("ranking"); return; }
-      openHomeSectionFull(id);
+      // R18-B2: a list section's header opens that list; recent/progress get the
+      // full overlay. Genre/tag rows have no "see all" page, so the header is inert.
+      const sec = getHomeSections().find(s => sectionKey(s) === id);
+      if (sec && sec.type === "list") { switchTab("lists"); setTimeout(() => openListDetail(sec.listId), 60); return; }
+      if (id === "lh-recent" || id === "lh-progress") { openHomeSectionFull(id); return; }
     }
 
     function openHomeSectionFull(sectionId) {
@@ -6346,18 +6534,18 @@
       const list = db.lists[listId];
       if (list && list.shared && list.sharedId && window.__vaultSocial) {
         window.__vaultSocial.addToSharedList(list.sharedId, key, rec, window.__vaultUser.uid).catch(() => {});
-        notifyShared(list, "list_item_added", rec.title);
+        notifyShared(list, "list_item_added", rec);
       }
       return true;
     }
     function removeFromList(listId, key) {
       const map = listItemsMap(listId);
       const list = db.lists[listId];
-      const title = map[key] && map[key].title;
+      const removed = map[key];           // capture id/type/title for the notification before deletion
       if (map[key]) { delete map[key]; saveDB(); }
       if (list && list.shared && list.sharedId && window.__vaultSocial) {
         window.__vaultSocial.removeFromSharedList(list.sharedId, key).catch(() => {});
-        notifyShared(list, "list_item_removed", title || "");
+        notifyShared(list, "list_item_removed", removed || null);
       }
     }
     function createList(name, permanent) {
@@ -6373,6 +6561,7 @@
         // remove from home custom sections if pinned
         if (db.homeCustomSections) db.homeCustomSections = db.homeCustomSections.filter(id => id !== listId);
         if (db.homeOrder) db.homeOrder = db.homeOrder.filter(id => id !== listId);
+        if (Array.isArray(db.homeSections)) db.homeSections = db.homeSections.filter(s => !(s.type === "list" && s.listId === listId));
         const el = document.getElementById(listId); if (el) el.remove();
         saveDB();
       }
@@ -6574,10 +6763,14 @@
         .filter(it => it.loggedAt && !_rwExcluded[it.mediaType + ":" + it.id])
         .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0))
         .slice(0, 20)
-        .map(it => ({
-          id: it.id, title: it.title || "", posterPath: it.poster || null,
-          mediaType: it.mediaType, bucket: it.bucket || null, watchedAt: it.loggedAt || 0
-        }));
+        .map(it => {
+          const m = db.meta[it.mediaType + ":" + it.id];
+          return {
+            id: it.id, title: it.title || "", posterPath: it.poster || null,
+            mediaType: it.mediaType, bucket: it.bucket || null, watchedAt: it.loggedAt || 0,
+            year: it.year || null, note: (m && m.note) ? m.note : ""   // R18-A: feed shows the friend's note
+          };
+        });
       // Top ranked — movies + series merged, honouring manual order, by Elo, max 20.
       const rankMovies = orderedRankedItems(rankedPool("movie").sort((a, b) => b.score - a.score), "movie");
       const rankSeries = orderedRankedItems(rankedPool("tv").sort((a, b) => b.score - a.score), "tv");
@@ -6723,7 +6916,7 @@
       if (!list || !list.shared) return;
       stopSharedSub();
       // Notify the other member(s) while we still know who they are.
-      notifyShared(list, "list_unshared", "");
+      notifyShared(list, "list_unshared", null);
       // Leave the collaboration in Firestore (drop self from members).
       if (list.sharedId && window.__vaultSocial && window.__vaultSocial.leaveSharedList) {
         try { await window.__vaultSocial.leaveSharedList(list.sharedId, window.__vaultUser.uid); } catch (e) {}
@@ -6738,14 +6931,38 @@
     }
 
     // Notify every other member of a shared list (best-effort).
-    function notifyShared(list, type, title) {
+    // `item` may be the local record (id/mediaType/title/poster) or null (e.g. unshare).
+    function notifyShared(list, type, item) {
       if (!list || !list.shared || !window.__vaultUser || !window.__vaultSocial || !window.__vaultSocial.sendSharedListNotif) return;
       const myUid  = window.__vaultUser.uid;
       const myName = (_myProfile && _myProfile.username) || (window.__vaultUser.email || "");
+      const title      = item ? (item.title || "") : "";
+      const tmdbId     = item ? (item.id || null) : null;
+      const itemType   = item ? (item.mediaType || null) : null;
+      const itemPoster = item ? (item.poster || null) : null;
       (list.members || []).forEach(uid => {
         if (uid === myUid) return;
-        window.__vaultSocial.sendSharedListNotif(uid, myUid, myName, list.sharedId, list.name, title || "", type).catch(() => {});
+        window.__vaultSocial.sendSharedListNotif(uid, myUid, myName, list.sharedId, list.name, title, type, tmdbId, itemType, itemPoster).catch(() => {});
       });
+    }
+
+    // C1 (R18): a shared-list notification stores the Firestore sharedId, but
+    // openListDetail needs the LOCAL list id. Resolve it (syncing first if the
+    // list hasn't been pulled into the local tab yet) so the link opens the real,
+    // populated list instead of an empty/wrong one.
+    async function openSharedListByShared(sharedId) {
+      if (!sharedId) return;
+      const findLocal = () => {
+        for (const id in db.lists) if (db.lists[id].sharedId === sharedId) return id;
+        return null;
+      };
+      let localId = findLocal();
+      if (!localId && typeof syncSharedLists === "function") {
+        try { await syncSharedLists(); } catch (e) {}
+        localId = findLocal();
+      }
+      if (localId) openListDetail(localId);
+      else showToast("Liste nicht gefunden");
     }
 
     // R13-#6 phase 2: pull shared lists I'm a member of into the local Listen tab
@@ -8922,10 +9139,15 @@
       if (!ts) return "";
       const d = ts.toDate ? ts.toDate() : new Date(ts);
       const diff = Date.now() - d.getTime();
-      if (diff < 60000)  return "Gerade eben";
-      if (diff < 3600000) return Math.floor(diff/60000) + " Min. ago";
-      if (diff < 86400000) return Math.floor(diff/3600000) + " Std. ago";
-      return Math.floor(diff/86400000) + " Tagen ago";
+      if (diff < 60000)    return "Gerade eben";
+      if (diff < 3600000)  return "vor " + Math.floor(diff / 60000) + " Min.";
+      if (diff < 86400000) return "vor " + Math.floor(diff / 3600000) + " Std.";
+      const days = Math.floor(diff / 86400000);
+      if (days === 1) return "gestern";
+      if (days < 7)   return "vor " + days + " Tagen";
+      if (days < 30)  { const w = Math.floor(days / 7);   return "vor " + w + (w === 1 ? " Woche" : " Wochen"); }
+      if (days < 365) { const m = Math.floor(days / 30);  return "vor " + m + (m === 1 ? " Monat" : " Monaten"); }
+      const y = Math.floor(days / 365); return "vor " + y + (y === 1 ? " Jahr" : " Jahren");
     }
     function bucketToStars(b) {
       const m = { great: "★★★★★", good: "★★★★", watchable: "★★★", meh: "★★", bad: "★" };
@@ -8952,6 +9174,10 @@
       if (!window.__vaultSocial) return;
       _notifUnsub = window.__vaultSocial.subscribeNotifications(uid, notifs => {
         updateNotifBadge(notifs);
+        // C3 (R18): keep the open notification center in sync with the live data
+        // (read-state changes, new arrivals) so marking read always reflects.
+        const nc = document.getElementById("notif-center");
+        if (nc && !nc.hidden) renderNotifList(_notifCache);
         // Show recommendation popup if needed
         const unreadRecos = notifs.filter(n => n.type === "item_shared" && !n.read);
         if (unreadRecos.length && !_recoPopupShown) { _recoPopupShown = true; showRecoPopup(unreadRecos); }
@@ -8990,6 +9216,11 @@
     document.getElementById("notif-center-back").addEventListener("click", closeNotifCenter);
     document.getElementById("notif-mark-all").addEventListener("click", async () => {
       if (!window.__vaultUser || !window.__vaultSocial) return;
+      // C3 (R18): optimistic — flip the local cache, re-render and refresh the
+      // badge right away so it feels reliable; the snapshot confirms afterwards.
+      _notifCache = _notifCache.map(n => ({ ...n, read: true }));
+      updateNotifBadge(_notifCache);
+      renderNotifList(_notifCache);
       await window.__vaultSocial.markAllRead(window.__vaultUser.uid);
     });
 
@@ -9032,6 +9263,10 @@
           const uid  = window.__vaultUser?.uid;
           const nid  = el.dataset.id;
           if (uid && nid && window.__vaultSocial) window.__vaultSocial.markNotificationRead(uid, nid);
+          // C3 (R18): reflect read-state locally (cache + badge) right away.
+          const cached = _notifCache.find(n => n.id === nid);
+          if (cached) cached.read = true;
+          updateNotifBadge(_notifCache);
           el.classList.remove("unread");
           el.querySelector(".notif-unread-dot")?.remove();
           if (el.dataset.type === "friend_request" || el.dataset.type === "friend_accepted") {
@@ -9056,8 +9291,8 @@
           } else if (tap === "list") {
             closeNotifCenter();
             switchTab("lists");
-            const listId = span.dataset.listid;
-            if (listId) setTimeout(() => { if (typeof openListDetail === "function") openListDetail(listId); }, 80);
+            const sharedId = span.dataset.listid;
+            if (sharedId) setTimeout(() => openSharedListByShared(sharedId), 80);
           }
         });
       });
@@ -9211,114 +9446,148 @@
       if (tabFeed)    tabFeed.classList.toggle("active",    pane === "feed");
       if (tabFriends) tabFriends.classList.toggle("active", pane === "friends");
       if (pane === "feed") renderFeed();
+      else stopFeedSubs();
     }
 
-    // R17-B3: Activity feed rendered from friends' recentlyWatched snapshots
+    // R18-A: Instagram-style activity feed — highlights from friends'
+    // recentlyWatched, with live profile listeners while the Feed pane is open.
+    const FEED_STAR = { great: 5, good: 4, watchable: 3, meh: 2, bad: 1 };
+    const feedIsHighlight = b => { const s = FEED_STAR[b] || 0; return s >= 4 || s === 1; };
+
+    let _feedUnsubs = [];
+    let _feedProfiles = {};
+
+    function stopFeedSubs() {
+      _feedUnsubs.forEach(fn => { try { fn(); } catch (e) {} });
+      _feedUnsubs = [];
+    }
+
+    const FEED_BOOKMARK = '<svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+    const FEED_EYE      = '<svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+    const FEED_PEOPLE   = '<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+
     async function renderFeed() {
       const host = document.getElementById("social-feed-list");
       if (!host) return;
       const accepted = _socialFriends.filter(f => f.status === "accepted");
       if (!accepted.length) {
+        stopFeedSubs();
         host.innerHTML = '<div class="feed-empty">' +
           '<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' +
-          'Noch keine Aktivität. Füge Freunde hinzu, um ihren Feed zu sehen.</div>';
+          'Noch keine Aktivität von deinen Freunden.</div>';
         return;
       }
 
       host.innerHTML = '<div style="color:var(--text-mute);font-size:13px;padding:12px 0">Lade Feed …</div>';
 
-      // Fetch each friend's profile (contains recentlyWatched snapshot)
-      const profilePromises = accepted.map(f =>
+      // Initial fetch — recentlyWatched lives on each friend's profile.
+      const results = await Promise.all(accepted.map(f =>
         (window.__vaultSocial ? window.__vaultSocial.getProfile(f.uid) : Promise.resolve(null))
-          .catch(() => null)
-          .then(p => ({ friend: f, profile: p }))
-      );
-      const results = await Promise.all(profilePromises);
+          .catch(() => null).then(p => ({ friend: f, profile: p }))));
+      results.forEach(({ friend, profile }) => { _feedProfiles[friend.uid] = profile; });
 
-      // Collect and merge feed items
+      paintFeed(host, accepted);
+
+      // A4: live updates — re-paint whenever a friend's profile changes.
+      stopFeedSubs();
+      if (window.__vaultSocial && window.__vaultSocial.subscribeProfile) {
+        accepted.forEach(f => {
+          _feedUnsubs.push(window.__vaultSocial.subscribeProfile(f.uid, p => {
+            _feedProfiles[f.uid] = p;
+            if (_socialActivePane === "feed" && document.body.dataset.tab === "social") paintFeed(host, accepted);
+          }));
+        });
+      }
+    }
+
+    function paintFeed(host, accepted) {
+      // "Auch gesehen von" index: key → [{uid, username, self}]
+      const watchers = {};
+      const addWatcher = (key, uid, username, self) => {
+        if (!watchers[key]) watchers[key] = [];
+        if (!watchers[key].some(w => w.uid === uid)) watchers[key].push({ uid, username, self: !!self });
+      };
+
       const items = [];
-      results.forEach(({ friend, profile }) => {
+      accepted.forEach(f => {
+        const profile = _feedProfiles[f.uid];
         if (!profile || profile.privacy?.shareWatched === false) return;
-        const watched = profile.recentlyWatched || [];
-        watched.slice(0, 5).forEach(it => {
-          items.push({ friend, item: it, ts: it.loggedAt || 0 });
+        (profile.recentlyWatched || []).forEach(it => {
+          const key = (it.mediaType || "movie") + ":" + it.id;
+          addWatcher(key, f.uid, f.username || f.uid);                       // anyone who saw it
+          if (feedIsHighlight(it.bucket)) items.push({ friend: f, item: it, ts: it.watchedAt || 0 }); // only highlights as posts
         });
       });
+      const myUid  = window.__vaultUser && window.__vaultUser.uid;
+      const myName = (_myProfile && _myProfile.username) || "Du";
+      if (myUid) Object.values(db.items).forEach(it => addWatcher(it.mediaType + ":" + it.id, myUid, myName, true));
 
-      // Sort newest first
       items.sort((a, b) => b.ts - a.ts);
 
       if (!items.length) {
         host.innerHTML = '<div class="feed-empty">' +
           '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
-          'Noch keine Aktivität deiner Freunde sichtbar.</div>';
+          'Noch keine Aktivität von deinen Freunden.</div>';
         return;
       }
 
       host.innerHTML = items.map(({ friend, item }) => {
-        const poster = item.poster
-          ? `<img class="feed-card-poster" src="${IMG_BASE}w154${item.poster}" alt="" loading="lazy"
-               data-id="${item.id}" data-type="${item.mediaType || 'movie'}">`
-          : `<div class="feed-card-poster" style="display:flex;align-items:center;justify-content:center">
-               <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--text-mute)" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="3"/><path d="M2 10h20"/></svg>
-             </div>`;
-        const stars = bucketToStars(item.bucket);
-        const mediaLabel = item.mediaType === "tv" ? "Serie" : "Film";
-        const timeStr = relativeTime(item.loggedAt);
-        const alreadyInWl = !!db.watchlist[keyOf(item.mediaType || "movie", item.id)];
+        const type = item.mediaType || "movie";
+        const key  = keyOf(type, item.id);
+        const posterInner = item.posterPath
+          ? `<img class="feed-poster" src="${IMG_BASE}w500${item.posterPath}" alt="" loading="lazy">`
+          : `<div class="feed-poster feed-poster-ph"><span>${socialEsc(item.title || "")}</span></div>`;
+        const stars      = bucketToStars(item.bucket);
+        const mediaLabel = type === "tv" ? "Serie" : "Film";
+        const titleLine  = [socialEsc(item.title || ""), mediaLabel, (item.year || "")].filter(Boolean).join(" · ");
+        const inWl       = !!db.watchlist[key];
+        const seen = (watchers[key] || []).filter(w => w.uid !== friend.uid);  // exclude the poster
+        const seenHtml = seen.length
+          ? `<div class="feed-alsoseen"><span class="feed-alsoseen-ic">${FEED_PEOPLE}</span>` +
+            `<span class="feed-alsoseen-lbl">Auch gesehen von</span><div class="feed-alsoseen-avs">` +
+            seen.slice(0, 8).map(w =>
+              `<div class="feed-mini-av${w.self ? " self" : ""}"${w.self ? "" : ` data-uid="${socialEsc(w.uid)}"`} title="${socialEsc(w.username)}">${avatarInitial(w.username)}</div>`).join("") +
+            `</div></div>`
+          : "";
         return `<div class="feed-card">
-          <div class="feed-card-header" data-uid="${socialEsc(friend.uid)}">
-            <div class="friend-avatar" style="width:34px;height:34px;font-size:14px">${avatarInitial(friend.username || friend.uid)}</div>
-            <div class="feed-card-meta">
-              <div class="feed-card-author">${socialEsc(friend.username || friend.uid)}</div>
-              <div class="feed-card-time">${timeStr}</div>
+          <div class="feed-head">
+            <div class="feed-av" data-uid="${socialEsc(friend.uid)}">${avatarInitial(friend.username || friend.uid)}</div>
+            <div class="feed-author" data-uid="${socialEsc(friend.uid)}">${socialEsc(friend.username || friend.uid)}</div>
+            <div class="feed-time">${relativeTime(item.watchedAt)}</div>
+          </div>
+          <div class="feed-poster-wrap" data-id="${item.id}" data-type="${type}">${posterInner}</div>
+          <div class="feed-engage">
+            <div class="feed-stars">${stars || ""}</div>
+            <div class="feed-icons">
+              <button class="feed-icon-btn feed-bm${inWl ? " on" : ""}" data-id="${item.id}" data-type="${type}" data-title="${socialEsc(item.title || "")}" data-poster="${socialEsc(item.posterPath || "")}" aria-label="Watchlist">${FEED_BOOKMARK}</button>
+              <button class="feed-icon-btn feed-eye" data-id="${item.id}" data-type="${type}" data-title="${socialEsc(item.title || "")}" data-poster="${socialEsc(item.posterPath || "")}" aria-label="Ich hab den auch gesehen">${FEED_EYE}</button>
             </div>
           </div>
-          <div class="feed-card-body">
-            <div class="feed-card-poster-wrap" data-id="${item.id}" data-type="${item.mediaType || 'movie'}">
-              ${poster}
-            </div>
-            <div class="feed-card-info">
-              <div class="feed-card-title">${socialEsc(item.title || "")}</div>
-              <div class="feed-card-sub">${mediaLabel}</div>
-              ${stars ? `<div class="feed-card-stars">${stars}</div>` : ""}
-              <div class="feed-card-btns">
-                <button class="feed-card-btn primary feed-wl-btn" data-id="${item.id}" data-type="${item.mediaType || 'movie'}" data-title="${socialEsc(item.title || '')}" data-poster="${socialEsc(item.poster || '')}">
-                  ${alreadyInWl ? "Auf Watchlist" : "+ Watchlist"}
-                </button>
-                <button class="feed-card-btn feed-detail-btn" data-id="${item.id}" data-type="${item.mediaType || 'movie'}">Details</button>
-              </div>
-            </div>
-          </div>
+          ${item.note ? `<div class="feed-note">„${socialEsc(item.note)}"</div>` : ""}
+          <div class="feed-titleline">${titleLine}</div>
+          ${seenHtml}
         </div>`;
       }).join("");
 
-      // Wire events
-      host.querySelectorAll(".feed-card-header[data-uid]").forEach(hdr => {
-        hdr.addEventListener("click", () => openFriendProfile(hdr.dataset.uid));
-      });
-      host.querySelectorAll(".feed-card-poster-wrap[data-id],.feed-card-poster[data-id]").forEach(el => {
+      // wiring
+      host.querySelectorAll(".feed-av[data-uid], .feed-author[data-uid]").forEach(el =>
+        el.addEventListener("click", () => openFriendProfile(el.dataset.uid)));
+      host.querySelectorAll(".feed-poster-wrap[data-id]").forEach(el => {
         el.style.cursor = "pointer";
         el.addEventListener("click", () => openDetail(el.dataset.type, parseInt(el.dataset.id, 10)));
       });
-      host.querySelectorAll(".feed-detail-btn[data-id]").forEach(btn => {
-        btn.addEventListener("click", () => openDetail(btn.dataset.type, parseInt(btn.dataset.id, 10)));
-      });
-      host.querySelectorAll(".feed-wl-btn[data-id]").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const k = keyOf(btn.dataset.type, btn.dataset.id);
-          if (db.watchlist[k]) {
-            delete db.watchlist[k]; saveDB();
-            btn.textContent = "+ Watchlist";
-          } else {
-            db.watchlist[k] = { id: parseInt(btn.dataset.id, 10), mediaType: btn.dataset.type,
-              title: btn.dataset.title, poster: btn.dataset.poster, loggedAt: Date.now() };
-            saveDB();
-            btn.textContent = "Auf Watchlist";
-            showToast("Auf Watchlist gespeichert");
-          }
-        });
-      });
+      host.querySelectorAll(".feed-mini-av[data-uid]").forEach(el =>
+        el.addEventListener("click", () => openFriendProfile(el.dataset.uid)));
+      host.querySelectorAll(".feed-bm").forEach(btn => btn.addEventListener("click", () => {
+        const k = keyOf(btn.dataset.type, btn.dataset.id);
+        if (db.watchlist[k]) { delete db.watchlist[k]; saveDB(); btn.classList.remove("on"); showToast("Von Watchlist entfernt"); }
+        else {
+          db.watchlist[k] = { id: parseInt(btn.dataset.id, 10), mediaType: btn.dataset.type, title: btn.dataset.title, poster: btn.dataset.poster, loggedAt: Date.now() };
+          saveDB(); btn.classList.add("on"); showToast("Auf Watchlist gespeichert");
+        }
+      }));
+      host.querySelectorAll(".feed-eye").forEach(btn => btn.addEventListener("click", () =>
+        openQuickRate({ id: parseInt(btn.dataset.id, 10), media_type: btn.dataset.type, title: btn.dataset.title, poster_path: btn.dataset.poster || null })));
     }
 
     // "Kein Benutzername" banner → jump to Profil where the username is set.
