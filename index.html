@@ -1845,6 +1845,66 @@
     .pwa-banner-close { flex: 0 0 auto; background: none; border: none; color: #1a1206; font-size: 16px; line-height: 1; cursor: pointer; padding: 4px; }
     .list-shared-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: var(--accent); font-weight: 600; margin-left: 6px; vertical-align: middle; }
     .list-shared-badge svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* R17-A3: Quick-rate popup above friend-profile detail overlay */
+    #qr-backdrop.over-profile { z-index: 150; }
+
+    /* R17-B: Social sub-tabs */
+    .social-tabs { display: flex; gap: 4px; margin-bottom: 18px; padding: 3px; background: var(--surface); border-radius: 12px; border: 1px solid var(--border); }
+    .social-tab { flex: 1; padding: 8px; border: none; background: none; color: var(--text-mute); font-family: inherit; font-size: 13px; font-weight: 600; border-radius: 9px; cursor: pointer; transition: all .18s ease; }
+    .social-tab.active { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+    .social-pane[hidden] { display: none !important; }
+
+    /* R17-B: Activity feed cards */
+    .feed-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 14px; }
+    .feed-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .feed-card-meta { flex: 1; min-width: 0; }
+    .feed-card-author { font-size: 14px; font-weight: 700; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .feed-card-time { font-size: 12px; color: var(--text-mute); margin-top: 1px; }
+    .feed-card-body { display: flex; gap: 12px; }
+    .feed-card-poster { flex: 0 0 64px; width: 64px; height: 96px; border-radius: 8px; object-fit: cover; background: var(--surface-2); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .feed-card-info { flex: 1; min-width: 0; }
+    .feed-card-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .feed-card-sub { font-size: 12px; color: var(--text-mute); margin-bottom: 5px; }
+    .feed-card-stars { font-size: 14px; color: var(--accent); margin-bottom: 5px; letter-spacing: .05em; }
+    .feed-card-note { font-size: 13px; color: var(--text-dim); font-style: italic; line-height: 1.4; margin-bottom: 7px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .feed-card-btns { display: flex; gap: 8px; margin-top: 10px; }
+    .feed-card-btn { flex: 1; padding: 8px 10px; border-radius: 8px; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: none; color: var(--text-dim); }
+    .feed-card-btn.primary { background: var(--accent); color: #1a1206; border-color: var(--accent); }
+    .feed-card-btn:active { opacity: .7; }
+    .feed-empty { text-align: center; padding: 48px 24px; color: var(--text-mute); font-size: 14px; line-height: 1.6; }
+    .feed-empty svg { width: 42px; height: 42px; stroke: var(--text-mute); fill: none; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; display: block; margin: 0 auto 14px; }
+
+    /* R17-B5: "Also seen by friends" in film detail */
+    .also-seen-section { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+    .also-seen-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-mute); margin-bottom: 10px; }
+    .also-seen-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .also-seen-row:active { opacity: .7; }
+    .also-seen-avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #c8901f); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #1a1206; flex: 0 0 auto; }
+    .also-seen-name { font-size: 13px; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .also-seen-rating { font-size: 13px; color: var(--accent); flex: 0 0 auto; }
+
+    /* R17-C: Friend management accordion in Profil */
+    .prof-friend-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .prof-friend-row:last-child { border-bottom: none; }
+    .prof-friend-info { flex: 1; min-width: 0; }
+    .prof-friend-name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .prof-friend-sub { font-size: 12px; color: var(--text-mute); margin-top: 1px; }
+    .prof-friend-btns { display: flex; gap: 6px; flex: 0 0 auto; }
+    .prof-friend-btn { padding: 5px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; border: 1px solid var(--border); background: none; color: var(--text-dim); }
+    .prof-friend-btn.danger { border-color: #ef4444; color: #ef4444; }
+    .prof-friend-btn:active { opacity: .7; }
+    .prof-friends-invite { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin: 12px 0; padding: 11px 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--accent); font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .prof-friends-invite:active { opacity: .7; }
+    .prof-friends-invite svg { flex: 0 0 auto; }
+    #prof-invite-url { display: none; }
+
+    /* R17-D: Home dynamic sections – refresh button */
+    .lh-home-head { display: flex; align-items: center; gap: 8px; }
+    .lh-home-head h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+    .lh-refresh-btn { margin-left: auto; background: none; border: none; padding: 6px; cursor: pointer; color: var(--text-mute); display: flex; align-items: center; border-radius: 8px; }
+    .lh-refresh-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .lh-refresh-btn:active { color: var(--accent); }
   </style>
 </head>
 <body data-tab="log">
@@ -1872,6 +1932,9 @@
       <div id="log-home">
         <div id="log-hero" hidden></div>
         <div id="lh-edit-bar" hidden>
+          <button id="lh-refresh-btn" class="lh-refresh-btn" type="button" aria-label="Abschnitte neu laden">
+            <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
           <button id="lh-edit-toggle" class="lh-edit-btn" type="button">
             <svg viewBox="0 0 24 24"><polyline points="8 9 12 5 16 9"/><polyline points="8 15 12 19 16 15"/></svg>
             <span>Bearbeiten</span>
@@ -1886,6 +1949,12 @@
         <div id="lh-watchlist" class="log-home-row" hidden></div>
         <div id="lh-movies" class="log-home-row" hidden></div>
         <div id="lh-series" class="log-home-row" hidden></div>
+        <!-- R17-D: dynamic section slots (genre, long-unseen, recently-added, from-list) -->
+        <div id="lh-genre-film" class="log-home-row" hidden></div>
+        <div id="lh-genre-serie" class="log-home-row" hidden></div>
+        <div id="lh-long-unseen" class="log-home-row" hidden></div>
+        <div id="lh-recently-added" class="log-home-row" hidden></div>
+        <div id="lh-from-list" class="log-home-row" hidden></div>
         <div id="log-hint" class="placeholder">
           <svg viewBox="0 0 24 24"><path d="M3 8h18v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 8l2.5-4 4 1.6L7 9.6M9.5 5.6L13.5 4 16 8M13.5 5.6L17.5 4 20 8"/></svg>
           <span>Tippe los — schon ein paar Buchstaben reichen.</span>
@@ -2094,39 +2163,34 @@
       <div id="social-login-hint" hidden>
         <div class="social-empty">
           <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Melde dich an, um Freunde hinzuzufügen und Empfehlungen zu teilen.
+          Melde dich an, um den Activity Feed deiner Freunde zu sehen.
         </div>
       </div>
       <div id="social-content" hidden>
+        <!-- no-username banner (no search — that lives in Profil now) -->
         <button id="social-no-username" class="social-no-username" type="button" hidden>
-          <span>Kein Benutzername gesetzt — lege einen unter <strong>Profil</strong> fest, damit Freunde dich finden.</span>
+          <span>Kein Benutzername gesetzt — lege einen unter <strong>Profil</strong> fest.</span>
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
-        <div class="social-search-wrap" style="margin-top:20px">
-          <p class="social-section-title">Freunde finden</p>
-          <div class="search-bar">
-            <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-            <input id="social-search" type="search" inputmode="search" autocomplete="off"
-                   autocorrect="off" spellcheck="false" enterkeyhint="search"
-                   placeholder="Benutzername oder E-Mail …" aria-label="Freunde suchen" />
-          </div>
-          <p class="social-search-hint">Suche per <strong>Benutzername</strong> oder <strong>E-Mail</strong> — oder teile deinen Einladungslink.</p>
-          <div id="social-search-results"></div>
-          <div id="social-invite-wrap" hidden>
-            <button class="social-invite-btn" type="button" id="social-invite-copy">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-              Einladungslink kopieren
-            </button>
-            <span class="social-invite-url" id="social-invite-url" hidden></span>
-          </div>
+        <!-- R17-B: Sub-tab pills -->
+        <div class="social-tabs">
+          <button class="social-tab active" data-stab="feed" id="social-tab-feed">Feed</button>
+          <button class="social-tab" data-stab="friends" id="social-tab-friends">Freunde</button>
         </div>
-        <div id="social-requests-section" hidden style="margin-top:20px">
-          <p class="social-section-title">Anfragen</p>
-          <div id="social-requests-list"></div>
+        <!-- Feed pane -->
+        <div id="social-feed-pane" class="social-pane">
+          <div id="social-feed-list"></div>
         </div>
-        <div id="social-friends-section" style="margin-top:20px">
-          <p class="social-section-title">Freunde</p>
-          <div id="social-friends-list"></div>
+        <!-- Freunde pane (friend list only — search/management is in Profil) -->
+        <div id="social-friends-pane" class="social-pane" hidden>
+          <div id="social-requests-section" hidden>
+            <p class="social-section-title">Anfragen</p>
+            <div id="social-requests-list"></div>
+          </div>
+          <div id="social-friends-section">
+            <p class="social-section-title">Freunde</p>
+            <div id="social-friends-list"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -2137,22 +2201,31 @@
         <h1>Profil</h1>
         <p>Deine Statistiken.</p>
       </div>
-      <!-- R13-#8: stats first; account area moved to the very bottom -->
+      <!-- R17-A2: correct section order -->
+      <!-- 1. Statistiken -->
       <div id="profile-stats" class="stat-grid"></div>
       <div id="profile-note" class="profile-note"></div>
+      <!-- 2. Benutzername -->
+      <div id="profile-username"></div>
+      <!-- 3. Account block (E-Mail, Sync, Passwort, Logout) -->
+      <div id="profile-account"></div>
+      <!-- 4+5. Empfehlungen + Benachrichtigungen (both rendered into profile-settings) -->
       <div id="profile-settings"></div>
+      <!-- 6. Datenschutz -->
       <div id="profile-privacy"></div>
+      <!-- 7. Freunde verwalten (R17-C) -->
+      <div id="profile-friends"></div>
+      <!-- 8. Gesperrte Titel -->
       <div id="profile-blocked"></div>
+      <!-- 9. Listen-Freigaben (extracted from Datenschutz in R17) -->
+      <div id="profile-list-shares"></div>
+      <!-- 10. Daten exportieren — absolute last item -->
       <div class="export-section">
         <button class="export-btn" onclick="exportDB()">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Daten exportieren
         </button>
       </div>
-      <!-- R14-#1: Benutzername direkt über dem Account-Block; Account ganz unten -->
-      <div id="profile-username"></div>
-      <!-- Account-Bereich (E-Mail, Sync, Passwort, Logout) als absolut letztes Element -->
-      <div id="profile-account"></div>
     </section>
 
   </div>
@@ -3918,6 +3991,58 @@
       setupHeroSwipe();
     }
 
+    // R17-D: Session-scoped dynamic section selection (null = needs picking this session)
+    let _homeSessionDynamic = null;
+
+    // Pick 1-3 optional sections randomly for this session
+    function pickDynamicSections() {
+      const all    = Object.values(db.items);
+      const movies = all.filter(it => it.mediaType === "movie");
+      const series = all.filter(it => it.mediaType === "tv");
+      const lists  = Object.values(db.lists || {});
+      const now    = Date.now();
+      const sixMo  = 6 * 30 * 24 * 3600 * 1000;
+
+      // Build candidate pool — only include sections that have content
+      const pool = [];
+
+      // Genre sections: find genres the user has well-rated items in
+      const movieGenres = {};
+      movies.filter(it => !it.unranked && (it.bucket === "great" || it.bucket === "good"))
+        .forEach(it => (it.genreIds || []).forEach(gid => { movieGenres[gid] = (movieGenres[gid] || 0) + 1; }));
+      const topMovieGenres = Object.entries(movieGenres).sort((a, b) => b[1] - a[1]).map(e => parseInt(e[0], 10));
+      if (topMovieGenres.length) pool.push({ id: "lh-genre-film", genreId: topMovieGenres[Math.floor(Math.random() * Math.min(3, topMovieGenres.length))] });
+
+      const tvGenres = {};
+      series.filter(it => !it.unranked && (it.bucket === "great" || it.bucket === "good"))
+        .forEach(it => (it.genreIds || []).forEach(gid => { tvGenres[gid] = (tvGenres[gid] || 0) + 1; }));
+      const topTvGenres = Object.entries(tvGenres).sort((a, b) => b[1] - a[1]).map(e => parseInt(e[0], 10));
+      if (topTvGenres.length) pool.push({ id: "lh-genre-serie", genreId: topTvGenres[Math.floor(Math.random() * Math.min(3, topTvGenres.length))] });
+
+      // Aus deiner Liste (random non-empty list)
+      const nonEmptyLists = lists.filter(l => l.items && l.items.length > 0);
+      if (nonEmptyLists.length) {
+        const picked = nonEmptyLists[Math.floor(Math.random() * nonEmptyLists.length)];
+        pool.push({ id: "lh-from-list", listId: picked.id, listName: picked.name });
+      }
+
+      // Long unseen (>6 months ago)
+      const longUnseen = all.filter(it => it.loggedAt && (now - it.loggedAt) > sixMo);
+      if (longUnseen.length >= 3) pool.push({ id: "lh-long-unseen" });
+
+      // Recently added (last 30 days)
+      const recentItems = all.sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0)).slice(0, 20)
+        .filter(it => (now - (it.loggedAt || 0)) < 30 * 24 * 3600 * 1000);
+      if (recentItems.length >= 3) pool.push({ id: "lh-recently-added" });
+
+      // Shuffle pool and take 1-3
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      return pool.slice(0, 3);
+    }
+
     function renderLogHome() {
       const all = Object.values(db.items);
       const hint = document.getElementById("log-hint");
@@ -3943,6 +4068,10 @@
       buildHomeRow("lh-movies", "Top Filme", topMovies, true);
       buildHomeRow("lh-series", "Top Serien", topSeries, true);
 
+      // R17-D: dynamic optional sections (randomized once per session)
+      if (!_homeSessionDynamic) _homeSessionDynamic = pickDynamicSections();
+      buildDynamicSections(_homeSessionDynamic, all);
+
       // R6-P4: render pinned custom list sections as Home rows
       (db.homeCustomSections || []).forEach(listId => {
         if (!db.lists[listId]) return;
@@ -3956,6 +4085,68 @@
       if (editBar) editBar.hidden =
         !(all.length || Object.keys(db.watchlist).length || Object.keys(db.progress).length);
     }
+
+    function buildDynamicSections(sections, all) {
+      const now   = Date.now();
+      const sixMo = 6 * 30 * 24 * 3600 * 1000;
+
+      // Hide all dynamic slots first
+      ["lh-genre-film", "lh-genre-serie", "lh-from-list", "lh-long-unseen", "lh-recently-added"]
+        .forEach(id => { const el = document.getElementById(id); if (el) el.hidden = true; });
+
+      sections.forEach(sec => {
+        switch (sec.id) {
+          case "lh-genre-film": {
+            const gid   = sec.genreId;
+            const items = all.filter(it => it.mediaType === "movie" && !it.unranked && (it.genreIds || []).includes(gid))
+              .sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10);
+            if (!items.length) return;
+            const gname = (genreMapById && genreMapById[gid]) || "Genre";
+            buildHomeRow("lh-genre-film", "Bester " + gname + "-Film", items, true);
+            break;
+          }
+          case "lh-genre-serie": {
+            const gid   = sec.genreId;
+            const items = all.filter(it => it.mediaType === "tv" && !it.unranked && (it.genreIds || []).includes(gid))
+              .sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10);
+            if (!items.length) return;
+            const gname = (genreMapById && genreMapById[gid]) || "Genre";
+            buildHomeRow("lh-genre-serie", "Beste " + gname + "-Serie", items, true);
+            break;
+          }
+          case "lh-from-list": {
+            const list = db.lists[sec.listId];
+            if (!list || !list.items || !list.items.length) return;
+            const listItems = list.items.map(it => ({
+              id: it.id, mediaType: it.mediaType, title: it.title, poster: it.poster,
+              score: 0, loggedAt: 0
+            })).slice(0, 10);
+            buildHomeRow("lh-from-list", "Aus deiner Liste: " + (sec.listName || list.name), listItems, false);
+            break;
+          }
+          case "lh-long-unseen": {
+            const items = all.filter(it => it.loggedAt && (now - it.loggedAt) > sixMo)
+              .sort(() => Math.random() - 0.5).slice(0, 8);
+            if (!items.length) return;
+            buildHomeRow("lh-long-unseen", "Schon lange nicht gesehen", items, false);
+            break;
+          }
+          case "lh-recently-added": {
+            const items = all.filter(it => it.loggedAt && (now - it.loggedAt) < 30 * 24 * 3600 * 1000)
+              .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0)).slice(0, 10);
+            if (!items.length) return;
+            buildHomeRow("lh-recently-added", "Kürzlich hinzugefügt", items, false);
+            break;
+          }
+        }
+      });
+    }
+
+    // Refresh button — pick new sections for this session and re-render
+    document.getElementById("lh-refresh-btn").addEventListener("click", () => {
+      _homeSessionDynamic = null;   // force re-pick
+      renderLogHome();
+    });
 
     // ---------- Home section reordering (N5) + custom list sections (R6-P4) ----------
     const SECTION_LABELS = {
@@ -4302,15 +4493,29 @@
         });
         qrBuckets.appendChild(el);
       });
-      // Show share toggle only when logged in and has friends
+      // A1: Show share toggle when logged in and has friends; refresh if not yet loaded
       const hasFriends = !!(window.__vaultUser && typeof _socialFriends !== "undefined" && _socialFriends.some(f => f.status === "accepted"));
       const shareRow = document.getElementById("qr-share-row");
       if (shareRow) shareRow.hidden = !hasFriends;
+      if (window.__vaultUser && window.__vaultSocial && !hasFriends) {
+        loadSocialFriends().then(() => {
+          const sr = document.getElementById("qr-share-row");
+          if (sr && !qrBackdrop.hidden) sr.hidden = !_socialFriends.some(f => f.status === "accepted");
+        }).catch(() => {});
+      }
+      // A3: if opened from a friend-profile stacked detail, raise z-index above it
+      const detailOverlay = document.getElementById("detail");
+      if (detailOverlay && detailOverlay.classList.contains("over-profile")) {
+        qrBackdrop.classList.add("over-profile");
+      } else {
+        qrBackdrop.classList.remove("over-profile");
+      }
       qrBackdrop.hidden = false;
       document.body.style.overflow = "hidden";
     }
     function closeQuickRate() {
       qrBackdrop.hidden = true;
+      qrBackdrop.classList.remove("over-profile");
       qrItem = null;
       _qrPendingBucket = null;
       document.body.style.overflow = "";
@@ -5350,6 +5555,8 @@
       // Filled after innerHTML below: collection needs an extra fetch; both use card style.
       if (!isTv) html += '<div id="detail-collection"></div>';   // movies can belong to a collection
       html += '<div id="detail-recs"></div>';
+      // R17-B5: "Auch gesehen von" — filled async after render
+      html += '<div id="detail-also-seen"></div>';
 
       // ---- block / unblock (point 12): subtle, at the very bottom ----
       html += '<div class="detail-block-row"><button id="detail-block" class="detail-block-btn" type="button"></button></div>';
@@ -5408,6 +5615,7 @@
       }
       renderRecs(data, mediaType);                                       // point 13b: recommendations
       if (!isTv) renderCollection(data.belongs_to_collection, data.id, mediaType);  // point 13a: collection
+      renderAlsoSeen(mediaType, data.id);                                // R17-B5: friends who watched this
       // point 12: block / unblock toggle
       const blockBtn = document.getElementById("detail-block");
       if (blockBtn) {
@@ -5439,6 +5647,43 @@
       delete db.items[key];
       heroItemCount = -1;
       saveDB();
+    }
+
+    // R17-B5: "Auch gesehen von" — friends who have watched this title
+    async function renderAlsoSeen(mediaType, tmdbId) {
+      const host = document.getElementById("detail-also-seen");
+      if (!host) return;
+      if (!window.__vaultUser || !window.__vaultSocial) return;
+      const accepted = (typeof _socialFriends !== "undefined" ? _socialFriends : []).filter(f => f.status === "accepted");
+      if (!accepted.length) return;
+
+      // Check each accepted friend's recentlyWatched snapshot
+      const seenFriends = [];
+      await Promise.all(accepted.map(async f => {
+        try {
+          const p = await window.__vaultSocial.getProfile(f.uid);
+          if (!p || p.privacy?.shareWatched === false) return;
+          const watched = p.recentlyWatched || [];
+          const match = watched.find(it => String(it.id) === String(tmdbId) && (it.mediaType || "movie") === mediaType);
+          if (match) seenFriends.push({ friend: f, bucket: match.bucket });
+        } catch (e) {}
+      }));
+
+      if (!seenFriends.length) return;
+
+      const sec = document.createElement("div"); sec.className = "also-seen-section";
+      sec.innerHTML = '<div class="also-seen-label">Auch gesehen von</div>' +
+        seenFriends.map(({ friend, bucket }) =>
+          `<div class="also-seen-row" data-uid="${socialEsc(friend.uid)}">
+            <div class="also-seen-avatar">${avatarInitial(friend.username || friend.uid)}</div>
+            <span class="also-seen-name">${socialEsc(friend.username || friend.uid)}</span>
+            <span class="also-seen-rating">${bucketToStars(bucket)}</span>
+          </div>`
+        ).join("");
+      host.appendChild(sec);
+      host.querySelectorAll(".also-seen-row[data-uid]").forEach(row => {
+        row.addEventListener("click", () => openFriendProfile(row.dataset.uid));
+      });
     }
 
     // point 13b: up to 10 recommendations, same card style as the discover rows
@@ -8472,11 +8717,42 @@
       html += '<div id="privacy-body"' + (privacyRevealed ? "" : " hidden") + ">";
       html += '<p class="settings-sub-label">Lege fest, was andere von dir sehen dürfen, wenn sie dein Profil ansehen.</p>';
       html += '<div class="settings-group">' + Object.keys(PRIVACY_LABELS).map(row).join("") + '</div>';
+      html += '</div></div>';
+      host.innerHTML = html;
 
-      // R12-P4: per-list sharing overview — mirrors the controls inside each list.
-      html += '<p class="settings-group-title">Listen-Freigaben</p>';
-      html += '<p class="settings-sub-label">Lege pro Liste fest, wer sie sehen darf.</p>';
+      const toggle = document.getElementById("privacy-toggle");
+      const body   = document.getElementById("privacy-body");
+      toggle.classList.toggle("open", privacyRevealed);
+      toggle.addEventListener("click", () => {
+        privacyRevealed = !privacyRevealed;
+        body.hidden = !privacyRevealed;
+        toggle.classList.toggle("open", privacyRevealed);
+      });
+      host.querySelectorAll("input[data-priv]").forEach(cb => cb.addEventListener("change", () => {
+        ensurePrivacy()[cb.dataset.priv] = cb.checked;
+        saveDB();
+        if (window.__vaultSocial && window.__vaultUser) {
+          window.__vaultSocial.saveProfile(window.__vaultUser.uid, { privacy: ensurePrivacy() }).catch(() => {});
+        }
+      }));
+    }
+
+    // R17-A2: Listen-Freigaben as its own accordion (#9 in profile order)
+    let listSharesRevealed = false;
+    function renderListShares() {
+      const host = document.getElementById("profile-list-shares");
+      if (!host) return;
+      if (!window.__vaultAuth || !window.__vaultAuth.available || !window.__vaultUser) {
+        host.innerHTML = ""; return;
+      }
       const customLists = Object.values(db.lists || {});
+      let html = '<div class="detail-section">';
+      html += '<button class="blocked-toggle" type="button" id="list-shares-toggle">' +
+        '<span class="blocked-toggle-label">Listen-Freigaben</span>' +
+        '<svg class="blocked-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>' +
+        '</button>';
+      html += '<div id="list-shares-body"' + (listSharesRevealed ? "" : " hidden") + ">";
+      html += '<p class="settings-sub-label">Lege pro Liste fest, wer sie sehen darf.</p>';
       if (!customLists.length) {
         html += '<p class="settings-sub-label" style="margin-bottom:0">Noch keine eigenen Listen.</p>';
       } else {
@@ -8492,28 +8768,17 @@
         });
         html += '</div>';
       }
-
       html += '</div></div>';
       host.innerHTML = html;
 
-      const toggle = document.getElementById("privacy-toggle");
-      const body   = document.getElementById("privacy-body");
-      toggle.classList.toggle("open", privacyRevealed);
-      toggle.addEventListener("click", () => {
-        privacyRevealed = !privacyRevealed;
-        body.hidden = !privacyRevealed;
-        toggle.classList.toggle("open", privacyRevealed);
+      const tog = document.getElementById("list-shares-toggle");
+      const bod = document.getElementById("list-shares-body");
+      tog.classList.toggle("open", listSharesRevealed);
+      tog.addEventListener("click", () => {
+        listSharesRevealed = !listSharesRevealed;
+        bod.hidden = !listSharesRevealed;
+        tog.classList.toggle("open", listSharesRevealed);
       });
-      host.querySelectorAll("input[data-priv]").forEach(cb => cb.addEventListener("change", () => {
-        ensurePrivacy()[cb.dataset.priv] = cb.checked;
-        saveDB();   // persists locally + syncs to Firestore (R2)
-        // Also write to users/{uid} so friends can read privacy settings
-        if (window.__vaultSocial && window.__vaultUser) {
-          window.__vaultSocial.saveProfile(window.__vaultUser.uid, { privacy: ensurePrivacy() }).catch(() => {});
-        }
-      }));
-      // R12-P4: per-list shareMode controls — write straight to the list object
-      // (same field the in-list segmented control uses, so the two stay in sync).
       host.querySelectorAll("#list-shares .seg-control").forEach(seg => {
         const listId = seg.dataset.list;
         seg.querySelectorAll(".seg-option").forEach(btn => {
@@ -8525,7 +8790,7 @@
       });
     }
     // Keep the privacy panel in step with login/logout.
-    window.addEventListener("vault-auth-changed", renderPrivacy);
+    window.addEventListener("vault-auth-changed", () => { renderPrivacy(); renderListShares(); });
 
     // ============ R4: first-login migration ============
     // When a user logs into an account that has NO Firestore document yet but
@@ -8589,10 +8854,11 @@
     migrateBackdrop.addEventListener("click", (e) => { if (e.target === migrateBackdrop) migrateLater(); });
 
     async function renderProfile() {
-      renderAccount();   // R1: account card (login/logout) at the top
-      renderBlocked();   // point 12: always render the blocklist, even with no logged items
-      renderSettings();  // R9-P4: recommendation source toggles
-      renderPrivacy();   // R3: Datenschutz toggles (only shown when logged in)
+      renderAccount();      // R1: account card
+      renderBlocked();      // point 12: always render the blocklist
+      renderSettings();     // R9-P4: recommendation source toggles
+      renderPrivacy();      // R3: Datenschutz (without Listen-Freigaben in R17)
+      renderListShares();   // R17-A2: Listen-Freigaben as separate accordion (#9)
       const noteEl = document.getElementById("profile-note");
       const items = Object.values(db.items);
       const movies = items.filter(i => i.mediaType === "movie");
@@ -8896,6 +9162,9 @@
     let _socialFriends = [];
     let _myProfile = null;
 
+    // R17-B: Social tab sub-tab state
+    let _socialActivePane = "feed";   // "feed" | "friends"
+
     async function initSocialTab() {
       const user = window.__vaultUser;
       const loginHint = document.getElementById("social-login-hint");
@@ -8904,26 +9173,152 @@
         loginHint.hidden = false; content.hidden = true; return;
       }
       loginHint.hidden = true; content.hidden = false;
+
       // Load own profile
       if (window.__vaultSocial) {
-        _myProfile = await window.__vaultSocial.getProfile(user.uid);
+        try { _myProfile = await window.__vaultSocial.getProfile(user.uid); } catch (e) {}
       }
-      // Username lives under Profil (R13-#7: no longer shown in the Social header).
-      // Here we only show a non-intrusive banner when it isn't set yet.
-      const banner     = document.getElementById("social-no-username");
-      const inviteWrap = document.getElementById("social-invite-wrap");
-      if (!_myProfile || !_myProfile.username) {
-        banner.hidden = false;
-        inviteWrap.hidden = true;
-      } else {
-        banner.hidden = true;
-        inviteWrap.hidden = false;
-        document.getElementById("social-invite-url").textContent =
-          location.origin + location.pathname + "?invite=" + user.uid;
+
+      // Show no-username banner if needed
+      const banner = document.getElementById("social-no-username");
+      if (banner) banner.hidden = !!(_myProfile && _myProfile.username);
+
+      // Wire sub-tab pills (once per tab visit via data-wired flag)
+      const tabFeed    = document.getElementById("social-tab-feed");
+      const tabFriends = document.getElementById("social-tab-friends");
+      if (tabFeed && !tabFeed.dataset.wired) {
+        tabFeed.dataset.wired = "1";
+        tabFeed.addEventListener("click", () => switchSocialPane("feed"));
+        tabFriends.addEventListener("click", () => switchSocialPane("friends"));
       }
+
       await loadSocialFriends();
-      // Sync privacy to Firestore
       syncPrivacyToFirestore();
+
+      // Show the pane that was last active (default: feed)
+      switchSocialPane(_socialActivePane);
+    }
+
+    function switchSocialPane(pane) {
+      _socialActivePane = pane;
+      const feedPane    = document.getElementById("social-feed-pane");
+      const friendsPane = document.getElementById("social-friends-pane");
+      const tabFeed     = document.getElementById("social-tab-feed");
+      const tabFriends  = document.getElementById("social-tab-friends");
+      if (!feedPane || !friendsPane) return;
+      feedPane.hidden    = pane !== "feed";
+      friendsPane.hidden = pane !== "friends";
+      if (tabFeed)    tabFeed.classList.toggle("active",    pane === "feed");
+      if (tabFriends) tabFriends.classList.toggle("active", pane === "friends");
+      if (pane === "feed") renderFeed();
+    }
+
+    // R17-B3: Activity feed rendered from friends' recentlyWatched snapshots
+    async function renderFeed() {
+      const host = document.getElementById("social-feed-list");
+      if (!host) return;
+      const accepted = _socialFriends.filter(f => f.status === "accepted");
+      if (!accepted.length) {
+        host.innerHTML = '<div class="feed-empty">' +
+          '<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' +
+          'Noch keine Aktivität. Füge Freunde hinzu, um ihren Feed zu sehen.</div>';
+        return;
+      }
+
+      host.innerHTML = '<div style="color:var(--text-mute);font-size:13px;padding:12px 0">Lade Feed …</div>';
+
+      // Fetch each friend's profile (contains recentlyWatched snapshot)
+      const profilePromises = accepted.map(f =>
+        (window.__vaultSocial ? window.__vaultSocial.getProfile(f.uid) : Promise.resolve(null))
+          .catch(() => null)
+          .then(p => ({ friend: f, profile: p }))
+      );
+      const results = await Promise.all(profilePromises);
+
+      // Collect and merge feed items
+      const items = [];
+      results.forEach(({ friend, profile }) => {
+        if (!profile || profile.privacy?.shareWatched === false) return;
+        const watched = profile.recentlyWatched || [];
+        watched.slice(0, 5).forEach(it => {
+          items.push({ friend, item: it, ts: it.loggedAt || 0 });
+        });
+      });
+
+      // Sort newest first
+      items.sort((a, b) => b.ts - a.ts);
+
+      if (!items.length) {
+        host.innerHTML = '<div class="feed-empty">' +
+          '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+          'Noch keine Aktivität deiner Freunde sichtbar.</div>';
+        return;
+      }
+
+      host.innerHTML = items.map(({ friend, item }) => {
+        const poster = item.poster
+          ? `<img class="feed-card-poster" src="${IMG_BASE}w154${item.poster}" alt="" loading="lazy"
+               data-id="${item.id}" data-type="${item.mediaType || 'movie'}">`
+          : `<div class="feed-card-poster" style="display:flex;align-items:center;justify-content:center">
+               <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--text-mute)" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="3"/><path d="M2 10h20"/></svg>
+             </div>`;
+        const stars = bucketToStars(item.bucket);
+        const mediaLabel = item.mediaType === "tv" ? "Serie" : "Film";
+        const timeStr = relativeTime(item.loggedAt);
+        const alreadyInWl = !!db.watchlist[keyOf(item.mediaType || "movie", item.id)];
+        return `<div class="feed-card">
+          <div class="feed-card-header" data-uid="${socialEsc(friend.uid)}">
+            <div class="friend-avatar" style="width:34px;height:34px;font-size:14px">${avatarInitial(friend.username || friend.uid)}</div>
+            <div class="feed-card-meta">
+              <div class="feed-card-author">${socialEsc(friend.username || friend.uid)}</div>
+              <div class="feed-card-time">${timeStr}</div>
+            </div>
+          </div>
+          <div class="feed-card-body">
+            <div class="feed-card-poster-wrap" data-id="${item.id}" data-type="${item.mediaType || 'movie'}">
+              ${poster}
+            </div>
+            <div class="feed-card-info">
+              <div class="feed-card-title">${socialEsc(item.title || "")}</div>
+              <div class="feed-card-sub">${mediaLabel}</div>
+              ${stars ? `<div class="feed-card-stars">${stars}</div>` : ""}
+              <div class="feed-card-btns">
+                <button class="feed-card-btn primary feed-wl-btn" data-id="${item.id}" data-type="${item.mediaType || 'movie'}" data-title="${socialEsc(item.title || '')}" data-poster="${socialEsc(item.poster || '')}">
+                  ${alreadyInWl ? "Auf Watchlist" : "+ Watchlist"}
+                </button>
+                <button class="feed-card-btn feed-detail-btn" data-id="${item.id}" data-type="${item.mediaType || 'movie'}">Details</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }).join("");
+
+      // Wire events
+      host.querySelectorAll(".feed-card-header[data-uid]").forEach(hdr => {
+        hdr.addEventListener("click", () => openFriendProfile(hdr.dataset.uid));
+      });
+      host.querySelectorAll(".feed-card-poster-wrap[data-id],.feed-card-poster[data-id]").forEach(el => {
+        el.style.cursor = "pointer";
+        el.addEventListener("click", () => openDetail(el.dataset.type, parseInt(el.dataset.id, 10)));
+      });
+      host.querySelectorAll(".feed-detail-btn[data-id]").forEach(btn => {
+        btn.addEventListener("click", () => openDetail(btn.dataset.type, parseInt(btn.dataset.id, 10)));
+      });
+      host.querySelectorAll(".feed-wl-btn[data-id]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const k = keyOf(btn.dataset.type, btn.dataset.id);
+          if (db.watchlist[k]) {
+            delete db.watchlist[k]; saveDB();
+            btn.textContent = "+ Watchlist";
+          } else {
+            db.watchlist[k] = { id: parseInt(btn.dataset.id, 10), mediaType: btn.dataset.type,
+              title: btn.dataset.title, poster: btn.dataset.poster, loggedAt: Date.now() };
+            saveDB();
+            btn.textContent = "Auf Watchlist";
+            showToast("Auf Watchlist gespeichert");
+          }
+        });
+      });
     }
 
     // "Kein Benutzername" banner → jump to Profil where the username is set.
@@ -9083,86 +9478,6 @@
         card.addEventListener("click", () => openFriendProfile(card.dataset.uid));
       });
     }
-
-    // --- user search ---
-    let _searchTimer = null;
-    document.getElementById("social-search").addEventListener("input", e => {
-      clearTimeout(_searchTimer);
-      const term = e.target.value.trim();
-      if (!term) { document.getElementById("social-search-results").innerHTML = ""; return; }
-      _searchTimer = setTimeout(() => runUserSearch(term), 400);
-    });
-
-    async function runUserSearch(term) {
-      if (!window.__vaultUser || !window.__vaultSocial) return;
-      const results = await window.__vaultSocial.searchUsers(term);
-      const myUid   = window.__vaultUser.uid;
-      const box     = document.getElementById("social-search-results");
-      const filtered = results.filter(u => u.uid !== myUid);
-      if (!filtered.length) {
-        const msg = term.includes("@") ? "Kein Nutzer mit dieser E-Mail gefunden" : "Keine Nutzer gefunden";
-        box.innerHTML = '<div style="color:var(--text-mute);font-size:13px;padding:10px 4px">' + msg + '</div>';
-        return;
-      }
-      box.innerHTML = filtered.map(u => {
-        const rel = _socialFriends.find(f => f.uid === u.uid);
-        let action = "";
-        if (!rel)                          action = `<button class="friend-action-btn add" data-uid="${socialEsc(u.uid)}" data-uname="${socialEsc(u.username||"")}">Hinzufügen</button>`;
-        else if (rel.status === "accepted")  action = `<span style="font-size:12px;color:var(--text-mute)">Befreundet</span>`;
-        else if (rel.status === "pending_sent") action = `<span style="font-size:12px;color:var(--text-mute)">Ausstehend</span>`;
-        else if (rel.status === "pending_received") action = `<button class="friend-action-btn accept" data-uid="${socialEsc(u.uid)}" data-action="accept">Annehmen</button>`;
-        return `<div class="friend-card">
-          <div class="friend-avatar">${avatarInitial(u.username || u.uid)}</div>
-          <div class="friend-info">
-            <div class="friend-name">${socialEsc(u.username || u.uid)}</div>
-            <div class="friend-sub">${socialEsc(u.email || "")}</div>
-          </div>
-          <div class="friend-actions">${action}</div>
-        </div>`;
-      }).join("");
-      box.querySelectorAll("[data-uid]").forEach(btn => {
-        btn.addEventListener("click", async () => {
-          const toUid    = btn.dataset.uid;
-          const toUname  = btn.dataset.uname || "";
-          const myUid    = window.__vaultUser.uid;
-          const myUname  = (_myProfile && _myProfile.username) || "";
-          const isAccept = btn.dataset.action === "accept";
-          // R14-#3: guard the Firestore write so a failure (e.g. blocked rules)
-          // gives clear feedback instead of silently doing nothing.
-          const prevText = btn.textContent;
-          btn.disabled = true;
-          btn.textContent = "…";
-          try {
-            if (isAccept) {
-              await window.__vaultSocial.acceptFriendRequest(myUid, myUname, toUid, toUname);
-              showToast("Freund hinzugefügt");
-              document.getElementById("social-search").value = "";
-              document.getElementById("social-search-results").innerHTML = "";
-            } else {
-              await window.__vaultSocial.sendFriendRequest(myUid, myUname, toUid, toUname);
-              showToast("Anfrage gesendet!");
-              // Keep the result on screen; just reflect the new "pending" state.
-              btn.outerHTML = '<span style="font-size:12px;color:var(--text-mute)">Ausstehend</span>';
-            }
-            await loadSocialFriends();
-          } catch (e) {
-            console.warn("[VAULT] friend request failed", e);
-            const denied = e && (e.code === "permission-denied" || /permission/i.test(e.message || ""));
-            showToast(denied
-              ? "Keine Berechtigung — Firestore-Regeln prüfen"
-              : "Anfrage fehlgeschlagen — bitte erneut versuchen");
-            btn.disabled = false;
-            btn.textContent = prevText;
-          }
-        });
-      });
-    }
-
-    // --- invite link ---
-    document.getElementById("social-invite-copy").addEventListener("click", () => {
-      const url = document.getElementById("social-invite-url").textContent;
-      navigator.clipboard.writeText(url).then(() => showToast("Link kopiert!")).catch(() => showToast("Kopieren fehlgeschlagen"));
-    });
 
     // --- invite confirmation dialog (R13-#3) ---
     const inviteBackdrop = document.getElementById("invite-backdrop");
@@ -9592,6 +9907,201 @@
       return db.settings.notificationSettings;
     }
 
+    // R17-C2: "Freunde verwalten" accordion in Profil (#7 in section order)
+    let friendsMgmtRevealed = false;
+    let _profSearchTimer = null;
+
+    async function renderFriendsManagement() {
+      const host = document.getElementById("profile-friends");
+      if (!host) return;
+      if (!window.__vaultAuth || !window.__vaultAuth.available || !window.__vaultUser || !window.__vaultSocial) {
+        host.innerHTML = ""; return;
+      }
+      const myUid  = window.__vaultUser.uid;
+      const myName = (_myProfile && _myProfile.username) || "";
+
+      const received = _socialFriends.filter(f => f.status === "pending_received");
+      const sent     = _socialFriends.filter(f => f.status === "pending_sent");
+      const accepted = _socialFriends.filter(f => f.status === "accepted");
+
+      let html = '<div class="detail-section">';
+      html += '<button class="blocked-toggle" type="button" id="prof-friends-toggle">' +
+        '<span class="blocked-toggle-label">Freunde verwalten</span>' +
+        '<svg class="blocked-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>' +
+        '</button>';
+      html += '<div id="prof-friends-body"' + (friendsMgmtRevealed ? "" : " hidden") + '>';
+
+      // Search
+      html += '<div class="search-bar" style="margin-bottom:10px">' +
+        '<svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>' +
+        '<input id="prof-friend-search" type="search" inputmode="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Benutzername oder E-Mail …" />' +
+        '</div>';
+      html += '<p class="social-search-hint" style="margin-bottom:10px">Suche per <strong>Benutzername</strong> oder <strong>E-Mail</strong>.</p>';
+      html += '<div id="prof-search-results" style="margin-bottom:8px"></div>';
+
+      // Invite button
+      html += '<button class="prof-friends-invite" id="prof-invite-btn" type="button">' +
+        '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>' +
+        'Einladungslink kopieren</button>';
+      html += '<span id="prof-invite-url" hidden>' + location.origin + location.pathname + "?invite=" + myUid + '</span>';
+
+      // Pending incoming
+      if (received.length) {
+        html += '<p class="social-section-title" style="margin-top:14px">Eingehende Anfragen</p>';
+        received.forEach(f => {
+          html += `<div class="prof-friend-row">
+            <div class="friend-avatar" style="width:32px;height:32px;font-size:13px">${avatarInitial(f.username || f.uid)}</div>
+            <div class="prof-friend-info"><div class="prof-friend-name">${socialEsc(f.username || f.uid)}</div></div>
+            <div class="prof-friend-btns">
+              <button class="prof-friend-btn accept" data-uid="${socialEsc(f.uid)}" data-uname="${socialEsc(f.username||'')}" data-action="accept">Annehmen</button>
+              <button class="prof-friend-btn" data-uid="${socialEsc(f.uid)}" data-action="decline">Ablehnen</button>
+            </div></div>`;
+        });
+      }
+
+      // Pending outgoing
+      if (sent.length) {
+        html += '<p class="social-section-title" style="margin-top:14px">Gesendete Anfragen</p>';
+        sent.forEach(f => {
+          html += `<div class="prof-friend-row">
+            <div class="friend-avatar" style="width:32px;height:32px;font-size:13px">${avatarInitial(f.username || f.uid)}</div>
+            <div class="prof-friend-info"><div class="prof-friend-name">${socialEsc(f.username || f.uid)}</div><div class="prof-friend-sub">Ausstehend</div></div>
+            <div class="prof-friend-btns">
+              <button class="prof-friend-btn" data-uid="${socialEsc(f.uid)}" data-action="cancel">Abbrechen</button>
+            </div></div>`;
+        });
+      }
+
+      // Accepted friends
+      if (accepted.length) {
+        html += '<p class="social-section-title" style="margin-top:14px">Freunde</p>';
+        accepted.forEach(f => {
+          html += `<div class="prof-friend-row">
+            <div class="friend-avatar" style="width:32px;height:32px;font-size:13px">${avatarInitial(f.username || f.uid)}</div>
+            <div class="prof-friend-info"><div class="prof-friend-name">${socialEsc(f.username || f.uid)}</div></div>
+            <div class="prof-friend-btns">
+              <button class="prof-friend-btn view-btn" data-uid="${socialEsc(f.uid)}">Profil</button>
+              <button class="prof-friend-btn danger unfriend-btn" data-uid="${socialEsc(f.uid)}" data-uname="${socialEsc(f.username||'')}">Entfreunden</button>
+            </div></div>`;
+        });
+      } else if (!received.length && !sent.length) {
+        html += '<p class="settings-sub-label" style="margin-bottom:0">Noch keine Freunde. Suche nach einem Benutzernamen oder teile deinen Einladungslink.</p>';
+      }
+
+      html += '</div></div>';
+      host.innerHTML = html;
+
+      // Toggle
+      const tog = document.getElementById("prof-friends-toggle");
+      const bod = document.getElementById("prof-friends-body");
+      tog.classList.toggle("open", friendsMgmtRevealed);
+      tog.addEventListener("click", () => {
+        friendsMgmtRevealed = !friendsMgmtRevealed;
+        bod.hidden = !friendsMgmtRevealed;
+        tog.classList.toggle("open", friendsMgmtRevealed);
+      });
+
+      // Invite copy
+      document.getElementById("prof-invite-btn").addEventListener("click", () => {
+        const url = document.getElementById("prof-invite-url").textContent;
+        navigator.clipboard.writeText(url).then(() => showToast("Link kopiert!")).catch(() => showToast("Kopieren fehlgeschlagen"));
+      });
+
+      // Search
+      const si = document.getElementById("prof-friend-search");
+      if (si) {
+        si.addEventListener("input", e => {
+          clearTimeout(_profSearchTimer);
+          const term = e.target.value.trim();
+          if (!term) { document.getElementById("prof-search-results").innerHTML = ""; return; }
+          _profSearchTimer = setTimeout(() => runProfUserSearch(term), 400);
+        });
+      }
+
+      // Action buttons
+      host.querySelectorAll("[data-action]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const friendUid  = btn.dataset.uid;
+          const friendName = btn.dataset.uname || "";
+          const action     = btn.dataset.action;
+          btn.disabled = true;
+          try {
+            if (action === "accept") {
+              await window.__vaultSocial.acceptFriendRequest(myUid, myName, friendUid, friendName);
+              showToast("Freund hinzugefügt");
+            } else if (action === "decline") {
+              await window.__vaultSocial.declineFriendRequest(myUid, friendUid);
+            } else if (action === "cancel") {
+              await window.__vaultSocial.cancelFriendRequest(myUid, friendUid);
+            }
+            await loadSocialFriends();
+            renderFriendsManagement();
+          } catch (e) { showToast("Aktion fehlgeschlagen"); btn.disabled = false; }
+        });
+      });
+      host.querySelectorAll(".view-btn[data-uid]").forEach(btn => {
+        btn.addEventListener("click", () => openFriendProfile(btn.dataset.uid));
+      });
+      host.querySelectorAll(".unfriend-btn[data-uid]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const uname = btn.dataset.uname || btn.dataset.uid;
+          if (!confirm("Wirklich entfreunden: @" + uname + "?")) return;
+          window.__vaultSocial.declineFriendRequest(myUid, btn.dataset.uid)
+            .then(() => loadSocialFriends())
+            .then(() => renderFriendsManagement())
+            .catch(() => showToast("Fehler beim Entfreunden"));
+        });
+      });
+    }
+
+    async function runProfUserSearch(term) {
+      if (!window.__vaultUser || !window.__vaultSocial) return;
+      const results = await window.__vaultSocial.searchUsers(term);
+      const myUid   = window.__vaultUser.uid;
+      const box     = document.getElementById("prof-search-results");
+      if (!box) return;
+      const filtered = results.filter(u => u.uid !== myUid);
+      if (!filtered.length) {
+        box.innerHTML = '<div style="color:var(--text-mute);font-size:13px;padding:6px 4px">' +
+          (term.includes("@") ? "Kein Nutzer mit dieser E-Mail gefunden" : "Keine Nutzer gefunden") + '</div>';
+        return;
+      }
+      const myName = (_myProfile && _myProfile.username) || "";
+      box.innerHTML = filtered.map(u => {
+        const rel = _socialFriends.find(f => f.uid === u.uid);
+        let action = "";
+        if (!rel)                              action = `<button class="prof-friend-btn accept pfs-add" data-uid="${socialEsc(u.uid)}" data-uname="${socialEsc(u.username||'')}">Hinzufügen</button>`;
+        else if (rel.status === "accepted")    action = `<span style="font-size:12px;color:var(--text-mute)">Befreundet</span>`;
+        else if (rel.status === "pending_sent") action = `<span style="font-size:12px;color:var(--text-mute)">Ausstehend</span>`;
+        else if (rel.status === "pending_received") action = `<button class="prof-friend-btn accept pfs-add" data-uid="${socialEsc(u.uid)}" data-action="accept">Annehmen</button>`;
+        return `<div class="prof-friend-row">
+          <div class="friend-avatar" style="width:32px;height:32px;font-size:13px">${avatarInitial(u.username || u.uid)}</div>
+          <div class="prof-friend-info"><div class="prof-friend-name">${socialEsc(u.username || u.uid)}</div><div class="prof-friend-sub">${socialEsc(u.email || "")}</div></div>
+          <div class="prof-friend-btns">${action}</div>
+        </div>`;
+      }).join("");
+      box.querySelectorAll(".pfs-add[data-uid]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const isAccept = btn.dataset.action === "accept";
+          const toUid   = btn.dataset.uid;
+          const toUname = btn.dataset.uname || "";
+          btn.disabled = true; btn.textContent = "…";
+          const myUid2  = window.__vaultUser.uid;
+          try {
+            if (isAccept) await window.__vaultSocial.acceptFriendRequest(myUid2, myName, toUid, toUname);
+            else          await window.__vaultSocial.sendFriendRequest(myUid2, myName, toUid, toUname);
+            showToast(isAccept ? "Freund hinzugefügt" : "Anfrage gesendet!");
+            btn.outerHTML = `<span style="font-size:12px;color:var(--text-mute)">${isAccept ? "Befreundet" : "Ausstehend"}</span>`;
+            await loadSocialFriends();
+          } catch (e) {
+            const denied = e && (e.code === "permission-denied" || /permission/i.test(e.message || ""));
+            showToast(denied ? "Keine Berechtigung — Firestore-Regeln prüfen" : "Anfrage fehlgeschlagen");
+            btn.disabled = false; btn.textContent = isAccept ? "Annehmen" : "Hinzufügen";
+          }
+        });
+      });
+    }
+
     // Extend renderSettings to include notification settings
     const _origRenderSettings = typeof renderSettings === "function" ? renderSettings : null;
     let notifSettingsRevealed = false;   // R14-#2: collapsed by default (session-only state)
@@ -9639,16 +10149,20 @@
       });
     }
 
-    // Hook into the existing vault-auth-changed to refresh notif settings
+    // Hook into the existing vault-auth-changed to refresh notif settings + friend mgmt
     window.addEventListener("vault-auth-changed", () => {
-      if (document.body.dataset.tab === "profile") { renderNotifSettings(); renderUsernameField(); }
+      if (document.body.dataset.tab === "profile") {
+        renderNotifSettings(); renderUsernameField();
+        renderFriendsManagement(); renderListShares();
+      }
     });
-    // Patch renderProfile to call renderNotifSettings + username field
+    // Patch renderProfile to call all R17 profile renders
     const _origRenderProfile = renderProfile;
     renderProfile = async function() {
       await _origRenderProfile();
       renderNotifSettings();
       renderUsernameField();
+      renderFriendsManagement();
     };
   </script>
 </body>
