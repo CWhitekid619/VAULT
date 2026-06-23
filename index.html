@@ -1676,28 +1676,66 @@
     .friend-action-btn.add { background: var(--accent); color: #1a1206; border-color: var(--accent); }
     .friend-action-btn:active { opacity: .7; }
 
-    #friend-profile { position: fixed; inset: 0; z-index: 140; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; padding: calc(var(--safe-top) + 12px) var(--pad) calc(var(--nav-h) + var(--safe-bottom) + var(--pad)); animation: fade-in .22s ease; }
-    .fprof-back { width: 36px; height: 36px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
-    .fprof-back svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .fprof-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
-    .fprof-avatar { width: 64px; height: 64px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: #1a1206; flex: 0 0 auto; }
-    .fprof-username { font-size: 22px; font-weight: 700; }
-    .fprof-stats { display: flex; gap: 16px; margin-top: 6px; flex-wrap: wrap; }
-    .fprof-stat { font-size: 13px; color: var(--text-dim); }
-    .fprof-stat b { color: var(--text); font-weight: 700; }
-    .fprof-section { margin-bottom: 24px; }
-    .fprof-section-title { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
-    .fprof-private { color: var(--text-mute); font-size: 13px; padding: 12px; background: var(--surface-2); border-radius: 10px; display: flex; align-items: center; gap: 8px; }
-    .fprof-private svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; flex: 0 0 auto; }
-    .fprof-empty-note { color: var(--text-mute); font-size: 13px; }
-    .fprof-lists { display: flex; flex-direction: column; gap: 10px; }
-    .fprof-list-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
-    .fprof-list-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
-    .fprof-list-name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* R15-B: Friend Profile — full redesign */
+    #friend-profile { position: fixed; inset: 0; z-index: 140; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; animation: fade-in .22s ease; }
+    /* Back bar: fixed at top so it's always reachable while scrolling */
+    .fprof-topbar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 12px; padding: calc(var(--safe-top) + 10px) var(--pad) 10px; background: linear-gradient(var(--bg) 85%, transparent); }
+    .fprof-back-btn { display: flex; align-items: center; gap: 6px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px 6px 10px; color: var(--text); font-size: 14px; font-weight: 500; cursor: pointer; }
+    .fprof-back-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
+    /* Header: centered, cinematic */
+    .fprof-header { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 8px var(--pad) 28px; }
+    .fprof-avatar { width: 88px; height: 88px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #c8901f); display: flex; align-items: center; justify-content: center; font-size: 36px; font-weight: 800; color: #1a1206; flex: 0 0 auto; box-shadow: 0 0 0 3px rgba(232,179,57,.25), 0 8px 24px rgba(0,0,0,.5); margin-bottom: 14px; }
+    .fprof-username { font-size: 24px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 14px; }
+    /* Stats pills row */
+    .fprof-pills { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    .fprof-pill { background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 5px 13px; font-size: 13px; font-weight: 600; color: var(--text-dim); display: flex; align-items: center; gap: 5px; }
+    .fprof-pill-icon { font-size: 14px; }
+    .fprof-pill b { color: var(--text); font-weight: 700; }
+    /* Private profile banner */
+    .fprof-private-banner { margin: 0 var(--pad) 28px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 14px; padding: 20px 16px; text-align: center; color: var(--text-mute); font-size: 14px; }
+    .fprof-private-banner svg { width: 22px; height: 22px; stroke: var(--text-mute); fill: none; stroke-width: 1.8; display: block; margin: 0 auto 10px; }
+    /* Sections */
+    .fprof-section { margin-bottom: 28px; }
+    .fprof-section-head { display: flex; align-items: baseline; gap: 8px; padding: 0 var(--pad); margin-bottom: 12px; }
+    .fprof-section-title { font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+    .fprof-section-count { font-size: 12px; color: var(--text-mute); }
+    /* Horizontal poster scroll row */
+    .fprof-hscroll { display: flex; gap: 10px; overflow-x: auto; padding: 0 var(--pad) 4px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+    .fprof-hscroll::-webkit-scrollbar { display: none; }
+    /* Poster card */
+    .fprof-card { flex: 0 0 96px; width: 96px; scroll-snap-align: start; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .fprof-card-img-wrap { position: relative; width: 96px; height: 144px; border-radius: 10px; overflow: hidden; background: var(--surface-2); margin-bottom: 6px; }
+    .fprof-card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .fprof-card-img-wrap .fprof-card-badge { position: absolute; top: 5px; left: 5px; background: rgba(0,0,0,.75); border-radius: 6px; padding: 2px 6px; font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing: .02em; backdrop-filter: blur(4px); }
+    .fprof-card-img-wrap .fprof-card-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+    .fprof-card-img-wrap .fprof-card-placeholder svg { width: 28px; height: 28px; stroke: var(--text-mute); fill: none; stroke-width: 1.5; }
+    .fprof-card-title { font-size: 11px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+    /* Private / empty state row */
+    .fprof-state-box { margin: 0 var(--pad); background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 18px 16px; display: flex; align-items: center; gap: 10px; color: var(--text-mute); font-size: 13px; }
+    .fprof-state-box svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; flex: 0 0 auto; }
+    /* Lists section */
+    .fprof-lists { display: flex; flex-direction: column; gap: 10px; padding: 0 var(--pad); }
+    .fprof-list-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .fprof-list-card:active { background: var(--surface-2); }
+    .fprof-list-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .fprof-list-name { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .fprof-list-count { font-size: 12px; color: var(--text-mute); flex: 0 0 auto; }
     .fprof-list-thumbs { display: flex; gap: 6px; overflow: hidden; }
-    .fprof-list-thumbs img { width: 40px; height: 60px; border-radius: 6px; object-fit: cover; flex: 0 0 auto; }
-    .fprof-list-empty { font-size: 12px; color: var(--text-mute); }
+    .fprof-list-thumbs img { width: 40px; height: 60px; border-radius: 6px; object-fit: cover; flex: 0 0 auto; background: var(--surface-2); }
+    .fprof-list-thumb-ph { width: 40px; height: 60px; border-radius: 6px; background: var(--surface-2); flex: 0 0 auto; }
+    /* bottom spacer */
+    .fprof-spacer { height: calc(var(--nav-h) + var(--safe-bottom) + 16px); }
+
+    /* R15-C: Friend list read-only overlay (opens on top of friend-profile, z-145) */
+    #friend-list-view { position: fixed; inset: 0; z-index: 145; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; animation: fade-in .2s ease; }
+    .flv-topbar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 12px; padding: calc(var(--safe-top) + 10px) var(--pad) 10px; background: linear-gradient(var(--bg) 85%, transparent); }
+    .flv-back-btn { display: flex; align-items: center; gap: 6px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px 6px 10px; color: var(--text); font-size: 14px; font-weight: 500; cursor: pointer; }
+    .flv-back-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
+    .flv-head { padding: 4px var(--pad) 18px; }
+    .flv-head h2 { margin: 0 0 4px; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+    .flv-count { font-size: 13px; color: var(--text-dim); }
+    .flv-grid { padding: 0 var(--pad); }
+    .flv-spacer { height: calc(var(--nav-h) + var(--safe-bottom) + 16px); }
 
     .share-sheet-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
     .share-sheet-poster { width: 44px; height: 66px; border-radius: 8px; object-fit: cover; flex: 0 0 auto; background: var(--surface-2); }
@@ -2212,10 +2250,29 @@
 
   <!-- ============ FRIEND PROFILE VIEW ============ -->
   <div id="friend-profile" hidden>
-    <button class="fprof-back" id="fprof-back" type="button" aria-label="Zurück">
-      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-    </button>
+    <div class="fprof-topbar">
+      <button class="fprof-back-btn" id="fprof-back" type="button" aria-label="Zurück">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        Zurück
+      </button>
+    </div>
     <div id="fprof-content"></div>
+  </div>
+
+  <!-- ============ FRIEND LIST READ-ONLY VIEW (R15-C) ============ -->
+  <div id="friend-list-view" hidden>
+    <div class="flv-topbar">
+      <button class="flv-back-btn" id="flv-back" type="button" aria-label="Zurück">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        Zurück
+      </button>
+    </div>
+    <div class="flv-head">
+      <h2 id="flv-title"></h2>
+      <div id="flv-count" class="flv-count"></div>
+    </div>
+    <div id="flv-grid" class="flv-grid poster-grid"></div>
+    <div class="flv-spacer"></div>
   </div>
 
   <!-- ============ SHARE SHEET (Empfehlen) ============ -->
@@ -6093,7 +6150,8 @@
         const items = Object.values(l.items || {});
         out.push({
           id, name: l.name, shareMode: mode, count: items.length,
-          posters: items.filter(it => it.poster).slice(0, 6).map(it => it.poster)
+          posters: items.filter(it => it.poster).slice(0, 6).map(it => it.poster),
+          items: items.slice(0, 100).map(it => ({ id: it.id, mediaType: it.mediaType, title: it.title || "", poster: it.poster || null }))
         });
       }
       return out;
@@ -9008,61 +9066,219 @@
       document.body.style.overflow = "";
     }
 
+    // R15-C: Friend list read-only view
+    const friendListViewEl = document.getElementById("friend-list-view");
+    document.getElementById("flv-back").addEventListener("click", closeFriendListView);
+
+    function closeFriendListView() {
+      friendListViewEl.hidden = true;
+    }
+
+    function openFriendListView(friendUid, list) {
+      const items = list.items || [];
+      document.getElementById("flv-title").textContent = list.name || "Liste";
+      document.getElementById("flv-count").textContent = (list.count || items.length) + " Titel";
+
+      const grid = document.getElementById("flv-grid");
+      grid.innerHTML = "";
+
+      if (!items.length) {
+        const empty = document.createElement("div");
+        empty.className = "grid-empty";
+        empty.textContent = "Diese Liste ist leer.";
+        grid.appendChild(empty);
+      } else {
+        const frag = document.createDocumentFragment();
+        items.forEach(it => {
+          const cell = document.createElement("div");
+          cell.className = "grid-item";
+          if (it.poster) {
+            const img = document.createElement("img");
+            img.loading = "lazy"; img.src = IMG_BASE + "w185" + it.poster; img.alt = it.title || "";
+            cell.appendChild(img);
+          } else {
+            const ph = document.createElement("div");
+            ph.className = "gi-empty"; ph.textContent = it.title || "";
+            cell.appendChild(ph);
+          }
+          if (it.id && it.mediaType) {
+            cell.addEventListener("click", () => openDetail(it.mediaType, it.id));
+          }
+          frag.appendChild(cell);
+        });
+        grid.appendChild(frag);
+      }
+
+      friendListViewEl.hidden = false;
+    }
+
+    // R15-B: bucket → star string for recently-watched badges
+    const FPROF_BUCKET_STARS = { great: "★★★★★", good: "★★★★", watchable: "★★★", meh: "★★", bad: "★" };
+
+    // Single poster card used in both "Zuletzt gesehen" and "Top" rows.
+    function fprofPosterCard(item, badgeText) {
+      const imgUrl = item.posterPath ? (IMG_BASE + "w185" + item.posterPath) : null;
+      const imgHtml = imgUrl
+        ? `<img loading="lazy" src="${imgUrl}" alt="">`
+        : `<div class="fprof-card-placeholder"><svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`;
+      const badge = badgeText ? `<div class="fprof-card-badge">${socialEsc(String(badgeText))}</div>` : "";
+      return `<div class="fprof-card" data-id="${item.id}" data-type="${socialEsc(item.mediaType || '')}">
+        <div class="fprof-card-img-wrap">${imgHtml}${badge}</div>
+        <div class="fprof-card-title">${socialEsc(item.title || '')}</div>
+      </div>`;
+    }
+
+    // "Not shared" lock box
+    function fprofPrivateBox() {
+      return `<div class="fprof-state-box" style="margin:0 var(--pad)"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Nicht geteilt</div>`;
+    }
+
+    // Generic empty state box
+    function fprofEmptyBox(text) {
+      return `<div class="fprof-state-box" style="margin:0 var(--pad)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${socialEsc(text)}</div>`;
+    }
+
     async function openFriendProfile(friendUid) {
       if (!window.__vaultSocial) return;
       friendProfileEl.hidden = false;
       document.body.style.overflow = "hidden";
       const content = document.getElementById("fprof-content");
-      content.innerHTML = '<div style="color:var(--text-mute);padding:40px;text-align:center">Lade …</div>';
-      const profile = await window.__vaultSocial.getProfile(friendUid);
-      if (!profile) { content.innerHTML = '<div style="color:var(--text-mute);padding:40px;text-align:center">Profil nicht gefunden</div>'; return; }
-      const p       = profile.privacy || {};
-      const initial = avatarInitial(profile.username || friendUid);
-      let html = `<div class="fprof-header">
-        <div class="fprof-avatar">${initial}</div>
-        <div>
-          <div class="fprof-username">${socialEsc(profile.username || "Unbekannt")}</div>
-          <div class="fprof-stats" id="fprof-stats-row"></div>
-        </div>
-      </div>`;
-      if (p.shareWatched !== false) {
-        html += `<div class="fprof-section"><div class="fprof-section-title">Zuletzt gesehen</div><div id="fprof-watched"></div></div>`;
-      } else {
-        html += `<div class="fprof-section"><div class="fprof-section-title">Zuletzt gesehen</div><div class="fprof-private"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Diese Info ist privat</div></div>`;
+      content.innerHTML = '<div style="color:var(--text-mute);padding:60px 16px;text-align:center">Lade …</div>';
+
+      // Fetch profile and lists in parallel
+      const [profile, rawLists] = await Promise.all([
+        window.__vaultSocial.getProfile(friendUid),
+        window.__vaultSocial.getUserLists(friendUid).catch(() => [])
+      ]);
+
+      if (!profile) {
+        content.innerHTML = '<div style="color:var(--text-mute);padding:60px 16px;text-align:center">Profil nicht gefunden</div>';
+        return;
       }
 
-      // R12-E: friend's shareable lists, honouring each list's shareMode.
-      // "public" is visible to anyone viewing the profile; "friends" only to
-      // confirmed friends; "private" lists are never published (see snapshot).
-      const myUid    = window.__vaultUser ? window.__vaultUser.uid : null;
+      const p       = profile.privacy || {};
+      const stats   = profile.stats   || {};
+      const initial = avatarInitial(profile.username || friendUid);
+      const uname   = socialEsc(profile.username || "Unbekannt");
+      const myUid   = window.__vaultUser ? window.__vaultUser.uid : null;
       const isFriend = !!(myUid && typeof _socialFriends !== "undefined" &&
                           _socialFriends.some(f => f.uid === friendUid && f.status === "accepted"));
-      let friendLists = [];
-      try { friendLists = await window.__vaultSocial.getUserLists(friendUid); } catch (e) {}
-      const visibleLists = (friendLists || []).filter(l =>
-        l.shareMode === "public" || (l.shareMode === "friends" && isFriend));
 
-      html += '<div class="fprof-section"><div class="fprof-section-title">Listen</div>';
-      if (!visibleLists.length) {
-        html += '<div class="fprof-empty-note">Keine geteilten Listen</div>';
+      let html = "";
+
+      // ── Header ──────────────────────────────────────────────────
+      html += `<div class="fprof-header"><div class="fprof-avatar">${initial}</div><div class="fprof-username">${uname}</div>`;
+      if (p.profileVisible !== false && (stats.films != null || stats.series != null)) {
+        html += `<div class="fprof-pills">
+          <div class="fprof-pill">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>
+            <b>${stats.films || 0}</b>&thinsp;Filme
+          </div>
+          <div class="fprof-pill">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/></svg>
+            <b>${stats.series || 0}</b>&thinsp;Serien
+          </div>
+          <div class="fprof-pill">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <b>${stats.hours || 0}</b>&thinsp;Std.
+          </div>
+        </div>`;
+      }
+      html += "</div>";
+
+      // Private profile → nothing else to show
+      if (p.profileVisible === false) {
+        html += `<div class="fprof-private-banner">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Dieses Profil ist privat
+        </div><div class="fprof-spacer"></div>`;
+        content.innerHTML = html;
+        return;
+      }
+
+      // ── Zuletzt gesehen ─────────────────────────────────────────
+      const watched = profile.recentlyWatched || [];
+      html += `<div class="fprof-section"><div class="fprof-section-head">
+        <span class="fprof-section-title">Zuletzt gesehen</span>
+        ${watched.length ? `<span class="fprof-section-count">${watched.length} Titel</span>` : ""}
+      </div>`;
+      if (p.shareWatched === false) {
+        html += fprofPrivateBox();
+      } else if (!watched.length) {
+        html += fprofEmptyBox("Noch nichts eingetragen");
+      } else {
+        html += '<div class="fprof-hscroll">';
+        watched.forEach(it => html += fprofPosterCard(it, FPROF_BUCKET_STARS[it.bucket] || ""));
+        html += "</div>";
+      }
+      html += "</div>";
+
+      // ── Top Filme & Serien ───────────────────────────────────────
+      const topRanked = profile.topRanked || [];
+      html += `<div class="fprof-section"><div class="fprof-section-head">
+        <span class="fprof-section-title">Top Filme &amp; Serien</span>
+      </div>`;
+      if (p.shareRanking === false) {
+        html += fprofPrivateBox();
+      } else if (!topRanked.length) {
+        html += fprofEmptyBox("Noch keine Bewertungen");
+      } else {
+        html += '<div class="fprof-hscroll">';
+        topRanked.forEach(it => html += fprofPosterCard(it, "#" + it.rank));
+        html += "</div>";
+      }
+      html += "</div>";
+
+      // ── Listen ──────────────────────────────────────────────────
+      const visibleLists = (rawLists || []).filter(l =>
+        l.shareMode === "public" || (l.shareMode === "friends" && isFriend));
+      html += `<div class="fprof-section"><div class="fprof-section-head">
+        <span class="fprof-section-title">Listen</span>
+      </div>`;
+      if (p.shareLists === false) {
+        html += fprofPrivateBox();
+      } else if (!visibleLists.length) {
+        html += fprofEmptyBox("Keine geteilten Listen");
       } else {
         html += '<div class="fprof-lists">';
         visibleLists.forEach(l => {
-          const thumbs = (l.posters || []).slice(0, 5)
-            .map(p2 => '<img loading="lazy" src="' + IMG_BASE + 'w92' + p2 + '" alt="">').join("");
-          html += '<div class="fprof-list-card">' +
-            '<div class="fprof-list-head">' +
-              '<span class="fprof-list-name">' + socialEsc(l.name) + '</span>' +
-              '<span class="fprof-list-count">' + (l.count || 0) + ' Titel</span>' +
-            '</div>' +
-            '<div class="fprof-list-thumbs">' + (thumbs || '<span class="fprof-list-empty">leer</span>') + '</div>' +
-          '</div>';
+          const thumbsHtml = (l.posters || []).slice(0, 4)
+            .map(pt => `<img loading="lazy" src="${IMG_BASE}w92${pt}" alt="">`)
+            .join("");
+          const phs = Array(Math.max(0, Math.min(4, l.count || 0) - (l.posters || []).slice(0, 4).length))
+            .fill('<div class="fprof-list-thumb-ph"></div>').join("");
+          html += `<div class="fprof-list-card" data-listid="${socialEsc(l.id || '')}">
+            <div class="fprof-list-head">
+              <span class="fprof-list-name">${socialEsc(l.name || "Liste")}</span>
+              <span class="fprof-list-count">${l.count || 0} Titel</span>
+            </div>
+            <div class="fprof-list-thumbs">${thumbsHtml || phs}</div>
+          </div>`;
         });
-        html += '</div>';
+        html += "</div>";
       }
-      html += '</div>';
+      html += "</div>";
 
+      html += '<div class="fprof-spacer"></div>';
       content.innerHTML = html;
+
+      // Wire poster cards → openDetail
+      content.querySelectorAll(".fprof-card[data-id]").forEach(card => {
+        card.addEventListener("click", () => {
+          const id = parseInt(card.dataset.id, 10);
+          const type = card.dataset.type;
+          if (id && type) openDetail(type, id);
+        });
+      });
+
+      // List cards → read-only list view (Runde C); stub for now
+      content.querySelectorAll(".fprof-list-card[data-listid]").forEach(card => {
+        const listId = card.dataset.listid;
+        const list = visibleLists.find(l => l.id === listId);
+        if (list && typeof openFriendListView === "function") {
+          card.addEventListener("click", () => openFriendListView(friendUid, list));
+        }
+      });
     }
 
     // --- share sheet (Empfehlen) ---
