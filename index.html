@@ -787,16 +787,6 @@
     .rank-arrow:active { background: var(--surface); }
     .rank-arrow:disabled { opacity: .3; cursor: default; }
     .rank-arrow svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-    /* R19-#6 Part C: Spotlight toggle per ranking row */
-    .rank-spot {
-      flex: 0 0 auto; width: 30px; height: 30px; padding: 0; margin-left: 6px; cursor: pointer;
-      background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
-      display: flex; align-items: center; justify-content: center; color: var(--text-dim);
-      transition: color .15s, border-color .15s, background .15s;
-    }
-    .rank-spot svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .rank-spot.active { color: var(--accent); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
-    .rank-spot:active { background: var(--surface); }
     /* R19-#6 Part D: subtle rating/ranking consistency banner */
     .rank-consistency {
       display: flex; align-items: center; gap: 10px; margin: 2px 0 12px;
@@ -950,7 +940,7 @@
 
     /* Info button: opens film detail from the duel card (desktop alternative to swipe-up) */
     .duel-info {
-      position: absolute; top: 8px; right: 8px; z-index: 3;
+      position: absolute; top: 8px; right: 46px; z-index: 3;
       width: 30px; height: 30px; border-radius: 50%; padding: 0;
       background: rgba(0,0,0,.65); border: none; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
@@ -959,6 +949,17 @@
     }
     .duel-info:active { background: rgba(0,0,0,.85); }
     .duel-info svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    /* R19-#6 Part C (revised): per-card Spotlight toggle inside the duel (top-left) */
+    .duel-spot-btn {
+      position: absolute; top: 8px; right: 8px; z-index: 3;
+      width: 30px; height: 30px; border-radius: 50%; padding: 0;
+      background: rgba(0,0,0,.65); border: 1px solid transparent; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(3px); color: rgba(255,255,255,.85); transition: all .15s ease;
+    }
+    .duel-spot-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .duel-spot-btn.active { background: var(--accent); border-color: var(--accent); color: #1a1206; }
+    .duel-spot-btn:active { transform: scale(.92); }
 
     @media (min-width: 600px) {
       .duel { max-width: 780px; margin: 0 auto; }
@@ -2415,6 +2416,9 @@
         <button id="duel-info-a" class="duel-info" type="button" aria-label="Details anzeigen" hidden>
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
         </button>
+        <button id="duel-spot-a" class="duel-spot-btn" type="button" aria-label="Spotlight">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><line x1="12" y1="1.5" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22.5"/><line x1="1.5" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22.5" y2="12"/><circle cx="12" cy="12" r="2.5"/></svg>
+        </button>
         <div class="duel-card-hint" id="duel-hint-a" hidden>↑ Filme</div>
       </div>
       <div class="duel-vs">oder</div>
@@ -2426,6 +2430,9 @@
         </button>
         <button id="duel-info-b" class="duel-info" type="button" aria-label="Details anzeigen" hidden>
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </button>
+        <button id="duel-spot-b" class="duel-spot-btn" type="button" aria-label="Spotlight">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><line x1="12" y1="1.5" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22.5"/><line x1="1.5" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22.5" y2="12"/><circle cx="12" cy="12" r="2.5"/></svg>
         </button>
         <div class="duel-card-hint" id="duel-hint-b" hidden>↑ Filme</div>
       </div>
@@ -4924,14 +4931,28 @@
     function clearSpotlight() {
       if (db.spotlight) { db.spotlight = null; saveDB(); }
     }
-    function toggleSpotlight(it, media) {
-      const name = it.title || it.name || "";
-      if (spotlightMatches(it.id, media)) { clearSpotlight(); showToast("Spotlight entfernt"); }
-      else { db.spotlight = { mediaType: media, id: it.id }; saveDB(); showToast("Spotlight: " + name); }   // only one at a time — replaces any previous
-      if (document.body.dataset.tab === "ranking") renderRanking();
+    // Toggle the focus on one of the two titles currently in the duel (Part C, revised).
+    // While focused, that title is forced into every following duel (vs. its nearest
+    // neighbour) until the user toggles it off again — no auto-clear on loss.
+    function toggleDuelSpotlight(idx) {
+      if (!duelPair) return;
+      const it = duelPair[idx];
+      const media = rankMedia;
+      if (spotlightMatches(it.id, media)) { clearSpotlight(); showToast("Spotlight aus"); }
+      else { db.spotlight = { mediaType: media, id: it.id }; saveDB(); showToast("Spotlight: " + (it.title || it.name || "")); }
       updateDuelSpotlight();
+      updateDuelSpotButtons();
     }
-    // Refresh the "Kämpft um Position: …" banner inside the duel (hidden when no
+    // Reflect the active focus on the per-card spotlight toggle buttons.
+    function updateDuelSpotButtons() {
+      [["duel-spot-a", 0], ["duel-spot-b", 1]].forEach(([id, idx]) => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        const it = duelPair && duelPair[idx];
+        btn.classList.toggle("active", !!(it && spotlightMatches(it.id, rankMedia)));
+      });
+    }
+    // Refresh the "Im Spotlight: …" banner inside the duel (hidden when no
     // spotlight applies to the current media type or the duel is closed).
     function updateDuelSpotlight() {
       const el = document.getElementById("duel-spotlight");
@@ -4942,7 +4963,7 @@
       if (rankMedia === "person") { const p = (db.people || {})[sp.id]; name = p ? (p.name || "") : ""; }
       else { const found = Object.values(db.items).find(x => x.mediaType === rankMedia && String(x.id) === String(sp.id)); name = found ? (found.title || "") : ""; }
       if (!name) { el.hidden = true; return; }
-      el.innerHTML = SPOT_SVG + '<span>Kämpft um Position:&nbsp;<span class="ds-name"></span></span>';
+      el.innerHTML = SPOT_SVG + '<span>Im Spotlight:&nbsp;<span class="ds-name"></span></span>';
       el.querySelector(".ds-name").textContent = name;
       el.hidden = false;
     }
@@ -5084,18 +5105,6 @@
           bodyEl.appendChild(tierLbl);
         }
         row.appendChild(bodyEl);
-
-        // R19-#6 Part C: Spotlight toggle (films, series, actors). Forces this title
-        // into every duel until it loses once. Only one can be active at a time.
-        const itMedia = isPerson ? "person" : it.mediaType;
-        const spot = document.createElement("button");
-        spot.className = "rank-spot" + (spotlightMatches(it.id, itMedia) ? " active" : "");
-        spot.type = "button"; spot.setAttribute("aria-label", "Spotlight");
-        spot.title = spotlightMatches(it.id, itMedia) ? "Spotlight aktiv – im Duell bevorzugt" : "Spotlight: im Duell bevorzugen";
-        spot.innerHTML = SPOT_SVG;
-        spot.addEventListener("click", e => { e.stopPropagation(); toggleSpotlight(it, itMedia); });
-        ["mousedown", "touchstart"].forEach(ev => spot.addEventListener(ev, e => e.stopPropagation(), { passive: true }));
-        row.appendChild(spot);
 
         // R10-P3: slim up/down arrows for manual reordering (ranked rows only)
         if (reorder) {
@@ -5257,33 +5266,39 @@
       return a.id < b.id ? a.id + "|" + b.id : b.id + "|" + a.id;
     }
 
-    // Pair selection (P7). Priority 1: place "Ungerankt" titles — they need a
-    // comparison the most. Each unranked title is matched against a ranked title
-    // near the middle of the list (a meaningful first split), or against another
-    // unranked title when none are ranked yet. Priority 2 (R19-#6 Part B): refine
-    // the leaderboard with VARIED opponents — 50% near-adjacent (±1–3), 30%
-    // star-boosted (a great/good title stuck in the lower half vs. a random
-    // top-half title), 20% random cross-rank — so a highly-rated but low-ranked
-    // title regularly gets a chance to climb.
-    // Returns null when all near-adjacent pairs have been seen → duel is done.
+    // Pair selection. Priority 0 (R19-#6 Part C, in-duel Spotlight): if a title is
+    // toggled as the focus, it is matched against its NEAREST not-yet-seen neighbour
+    // each round so the user can rank it precisely; it stays until manually untoggled.
+    // Priority 1: place "Ungerankt" titles — matched against a ranked title near the
+    // middle of the list (a meaningful first split), or another unranked title when
+    // none are ranked yet. Priority 2: refine the leaderboard via near-adjacent
+    // (gap 1–3) pairs — "wie es immer war". Returns null when no near-adjacent pairs
+    // remain (and no spotlight forces one) → duel is done.
     function pickPair() {
       const arr = duelItems();
       if (arr.length < 2) return null;
       arr.sort((a, b) => b.score - a.score);
 
-      // --- Priority 0 (R19-#6 Part C): Spotlight — keep one title in every duel until it loses ---
+      // --- Priority 0: Spotlight focus (toggled inside the duel) ---
       if (db.spotlight && db.spotlight.mediaType === rankMedia) {
         const sp = arr.find(it => String(it.id) === String(db.spotlight.id));
         if (sp) {   // (if filtered out by the duel pre-filter, just skip forcing this round)
           const rankedArr = arr.filter(it => !it.unranked).sort((a, b) => b.score - a.score);
-          if (sp.unranked) {
-            // not placed yet → give it a meaningful first comparison near the middle
+          const si = rankedArr.findIndex(it => it === sp);
+          if (sp.unranked || si < 0) {
             const pool = rankedArr.length ? rankedArr : arr.filter(it => it !== sp);
-            if (pool.length) return [sp, pool[Math.floor(pool.length / 2)]];
+            if (pool.length) return [sp, pool[Math.floor(pool.length / 2)]];   // first placement near the middle
           } else {
-            const i = rankedArr.findIndex(it => it === sp);
-            if (i > 0) return [sp, rankedArr[i - 1]];   // climb target: the title directly above it
-            if (i === 0) clearSpotlight();              // already #1 → the fight is won, resume normal
+            // nearest-by-position opponent whose pair hasn't been seen yet → lets the
+            // focused title be compared against its neighbours to find its true rank
+            let best = null, bestDist = Infinity;
+            for (let k = 0; k < rankedArr.length; k++) {
+              if (k === si || duelSeenPairs.has(pairSig(sp, rankedArr[k]))) continue;
+              const d = Math.abs(k - si);
+              if (d < bestDist) { bestDist = d; best = rankedArr[k]; }
+            }
+            if (best) return [sp, best];
+            // all of the focused title's pairs are seen → fall through to normal pairing
           }
         }
       }
@@ -5307,46 +5322,15 @@
         }
       }
 
-      // --- Priority 2 (R19-#6 Part B): refine the leaderboard with varied opponents ---
-      // All unseen near-adjacent (gap 1–3) pairs. This pool also drives termination:
-      // once it is empty the leaderboard is settled and the duel is done.
-      const adjacentPairs = () => {
-        const out = [];
-        for (let gap = 1; gap <= Math.min(3, arr.length - 1); gap++) {
-          for (let i = 0; i < arr.length - gap; i++) {
-            if (!duelSeenPairs.has(pairSig(arr[i], arr[i + gap]))) out.push([arr[i], arr[i + gap]]);
-          }
+      // --- Priority 2: refine the leaderboard via near-adjacent (gap 1–3) pairs ---
+      for (let gap = 1; gap <= Math.min(3, arr.length - 1); gap++) {
+        const candidates = [];
+        for (let i = 0; i < arr.length - gap; i++) {
+          if (!duelSeenPairs.has(pairSig(arr[i], arr[i + gap]))) candidates.push([arr[i], arr[i + gap]]);
         }
-        return out;
-      };
-      const adj = adjacentPairs();
-      if (!adj.length) return null;                 // no refinement left → duel finished
-      const pickAdjacent = () => adj[Math.floor(Math.random() * adj.length)];
-
-      const roll = Math.random();
-      let pair = null;
-      if (roll < 0.30) {
-        // 30%: star-boosted — a great/good title stuck in the lower half of the
-        // list, matched against a random title from the top half (climb chance).
-        // Actors have no buckets, so this naturally finds nothing → falls back.
-        const mid = Math.floor(arr.length / 2);
-        const topHalf = arr.slice(0, mid);
-        const boost = arr.slice(mid).filter(it => it.bucket === "great" || it.bucket === "good");
-        for (let t = 0; t < 12 && !pair && topHalf.length && boost.length; t++) {
-          const a = boost[Math.floor(Math.random() * boost.length)];
-          const b = topHalf[Math.floor(Math.random() * topHalf.length)];
-          if (a !== b && !duelSeenPairs.has(pairSig(a, b))) pair = [b, a];
-        }
-      } else if (roll < 0.50) {
-        // 20%: random cross-rank match from anywhere in the list
-        for (let t = 0; t < 12 && !pair; t++) {
-          const a = arr[Math.floor(Math.random() * arr.length)];
-          const b = arr[Math.floor(Math.random() * arr.length)];
-          if (a !== b && !duelSeenPairs.has(pairSig(a, b))) pair = [a, b];
-        }
+        if (candidates.length) return candidates[Math.floor(Math.random() * candidates.length)];
       }
-      // 50% case, or a boosted/random draw that found nothing unseen → near-adjacent
-      return pair || pickAdjacent();
+      return null; // all relevant pairs exhausted
     }
 
     // point 9a: a title's current leaderboard position ("#12") or "Ungerankt"
@@ -5384,7 +5368,8 @@
       duelSeenPairs.add(pairSig(pair[0], pair[1])); // mark as seen as soon as it's shown
       fillDuelCard(duelCardA, pair[0]);
       fillDuelCard(duelCardB, pair[1]);
-      updateDuelSpotlight();   // R19-#6 Part C: refresh "Kämpft um Position" banner
+      updateDuelSpotlight();      // R19-#6 Part C: refresh "Im Spotlight" banner
+      updateDuelSpotButtons();    // and the per-card toggle states
     }
 
     let lastDuel = null;   // point 11: snapshot of the most recent comparison, for one-level undo
@@ -5511,28 +5496,19 @@
       // A duel result places both titles: they leave the "Ungerankt" zone (P3)
       winner.unranked = false;
       loser.unranked = false;
-      // R19-#6 Part A: positional outcome. ONLY winner & loser ever move.
-      //  • winner already ranked ABOVE loser  → nothing changes (it already holds
-      //    the correct slot).
-      //  • winner ranked BELOW (or tied)      → winner takes loser's slot. Loser
-      //    drops one and everyone between shifts down by 1 automatically: their
-      //    scores stay untouched and the winner is re-inserted with a midpoint
-      //    score directly above the loser, so no renumbering is needed.
-      //    Adjacent pairs collapse to a clean swap by the same rule.
+      // R19-#6 Part A (revised): simple SWAP. ONLY winner & loser ever move.
+      //  • winner already ranked ABOVE loser → nothing changes (it already holds the
+      //    better slot).
+      //  • winner ranked BELOW (or tied)     → the two just swap places: winner takes
+      //    loser's exact slot, loser takes winner's. Nobody else moves.
       const posPool = (isPerson
         ? Object.values(db.people || {}).filter(p => !p.unranked)
         : Object.values(db.items).filter(it => it.mediaType === rankMedia && !it.unranked)
       ).sort((a, b) => b.score - a.score);
       const wi = posPool.findIndex(x => String(x.id) === String(winner.id));
       const li = posPool.findIndex(x => String(x.id) === String(loser.id));
-      if (wi > li) {                                      // winner was ranked below loser
-        const above = li > 0 ? posPool[li - 1] : null;    // item directly above the loser
-        const aboveScore = above ? above.score : loser.score + 2;
-        winner.score = (loser.score + aboveScore) / 2;    // land exactly in loser's old slot
-      }
-      // R19-#6 Part C: a spotlighted title that just LOST drops out of the spotlight.
-      if (db.spotlight && db.spotlight.mediaType === rankMedia && String(db.spotlight.id) === String(loser.id)) {
-        clearSpotlight();
+      if (wi > li) {                                      // winner was ranked below loser → swap
+        const tmp = winner.score; winner.score = loser.score; loser.score = tmp;
       }
       saveDB();
       updateUndoBtn();
@@ -5594,6 +5570,11 @@
     wireDuelCard(duelCardB, 1);
     if (duelInfoA) duelInfoA.addEventListener("click", e => { e.stopPropagation(); if (duelPair) openDuelDetail(duelPair[0]); });
     if (duelInfoB) duelInfoB.addEventListener("click", e => { e.stopPropagation(); if (duelPair) openDuelDetail(duelPair[1]); });
+    // R19-#6 Part C (revised): per-card Spotlight toggles
+    const duelSpotA = document.getElementById("duel-spot-a");
+    const duelSpotB = document.getElementById("duel-spot-b");
+    if (duelSpotA) duelSpotA.addEventListener("click", e => { e.stopPropagation(); toggleDuelSpotlight(0); });
+    if (duelSpotB) duelSpotB.addEventListener("click", e => { e.stopPropagation(); toggleDuelSpotlight(1); });
     document.getElementById("duel-undo").addEventListener("click", e => { e.stopPropagation(); undoDuel(); });   // point 11 / R19-B5
 
     // ---------- Person filmography sheet (people-duel long-press) ----------
