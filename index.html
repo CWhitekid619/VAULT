@@ -3051,8 +3051,28 @@
         );
       },
       async shareItem(fromUid, fromUsername, toUids, item, note, bucket) {
+        // R19-B2: guard against duplicate sends (e.g. 9× taps before async resolves).
+        // Skip recipients who received an identical share from this sender in the last 60 s.
+        const dedupWindow = 60 * 1000;
+        const now = Date.now();
+        const filteredUids = [];
+        for (const toUid of toUids) {
+          const recent = await getDocs(query(
+            collection(firestore, "users", toUid, "notifications"),
+            where("type",    "==", "item_shared"),
+            where("fromUid", "==", fromUid),
+            where("tmdbId",  "==", item.id)
+          ));
+          const isDup = recent.docs.some(d => {
+            const ts = d.data().createdAt;
+            const ms = ts && ts.toMillis ? ts.toMillis() : 0;
+            return now - ms < dedupWindow;
+          });
+          if (!isDup) filteredUids.push(toUid);
+        }
+        if (!filteredUids.length) return;
         const batch = writeBatch(firestore);
-        toUids.forEach(toUid => {
+        filteredUids.forEach(toUid => {
           const id = "share_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
           batch.set(doc(firestore, "users", toUid, "notifications", id), {
             type: "item_shared", fromUid, fromUsername,
@@ -5218,7 +5238,8 @@
       lastDuel.b.score = lastDuel.bScore; lastDuel.b.unranked = lastDuel.bUn;
       duelSeenPairs.delete(lastDuel.sig);
       saveDB();
-      const pair = [lastDuel.a, lastDuel.b];
+      // R19-B5: restore original left/right display order so undo shows the same pair
+      const pair = lastDuel.origPair || [lastDuel.a, lastDuel.b];
       lastDuel = null;
       showDuelPair(pair);
       updateUndoBtn();
@@ -5285,6 +5306,7 @@
       // point 11: snapshot both titles BEFORE changing anything, for one-level undo
       lastDuel = {
         a: winner, b: loser,
+        origPair: [duelPair[0], duelPair[1]],   // R19-B5: preserve original left/right order
         aScore: winner.score, bScore: loser.score,
         aUn: winner.unranked, bUn: loser.unranked,
         sig: pairSig(winner, loser)
@@ -5298,6 +5320,23 @@
       winner.unranked = false;
       loser.unranked = false;
       applyElo(winner, loser);
+      // R19-B6: cap winner's rank movement to at most +1 position per duel.
+      // Without this cap a new item (all at BUCKET_BASE) can jump past dozens of
+      // equally-scored items in a single round because Elo moves everyone equally.
+      if (!wasUnranked && isFinite(posBefore) && posBefore > 1) {
+        const poolAfter = (rankMedia === "person"
+          ? Object.values(db.people || {}).filter(p => !p.unranked)
+          : Object.values(db.items).filter(it => it.mediaType === rankMedia && !it.unranked)
+        ).sort((a, b) => b.score - a.score);
+        const winnerIdx = poolAfter.findIndex(x => String(x.id) === String(winner.id));
+        // winnerIdx+1 = new 1-based rank; clamp to no better than (posBefore-1)
+        if (winnerIdx >= 0 && winnerIdx + 1 < posBefore - 1) {
+          const targetItem = poolAfter[posBefore - 2]; // item currently at rank (posBefore-1)
+          if (targetItem && String(targetItem.id) !== String(winner.id)) {
+            winner.score = targetItem.score + 1;
+          }
+        }
+      }
       saveDB();
       updateUndoBtn();
       const newBucket = deriveBucket(winner.score);
@@ -5358,7 +5397,7 @@
     wireDuelCard(duelCardB, 1);
     if (duelInfoA) duelInfoA.addEventListener("click", e => { e.stopPropagation(); if (duelPair) openDuelDetail(duelPair[0]); });
     if (duelInfoB) duelInfoB.addEventListener("click", e => { e.stopPropagation(); if (duelPair) openDuelDetail(duelPair[1]); });
-    document.getElementById("duel-undo").addEventListener("click", undoDuel);   // point 11
+    document.getElementById("duel-undo").addEventListener("click", e => { e.stopPropagation(); undoDuel(); });   // point 11 / R19-B5
 
     // ---------- Person filmography sheet (people-duel long-press) ----------
     const personCreditsCache = {};   // personId -> top films (per session)
@@ -6755,6 +6794,7 @@
         const items = Object.values(l.items || {});
         out.push({
           id, name: l.name, shareMode: mode, count: items.length,
+          sharedId: l.sharedId || null,   // R19-B7: expose collaborative list ID for member routing
           posters: items.filter(it => it.poster).slice(0, 6).map(it => it.poster),
           items: items.slice(0, 100).map(it => ({ id: it.id, mediaType: it.mediaType, title: it.title || "", poster: it.poster || null }))
         });
@@ -9131,10 +9171,12 @@
     }
 
     function exportDB() {
+      const username = (_myProfile && _myProfile.username) || (window.__vaultUser && window.__vaultUser.email) || "user";
+      const date = new Date().toISOString().slice(0, 10);
       const blob = new Blob([JSON.stringify(db, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url; a.download = "vault-backup.json";
+      a.href = url; a.download = `vault-backup-${username}-${date}.json`;
       document.body.appendChild(a); a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
@@ -9146,6 +9188,44 @@
       for (const k in db.items) {
         if (typeof db.items[k].score !== "number") {
           db.items[k].score = (BUCKET_BASE[db.items[k].bucket] != null ? BUCKET_BASE[db.items[k].bucket] : 1400);
+          changed = true;
+        }
+      }
+      if (changed) saveDB();
+    })();
+
+    // R19-B1: deduplicate db.items — every entry's key must equal keyOf(mediaType, id).
+    // Stale keys (e.g. title-based, or id===undefined) caused silent overwrites and
+    // lost ratings when the same film was added again under its correct TMDB-ID key.
+    (function migrateDeduplicateItems() {
+      const best = {};  // correctKey → { key, it }
+      let changed = false;
+      for (const key in db.items) {
+        const it = db.items[key];
+        if (!it || !it.mediaType || it.id == null) {
+          console.warn("[VAULT] Dropping invalid item entry:", key, it);
+          delete db.items[key];
+          changed = true;
+          continue;
+        }
+        const correctKey = keyOf(it.mediaType, it.id);
+        if (!(correctKey in best)) {
+          best[correctKey] = { key, it };
+        } else {
+          const prev = best[correctKey];
+          const prevRated = prev.it.bucket && !prev.it.unranked;
+          const curRated  = it.bucket && !it.unranked;
+          console.warn("[VAULT] Duplicate item:", key, "vs", prev.key, "→", correctKey);
+          if (curRated && !prevRated) best[correctKey] = { key, it };
+          changed = true;
+        }
+      }
+      for (const correctKey in best) {
+        const { key, it } = best[correctKey];
+        if (key !== correctKey) {
+          console.warn("[VAULT] Re-keying item", key, "→", correctKey);
+          db.items[correctKey] = it;
+          delete db.items[key];
           changed = true;
         }
       }
@@ -9246,12 +9326,19 @@
     document.getElementById("notif-center-back").addEventListener("click", closeNotifCenter);
     document.getElementById("notif-mark-all").addEventListener("click", async () => {
       if (!window.__vaultUser || !window.__vaultSocial) return;
-      // C3 (R18): optimistic — flip the local cache, re-render and refresh the
-      // badge right away so it feels reliable; the snapshot confirms afterwards.
+      // R19-B3: snapshot before optimistic update so we can revert on Firestore failure.
+      const prevCache = _notifCache.slice();
       _notifCache = _notifCache.map(n => ({ ...n, read: true }));
       updateNotifBadge(_notifCache);
       renderNotifList(_notifCache);
-      await window.__vaultSocial.markAllRead(window.__vaultUser.uid);
+      try {
+        await window.__vaultSocial.markAllRead(window.__vaultUser.uid);
+      } catch (e) {
+        _notifCache = prevCache;
+        updateNotifBadge(_notifCache);
+        renderNotifList(_notifCache);
+        showToast("Fehler beim Markieren – bitte erneut versuchen");
+      }
     });
 
     let _notifCenterBackEntry = false;
@@ -9337,7 +9424,8 @@
     }
     function notifText(n) {
       const from = `<span class="notif-link" data-ntap="user" data-uid="${socialEsc(n.fromUid||'')}">${socialEsc(n.fromUsername || "Jemand")}</span>`;
-      const item = n.itemTitle ? `<span class="notif-link" data-ntap="item" data-tmdbid="${socialEsc(String(n.tmdbId||''))}" data-itype="${socialEsc(n.itemType||'')}">${socialEsc(n.itemTitle)}</span>` : "";
+      const itemLabel = n.itemTitle || "einen Titel";  // R19-B2: fallback prevents empty "empfiehlt dir " text
+      const item = n.tmdbId ? `<span class="notif-link" data-ntap="item" data-tmdbid="${socialEsc(String(n.tmdbId||''))}" data-itype="${socialEsc(n.itemType||'')}">${socialEsc(itemLabel)}</span>` : socialEsc(itemLabel);
       const list = n.listName  ? `<span class="notif-link" data-ntap="list" data-listid="${socialEsc(n.listId||'')}">${socialEsc(n.listName)}</span>` : "";
       if (n.type === "friend_request")   return `${from} möchte dein Freund sein`;
       if (n.type === "friend_accepted")  return `${from} hat deine Anfrage angenommen`;
@@ -10116,13 +10204,26 @@
         });
       });
 
-      // List cards → read-only list view (Runde C); stub for now
+      // List cards → full shared list when viewer is a member, read-only grid otherwise
       content.querySelectorAll(".fprof-list-card[data-listid]").forEach(card => {
         const listId = card.dataset.listid;
         const list = visibleLists.find(l => l.id === listId);
-        if (list && typeof openFriendListView === "function") {
-          card.addEventListener("click", () => openFriendListView(friendUid, list));
-        }
+        if (!list) return;
+        card.addEventListener("click", () => {
+          // R19-B7: if this is a collaborative list the current user is a member of,
+          // open the full interactive list view instead of the read-only grid.
+          if (list.sharedId) {
+            const localEntry = Object.entries(db.lists).find(([, l]) => l.sharedId === list.sharedId);
+            if (localEntry) {
+              const [localId] = localEntry;
+              closeFriendProfile();
+              switchTab("lists");
+              setTimeout(() => openListDetail(localId), 80);
+              return;
+            }
+          }
+          if (typeof openFriendListView === "function") openFriendListView(friendUid, list);
+        });
       });
     }
 
@@ -10136,7 +10237,16 @@
 
     function closeShareSheet() {
       shareBackdrop.hidden = true;
-      document.body.style.overflow = "";
+      // R19-B4: only clear scroll-lock if no other overlay is still open.
+      // Without this check, closing the share sheet while the detail page is open
+      // removes overflow:hidden from body, breaking the detail page scroll-lock and
+      // making the star rating unresponsive (the body scroll intercepts touch events).
+      const detailOpen   = document.getElementById("detail")     && !document.getElementById("detail").hidden;
+      const qrOpen       = document.getElementById("qr-backdrop") && !document.getElementById("qr-backdrop").hidden;
+      const profOpen     = document.getElementById("friend-profile") && !document.getElementById("friend-profile").hidden;
+      const notifOpen    = document.getElementById("notif-center") && !document.getElementById("notif-center").hidden;
+      if (!detailOpen && !qrOpen && !profOpen && !notifOpen) document.body.style.overflow = "";
+      if (shareBackdrop.contains(document.activeElement)) document.activeElement.blur();
       _shareItem = null; _shareRating = null;
     }
 
@@ -10178,18 +10288,29 @@
       document.body.style.overflow = "hidden";
     }
 
+    let _shareSubmitting = false;
     document.getElementById("share-submit").addEventListener("click", async () => {
       if (!_shareItem || !window.__vaultUser || !window.__vaultSocial) return;
-      const toUids = [...shareBackdrop.querySelectorAll("input[type=checkbox]:checked")].map(cb => cb.value);
-      if (!toUids.length) { showToast("Mindestens einen Freund auswählen"); return; }
-      const note = document.getElementById("share-note").value.trim();
-      const myName = (_myProfile && _myProfile.username) || (window.__vaultUser.email || "");
-      await window.__vaultSocial.shareItem(window.__vaultUser.uid, myName, toUids, {
-        title: _shareItem.title, poster: _shareItem.poster,
-        type: _shareItem.mediaType, id: _shareItem.id
-      }, note, _shareRating);
-      closeShareSheet();
-      showToast("Empfehlung gesendet");
+      // R19-B2: guard against multiple taps while the async shareItem resolves
+      if (_shareSubmitting) return;
+      _shareSubmitting = true;
+      const btn = document.getElementById("share-submit");
+      if (btn) btn.disabled = true;
+      try {
+        const toUids = [...shareBackdrop.querySelectorAll("input[type=checkbox]:checked")].map(cb => cb.value);
+        if (!toUids.length) { showToast("Mindestens einen Freund auswählen"); return; }
+        const note = document.getElementById("share-note").value.trim();
+        const myName = (_myProfile && _myProfile.username) || (window.__vaultUser.email || "");
+        await window.__vaultSocial.shareItem(window.__vaultUser.uid, myName, toUids, {
+          title: _shareItem.title, poster: _shareItem.poster,
+          type: _shareItem.mediaType, id: _shareItem.id
+        }, note, _shareRating);
+        closeShareSheet();
+        showToast("Empfehlung gesendet");
+      } finally {
+        _shareSubmitting = false;
+        if (btn) btn.disabled = false;
+      }
     });
 
     // R16-#7: qr-share button replaced by toggle+note flow; updateQRShareVisibility now handled in openQuickRate
