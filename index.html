@@ -787,6 +787,33 @@
     .rank-arrow:active { background: var(--surface); }
     .rank-arrow:disabled { opacity: .3; cursor: default; }
     .rank-arrow svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+    /* R19-#6 Part C: Spotlight toggle per ranking row */
+    .rank-spot {
+      flex: 0 0 auto; width: 30px; height: 30px; padding: 0; margin-left: 6px; cursor: pointer;
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; color: var(--text-dim);
+      transition: color .15s, border-color .15s, background .15s;
+    }
+    .rank-spot svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .rank-spot.active { color: var(--accent); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); }
+    .rank-spot:active { background: var(--surface); }
+    /* R19-#6 Part D: subtle rating/ranking consistency banner */
+    .rank-consistency {
+      display: flex; align-items: center; gap: 10px; margin: 2px 0 12px;
+      padding: 11px 12px; border-radius: 10px;
+      background: var(--surface-2); border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    }
+    .rank-consistency .rc-text { flex: 1; font-size: 12.5px; line-height: 1.35; color: var(--text-dim); }
+    .rank-consistency .rc-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+    .rank-consistency .rc-confirm {
+      background: var(--accent); color: #1a1206; border: none; border-radius: 7px;
+      padding: 7px 11px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; white-space: nowrap;
+    }
+    .rank-consistency .rc-confirm:active { opacity: .85; }
+    .rank-consistency .rc-dismiss {
+      background: none; border: none; cursor: pointer; padding: 4px; display: flex; color: var(--text-dim);
+    }
+    .rank-consistency .rc-dismiss svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
     /* ---------- Duel start button ---------- */
     .duel-start {
@@ -815,6 +842,16 @@
     }
     .duel-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
     .duel-q { font-size: 19px; font-weight: 700; letter-spacing: -.01em; }
+    /* R19-#6 Part C: active-spotlight indicator inside the duel */
+    .duel-spotlight {
+      display: flex; align-items: center; gap: 7px; margin-bottom: 12px;
+      padding: 8px 12px; border-radius: 10px;
+      background: color-mix(in srgb, var(--accent) 14%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+      color: var(--accent); font-size: 13px; font-weight: 600;
+    }
+    .duel-spotlight svg { width: 15px; height: 15px; flex: 0 0 auto; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .duel-spotlight .ds-name { color: var(--text); font-weight: 700; }
     .duel-close {
       border: none; background: none; cursor: pointer; padding: 6px;
       display: flex; color: var(--text-dim);
@@ -2367,6 +2404,7 @@
       </select>
       <select id="df-duel-genre" class="modal-select"><option value="">Alle Genres</option></select>
     </div>
+    <div id="duel-spotlight" class="duel-spotlight" hidden></div>
     <div class="duel-cards">
       <div class="duel-card-wrap">
         <button id="duel-a" class="duel-card" type="button">
@@ -3351,13 +3389,14 @@
             recoSnoozed: (parsed.recoSnoozed && typeof parsed.recoSnoozed === "object") ? parsed.recoSnoozed : {},  // R10-P2: dismissed reco titles → snoozedAt timestamp
             manualRankOrder: (parsed.manualRankOrder && typeof parsed.manualRankOrder === "object") ? parsed.manualRankOrder : {},  // R10-P3: manual ranking order per mediaType
             settings: (parsed.settings && typeof parsed.settings === "object") ? parsed.settings : {},  // R3: user prefs incl. settings.privacy (sharing groundwork)
-            recentlyWatchedExcluded: (parsed.recentlyWatchedExcluded && typeof parsed.recentlyWatchedExcluded === "object") ? parsed.recentlyWatchedExcluded : {}  // R16-#3: keys excluded from "Zuletzt gesehen" display
+            recentlyWatchedExcluded: (parsed.recentlyWatchedExcluded && typeof parsed.recentlyWatchedExcluded === "object") ? parsed.recentlyWatchedExcluded : {},  // R16-#3: keys excluded from "Zuletzt gesehen" display
+            spotlight: (parsed.spotlight && typeof parsed.spotlight === "object") ? parsed.spotlight : null  // R19-#6 Part C: {mediaType,id} of the spotlighted title, or null
           };
           migrateTags(out);
           return out;
         }
       } catch (e) { /* corrupted store — start fresh */ }
-      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, trackedSeries: {}, homeCustomSections: [], homeSections: null, people: {}, recoExcludeLists: {}, recoExcludeTags: {}, recoSnoozed: {}, manualRankOrder: {}, settings: {}, recentlyWatchedExcluded: {} };
+      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, trackedSeries: {}, homeCustomSections: [], homeSections: null, people: {}, recoExcludeLists: {}, recoExcludeTags: {}, recoSnoozed: {}, manualRankOrder: {}, settings: {}, recentlyWatchedExcluded: {}, spotlight: null };
     }
     let db = loadDB();
     function saveDB() {
@@ -4876,6 +4915,97 @@
       if ([...rankTagSel.options].some(o => o.value === prevT)) rankTagSel.value = prevT;
     }
 
+    // R19-#6 Part C: Spotlight — exactly one title (per media type) is forced into
+    // every duel until it loses once, then it auto-clears. State: db.spotlight = {mediaType, id}.
+    const SPOT_SVG = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><line x1="12" y1="1.5" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22.5"/><line x1="1.5" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22.5" y2="12"/><circle cx="12" cy="12" r="2.5"/></svg>';
+    function spotlightMatches(id, media) {
+      return !!db.spotlight && String(db.spotlight.id) === String(id) && db.spotlight.mediaType === media;
+    }
+    function clearSpotlight() {
+      if (db.spotlight) { db.spotlight = null; saveDB(); }
+    }
+    function toggleSpotlight(it, media) {
+      const name = it.title || it.name || "";
+      if (spotlightMatches(it.id, media)) { clearSpotlight(); showToast("Spotlight entfernt"); }
+      else { db.spotlight = { mediaType: media, id: it.id }; saveDB(); showToast("Spotlight: " + name); }   // only one at a time — replaces any previous
+      if (document.body.dataset.tab === "ranking") renderRanking();
+      updateDuelSpotlight();
+    }
+    // Refresh the "Kämpft um Position: …" banner inside the duel (hidden when no
+    // spotlight applies to the current media type or the duel is closed).
+    function updateDuelSpotlight() {
+      const el = document.getElementById("duel-spotlight");
+      if (!el) return;
+      const sp = db.spotlight;
+      if (!sp || sp.mediaType !== rankMedia || (duelEl && duelEl.hidden)) { el.hidden = true; return; }
+      let name = "";
+      if (rankMedia === "person") { const p = (db.people || {})[sp.id]; name = p ? (p.name || "") : ""; }
+      else { const found = Object.values(db.items).find(x => x.mediaType === rankMedia && String(x.id) === String(sp.id)); name = found ? (found.title || "") : ""; }
+      if (!name) { el.hidden = true; return; }
+      el.innerHTML = SPOT_SVG + '<span>Kämpft um Position:&nbsp;<span class="ds-name"></span></span>';
+      el.querySelector(".ds-name").textContent = name;
+      el.hidden = false;
+    }
+
+    // R19-#6 Part D: rating/ranking consistency check + one-time re-sort (films & series).
+    // Inconsistent = an explicitly ≤3★ title (watchable/meh/bad) ranked above a 5★ (great).
+    let ratingResortDismissed = {};   // per-media, session-scoped: don't re-nag after confirm/dismiss
+    function ratingInconsistent(media) {
+      if (media === "person") return false;
+      const ranked = Object.values(db.items)
+        .filter(it => it.mediaType === media && !it.unranked)
+        .sort((a, b) => b.score - a.score);
+      let seenLow = false;
+      for (const it of ranked) {
+        if (it.bucket === "watchable" || it.bucket === "meh" || it.bucket === "bad") seenLow = true;
+        else if (it.bucket === "great" && seenLow) return true;   // a 5★ sits below a ≤3★
+      }
+      return false;
+    }
+    // Re-sort by star rating (desc), keeping relative order within the same star tier.
+    // Implemented by reassigning Elo scores into each tier's safe band, so the normal
+    // zone view stays intact and ratings/ranking become genuinely consistent.
+    function resortByRating(media) {
+      const items = Object.values(db.items).filter(it => it.mediaType === media && !it.unranked);
+      if (!items.length) return;
+      // effective tier: explicit star rating if set, else the title's current score-zone
+      const effTier = it => (it.bucket && BUCKET_ORDER.indexOf(it.bucket) >= 0) ? it.bucket : deriveBucket(it.score);
+      items.sort((a, b) => {
+        const d = BUCKET_ORDER.indexOf(effTier(b)) - BUCKET_ORDER.indexOf(effTier(a)); // higher tier first
+        return d !== 0 ? d : (b.score - a.score);   // within a tier: preserve current relative order
+      });
+      const tiers = items.map(effTier);
+      const BANDS = { great: [1880, 1990], good: [1580, 1690], watchable: [1280, 1390], meh: [980, 1090], bad: [700, 900] };
+      let i = 0;
+      while (i < items.length) {
+        let j = i; while (j < items.length && tiers[j] === tiers[i]) j++;
+        const band = BANDS[tiers[i]] || [980, 1090], n = j - i;
+        for (let k = 0; k < n; k++) {
+          items[i + k].score = (n === 1)
+            ? Math.round((band[0] + band[1]) / 2)
+            : Math.round(band[1] - (band[1] - band[0]) * (k / (n - 1)));
+        }
+        i = j;
+      }
+      if (db.manualRankOrder && db.manualRankOrder[media]) delete db.manualRankOrder[media]; // show new Elo order with zones
+      saveDB();
+    }
+    function buildConsistencyBanner(media) {
+      if (ratingResortDismissed[media] || !ratingInconsistent(media)) return null;
+      const bar = document.createElement("div"); bar.className = "rank-consistency";
+      const txt = document.createElement("div"); txt.className = "rc-text";
+      txt.textContent = "Manche Platzierungen passen nicht zu deinen Bewertungen. Nach Sternen neu sortieren?";
+      const actions = document.createElement("div"); actions.className = "rc-actions";
+      const ok = document.createElement("button"); ok.className = "rc-confirm"; ok.type = "button"; ok.textContent = "Neu sortieren";
+      ok.addEventListener("click", () => { resortByRating(media); ratingResortDismissed[media] = true; renderRanking(); showToast("Nach Sternen sortiert"); });
+      const x = document.createElement("button"); x.className = "rc-dismiss"; x.type = "button"; x.setAttribute("aria-label", "Schließen");
+      x.innerHTML = '<svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+      x.addEventListener("click", () => { ratingResortDismissed[media] = true; renderRanking(); });
+      actions.appendChild(ok); actions.appendChild(x);
+      bar.appendChild(txt); bar.appendChild(actions);
+      return bar;
+    }
+
     function renderRanking() {
       const isPerson    = rankMedia === "person";
       const genreFilter = (!isPerson && rankGenreSel.value) ? parseInt(rankGenreSel.value, 10) : null;
@@ -4916,6 +5046,10 @@
 
       const frag = document.createDocumentFragment();
 
+      // R19-#6 Part D: one-time rating/ranking consistency banner (top of the list)
+      const consistencyBar = buildConsistencyBanner(rankMedia);
+      if (consistencyBar) frag.appendChild(consistencyBar);
+
       const addRow = (it, num, reorder) => {
         const row = document.createElement("div");
         row.className = "rank-row";
@@ -4950,6 +5084,18 @@
           bodyEl.appendChild(tierLbl);
         }
         row.appendChild(bodyEl);
+
+        // R19-#6 Part C: Spotlight toggle (films, series, actors). Forces this title
+        // into every duel until it loses once. Only one can be active at a time.
+        const itMedia = isPerson ? "person" : it.mediaType;
+        const spot = document.createElement("button");
+        spot.className = "rank-spot" + (spotlightMatches(it.id, itMedia) ? " active" : "");
+        spot.type = "button"; spot.setAttribute("aria-label", "Spotlight");
+        spot.title = spotlightMatches(it.id, itMedia) ? "Spotlight aktiv – im Duell bevorzugt" : "Spotlight: im Duell bevorzugen";
+        spot.innerHTML = SPOT_SVG;
+        spot.addEventListener("click", e => { e.stopPropagation(); toggleSpotlight(it, itMedia); });
+        ["mousedown", "touchstart"].forEach(ev => spot.addEventListener(ev, e => e.stopPropagation(), { passive: true }));
+        row.appendChild(spot);
 
         // R10-P3: slim up/down arrows for manual reordering (ranked rows only)
         if (reorder) {
@@ -5114,13 +5260,33 @@
     // Pair selection (P7). Priority 1: place "Ungerankt" titles — they need a
     // comparison the most. Each unranked title is matched against a ranked title
     // near the middle of the list (a meaningful first split), or against another
-    // unranked title when none are ranked yet. Priority 2: refine the existing
-    // leaderboard via adjacent / near-adjacent pairs.
-    // Returns null when all relevant pairs have been seen → duel is done.
+    // unranked title when none are ranked yet. Priority 2 (R19-#6 Part B): refine
+    // the leaderboard with VARIED opponents — 50% near-adjacent (±1–3), 30%
+    // star-boosted (a great/good title stuck in the lower half vs. a random
+    // top-half title), 20% random cross-rank — so a highly-rated but low-ranked
+    // title regularly gets a chance to climb.
+    // Returns null when all near-adjacent pairs have been seen → duel is done.
     function pickPair() {
       const arr = duelItems();
       if (arr.length < 2) return null;
       arr.sort((a, b) => b.score - a.score);
+
+      // --- Priority 0 (R19-#6 Part C): Spotlight — keep one title in every duel until it loses ---
+      if (db.spotlight && db.spotlight.mediaType === rankMedia) {
+        const sp = arr.find(it => String(it.id) === String(db.spotlight.id));
+        if (sp) {   // (if filtered out by the duel pre-filter, just skip forcing this round)
+          const rankedArr = arr.filter(it => !it.unranked).sort((a, b) => b.score - a.score);
+          if (sp.unranked) {
+            // not placed yet → give it a meaningful first comparison near the middle
+            const pool = rankedArr.length ? rankedArr : arr.filter(it => it !== sp);
+            if (pool.length) return [sp, pool[Math.floor(pool.length / 2)]];
+          } else {
+            const i = rankedArr.findIndex(it => it === sp);
+            if (i > 0) return [sp, rankedArr[i - 1]];   // climb target: the title directly above it
+            if (i === 0) clearSpotlight();              // already #1 → the fight is won, resume normal
+          }
+        }
+      }
 
       // --- Priority 1: get unranked titles into a duel ---
       const unranked = arr.filter(it => it.unranked);
@@ -5141,17 +5307,46 @@
         }
       }
 
-      // --- Priority 2: refine the ranked leaderboard ---
-      for (let gap = 1; gap <= Math.min(3, arr.length - 1); gap++) {
-        // collect all unseen candidates at this gap distance, then pick one at random
-        const candidates = [];
-        for (let i = 0; i < arr.length - gap; i++) {
-          const sig = pairSig(arr[i], arr[i + gap]);
-          if (!duelSeenPairs.has(sig)) candidates.push([arr[i], arr[i + gap]]);
+      // --- Priority 2 (R19-#6 Part B): refine the leaderboard with varied opponents ---
+      // All unseen near-adjacent (gap 1–3) pairs. This pool also drives termination:
+      // once it is empty the leaderboard is settled and the duel is done.
+      const adjacentPairs = () => {
+        const out = [];
+        for (let gap = 1; gap <= Math.min(3, arr.length - 1); gap++) {
+          for (let i = 0; i < arr.length - gap; i++) {
+            if (!duelSeenPairs.has(pairSig(arr[i], arr[i + gap]))) out.push([arr[i], arr[i + gap]]);
+          }
         }
-        if (candidates.length) return candidates[Math.floor(Math.random() * candidates.length)];
+        return out;
+      };
+      const adj = adjacentPairs();
+      if (!adj.length) return null;                 // no refinement left → duel finished
+      const pickAdjacent = () => adj[Math.floor(Math.random() * adj.length)];
+
+      const roll = Math.random();
+      let pair = null;
+      if (roll < 0.30) {
+        // 30%: star-boosted — a great/good title stuck in the lower half of the
+        // list, matched against a random title from the top half (climb chance).
+        // Actors have no buckets, so this naturally finds nothing → falls back.
+        const mid = Math.floor(arr.length / 2);
+        const topHalf = arr.slice(0, mid);
+        const boost = arr.slice(mid).filter(it => it.bucket === "great" || it.bucket === "good");
+        for (let t = 0; t < 12 && !pair && topHalf.length && boost.length; t++) {
+          const a = boost[Math.floor(Math.random() * boost.length)];
+          const b = topHalf[Math.floor(Math.random() * topHalf.length)];
+          if (a !== b && !duelSeenPairs.has(pairSig(a, b))) pair = [b, a];
+        }
+      } else if (roll < 0.50) {
+        // 20%: random cross-rank match from anywhere in the list
+        for (let t = 0; t < 12 && !pair; t++) {
+          const a = arr[Math.floor(Math.random() * arr.length)];
+          const b = arr[Math.floor(Math.random() * arr.length)];
+          if (a !== b && !duelSeenPairs.has(pairSig(a, b))) pair = [a, b];
+        }
       }
-      return null; // all relevant pairs exhausted
+      // 50% case, or a boosted/random draw that found nothing unseen → near-adjacent
+      return pair || pickAdjacent();
     }
 
     // point 9a: a title's current leaderboard position ("#12") or "Ungerankt"
@@ -5189,6 +5384,7 @@
       duelSeenPairs.add(pairSig(pair[0], pair[1])); // mark as seen as soon as it's shown
       fillDuelCard(duelCardA, pair[0]);
       fillDuelCard(duelCardB, pair[1]);
+      updateDuelSpotlight();   // R19-#6 Part C: refresh "Kämpft um Position" banner
     }
 
     let lastDuel = null;   // point 11: snapshot of the most recent comparison, for one-level undo
@@ -5227,6 +5423,7 @@
       if (duelInfoB) duelInfoB.hidden = isPerson;
       showDuelPair(pair);
       duelEl.hidden = false;
+      updateDuelSpotlight();   // R19-#6 Part C: now the duel is visible, show the banner
       document.body.style.overflow = "hidden";
     }
 
@@ -5236,6 +5433,7 @@
       if (!lastDuel) return;
       lastDuel.a.score = lastDuel.aScore; lastDuel.a.unranked = lastDuel.aUn;
       lastDuel.b.score = lastDuel.bScore; lastDuel.b.unranked = lastDuel.bUn;
+      db.spotlight = lastDuel.spot;   // R19-#6 Part C: restore spotlight state
       duelSeenPairs.delete(lastDuel.sig);
       saveDB();
       // R19-B5: restore original left/right display order so undo shows the same pair
@@ -5252,13 +5450,6 @@
       document.body.style.overflow = "";
       renderRanking();
       if (msg) showToast(msg);
-    }
-
-    function applyElo(winner, loser) {
-      const K = 32;
-      const expWin = 1 / (1 + Math.pow(10, (loser.score - winner.score) / 400));
-      winner.score = Math.round(winner.score + K * (1 - expWin));
-      loser.score  = Math.round(loser.score  + K * (0 - (1 - expWin)));
     }
 
     // point 10: short celebration when the winner climbs into a higher tier.
@@ -5309,6 +5500,7 @@
         origPair: [duelPair[0], duelPair[1]],   // R19-B5: preserve original left/right order
         aScore: winner.score, bScore: loser.score,
         aUn: winner.unranked, bUn: loser.unranked,
+        spot: db.spotlight,                       // R19-#6 Part C: restore spotlight on undo
         sig: pairSig(winner, loser)
       };
       const isPerson = rankMedia === "person";
@@ -5319,23 +5511,28 @@
       // A duel result places both titles: they leave the "Ungerankt" zone (P3)
       winner.unranked = false;
       loser.unranked = false;
-      applyElo(winner, loser);
-      // R19-B6: cap winner's rank movement to at most +1 position per duel.
-      // Without this cap a new item (all at BUCKET_BASE) can jump past dozens of
-      // equally-scored items in a single round because Elo moves everyone equally.
-      if (!wasUnranked && isFinite(posBefore) && posBefore > 1) {
-        const poolAfter = (rankMedia === "person"
-          ? Object.values(db.people || {}).filter(p => !p.unranked)
-          : Object.values(db.items).filter(it => it.mediaType === rankMedia && !it.unranked)
-        ).sort((a, b) => b.score - a.score);
-        const winnerIdx = poolAfter.findIndex(x => String(x.id) === String(winner.id));
-        // winnerIdx+1 = new 1-based rank; clamp to no better than (posBefore-1)
-        if (winnerIdx >= 0 && winnerIdx + 1 < posBefore - 1) {
-          const targetItem = poolAfter[posBefore - 2]; // item currently at rank (posBefore-1)
-          if (targetItem && String(targetItem.id) !== String(winner.id)) {
-            winner.score = targetItem.score + 1;
-          }
-        }
+      // R19-#6 Part A: positional outcome. ONLY winner & loser ever move.
+      //  • winner already ranked ABOVE loser  → nothing changes (it already holds
+      //    the correct slot).
+      //  • winner ranked BELOW (or tied)      → winner takes loser's slot. Loser
+      //    drops one and everyone between shifts down by 1 automatically: their
+      //    scores stay untouched and the winner is re-inserted with a midpoint
+      //    score directly above the loser, so no renumbering is needed.
+      //    Adjacent pairs collapse to a clean swap by the same rule.
+      const posPool = (isPerson
+        ? Object.values(db.people || {}).filter(p => !p.unranked)
+        : Object.values(db.items).filter(it => it.mediaType === rankMedia && !it.unranked)
+      ).sort((a, b) => b.score - a.score);
+      const wi = posPool.findIndex(x => String(x.id) === String(winner.id));
+      const li = posPool.findIndex(x => String(x.id) === String(loser.id));
+      if (wi > li) {                                      // winner was ranked below loser
+        const above = li > 0 ? posPool[li - 1] : null;    // item directly above the loser
+        const aboveScore = above ? above.score : loser.score + 2;
+        winner.score = (loser.score + aboveScore) / 2;    // land exactly in loser's old slot
+      }
+      // R19-#6 Part C: a spotlighted title that just LOST drops out of the spotlight.
+      if (db.spotlight && db.spotlight.mediaType === rankMedia && String(db.spotlight.id) === String(loser.id)) {
+        clearSpotlight();
       }
       saveDB();
       updateUndoBtn();
