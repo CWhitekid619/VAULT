@@ -412,7 +412,10 @@
       backdrop-filter: saturate(140%) blur(16px);
       -webkit-backdrop-filter: saturate(140%) blur(16px);
       border-top: 1px solid var(--border);
-      z-index: 50;
+      /* Fix #1 (R20-G2): sits ABOVE all navigation overlays (hso 90 / detail 95 /
+         friend-profile 140 / friend-list 145 / notif 150) so the bar never disappears
+         in sub-views. True modals (duel/sheets/lightbox) are bumped above this. */
+      z-index: 160;
     }
 
     .nav-btn {
@@ -549,7 +552,7 @@
 
     /* ---------- Bottom action sheet ---------- */
     .sheet-backdrop {
-      position: fixed; inset: 0; z-index: 100;
+      position: fixed; inset: 0; z-index: 170;   /* Fix #1: modal — above the bottom bar */
       background: rgba(0,0,0,.55);
       display: flex; align-items: flex-end;
       animation: fade-in .18s ease;
@@ -690,7 +693,7 @@
     .undo-toast {
       position: fixed; left: 50%; transform: translateX(-50%);
       bottom: calc(var(--nav-h) + var(--safe-bottom) + 16px);
-      z-index: 121; display: flex; align-items: center; gap: 10px;
+      z-index: 181; display: flex; align-items: center; gap: 10px;   /* Fix #1: above the bottom bar (tappable undo) */
       background: var(--surface-2); border: 1px solid var(--border);
       color: var(--text); padding: 10px 10px 10px 16px;
       border-radius: 999px; font-size: 14px; white-space: nowrap;
@@ -706,7 +709,7 @@
     .toast {
       position: fixed; left: 50%; transform: translateX(-50%);
       bottom: calc(var(--nav-h) + var(--safe-bottom) + 16px);
-      z-index: 120;
+      z-index: 180;   /* Fix #1: above the bottom bar */
       background: var(--surface-2);
       border: 1px solid var(--border);
       color: var(--text);
@@ -824,7 +827,7 @@
 
     /* ---------- Duel overlay ---------- */
     .duel {
-      position: fixed; inset: 0; z-index: 110;
+      position: fixed; inset: 0; z-index: 170;   /* Fix #1: modal — above the bottom bar */
       background: var(--bg);
       display: flex; flex-direction: column;
       padding: calc(var(--safe-top) + 12px) 16px calc(var(--safe-bottom) + 16px);
@@ -882,7 +885,7 @@
     .duel-rank.unranked { color: var(--text-dim); font-size: 11px; font-weight: 700; }
     /* People-duel filmography bottom sheet (long-press) */
     .psheet-backdrop {
-      position: fixed; inset: 0; z-index: 120; background: rgba(0,0,0,.55);
+      position: fixed; inset: 0; z-index: 170; background: rgba(0,0,0,.55);   /* Fix #1: modal — above the bottom bar */
       display: flex; align-items: flex-end; justify-content: center;
       opacity: 0; transition: opacity .22s ease;
     }
@@ -1769,7 +1772,7 @@
     .friend-action-btn:active { opacity: .7; }
 
     /* R15-B: Friend Profile — full redesign */
-    #friend-profile { position: fixed; inset: 0; z-index: 140; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; animation: fade-in .22s ease; }
+    #friend-profile { position: fixed; inset: 0; z-index: 140; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; animation: fade-in .22s ease; padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 24px); }   /* Fix #1: clear the always-visible bottom bar */
     /* Back bar: fixed at top so it's always reachable while scrolling */
     .fprof-topbar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 12px; padding: calc(var(--safe-top) + 10px) var(--pad) 10px; background: linear-gradient(var(--bg) 85%, transparent); }
     .fprof-back-btn { display: flex; align-items: center; gap: 6px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px 6px 10px; color: var(--text); font-size: 14px; font-weight: 500; cursor: pointer; }
@@ -1832,7 +1835,7 @@
     .fprof-spacer { height: calc(var(--nav-h) + var(--safe-bottom) + 16px); }
 
     /* R15-C: Friend list read-only overlay (opens on top of friend-profile, z-145) */
-    #friend-list-view { position: fixed; inset: 0; z-index: 145; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; animation: fade-in .2s ease; }
+    #friend-list-view { position: fixed; inset: 0; z-index: 145; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; animation: fade-in .2s ease; padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 24px); }   /* Fix #1: clear the always-visible bottom bar */
     .flv-topbar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 12px; padding: calc(var(--safe-top) + 10px) var(--pad) 10px; background: linear-gradient(var(--bg) 85%, transparent); }
     .flv-back-btn { display: flex; align-items: center; gap: 6px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px 6px 10px; color: var(--text); font-size: 14px; font-weight: 500; cursor: pointer; }
     .flv-back-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
@@ -1903,7 +1906,7 @@
     .list-shared-badge svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
     /* R17-A3: Quick-rate popup above friend-profile detail overlay */
-    #qr-backdrop.over-profile { z-index: 150; }
+    #qr-backdrop.over-profile { z-index: 175; }   /* Fix #1: modal — above the bottom bar & friend-profile */
 
     /* R17-B: Social sub-tabs */
     .social-tabs { display: flex; gap: 4px; margin-bottom: 18px; padding: 3px; background: var(--surface); border-radius: 12px; border: 1px solid var(--border); }
@@ -3253,12 +3256,36 @@
       if (target === "profile" && typeof renderProfile === "function") renderProfile();
     }
 
+    // Fix #1 (R20-G2): the bottom bar now sits ABOVE all navigation overlays, so a tab
+    // tap from any depth (Film → Schauspieler → dessen Filme → …) must tear those
+    // overlays down and land directly on the chosen tab — one tap, no stepping back
+    // through history. True modals (Duell/Sheets/Lightbox) sit above the bar and swallow
+    // the tap, so they never reach here. Returns true if anything was closed.
+    function closeAllNavOverlays() {
+      let closed = false;
+      const detail = document.getElementById("detail");
+      if (detail && !detail.hidden) { duelDetailReturn = false; _closeDetailFull(); closed = true; }
+      const hso = document.getElementById("hso-overlay");
+      if (hso && !hso.hidden) { hso.hidden = true; hsoBackEntry = false; closed = true; }
+      if (typeof friendProfileEl !== "undefined" && friendProfileEl && !friendProfileEl.hidden) { friendProfileEl.hidden = true; _fprofBackEntry = false; closed = true; }
+      const fl = document.getElementById("friend-list-view");
+      if (fl && !fl.hidden) { fl.hidden = true; closed = true; }
+      const nc = document.getElementById("notif-center");
+      if (nc && !nc.hidden) { closeNotifCenter(); closed = true; }
+      navStack = [];
+      if (closed) document.body.style.overflow = "";
+      return closed;
+    }
+
     let lastNavTap = { target: null, time: 0 };
     navButtons.forEach(btn => {
       btn.addEventListener("click", () => {
         const target = btn.dataset.target;
         const now = Date.now();
-        if (document.body.dataset.tab === target && lastNavTap.target === target && now - lastNavTap.time < 500) {
+        // close any open sub-view first; if one was open this tap is a plain navigation,
+        // never a double-tap (so closing an overlay can't trigger a tab reset)
+        const hadOverlay = closeAllNavOverlays();
+        if (!hadOverlay && document.body.dataset.tab === target && lastNavTap.target === target && now - lastNavTap.time < 500) {
           handleTabDoubleTap(target);
           lastNavTap = { target: null, time: 0 };
         } else {
@@ -5501,14 +5528,28 @@
       //    better slot).
       //  • winner ranked BELOW (or tied)     → the two just swap places: winner takes
       //    loser's exact slot, loser takes winner's. Nobody else moves.
+      // R20-#1: proper INSERTION (replaces the R19 swap). The swap exchanged the two
+      // scores — but every star rating seeds an identical BUCKET_BASE score, so winner
+      // and loser almost always shared a score and the swap was a NO-OP. Winning a duel
+      // then changed nothing, and the shown rank only wandered on arbitrary tie order
+      // (the "#95 → #100 despite 10 wins" symptom). Now: if the winner ranks BELOW the
+      // loser, it is lifted to directly ABOVE the loser, overtaking the loser AND every
+      // title that sat between them in one move. Ties are first split with a tiny epsilon
+      // that never crosses a (300-wide) bucket band, so star ratings are preserved.
+      const EPS = 1e-3;
       const posPool = (isPerson
         ? Object.values(db.people || {}).filter(p => !p.unranked)
         : Object.values(db.items).filter(it => it.mediaType === rankMedia && !it.unranked)
       ).sort((a, b) => b.score - a.score);
+      // de-tie in place: make scores strictly descending without changing order or buckets
+      for (let i = posPool.length - 2; i >= 0; i--) {
+        if (posPool[i].score <= posPool[i + 1].score) posPool[i].score = posPool[i + 1].score + EPS;
+      }
       const wi = posPool.findIndex(x => String(x.id) === String(winner.id));
       const li = posPool.findIndex(x => String(x.id) === String(loser.id));
-      if (wi > li) {                                      // winner was ranked below loser → swap
-        const tmp = winner.score; winner.score = loser.score; loser.score = tmp;
+      if (wi > li) {                                      // winner ranked below loser → lift above it
+        const above = posPool[li - 1];                   // title directly above the loser (none if loser is #1)
+        winner.score = above ? (above.score + loser.score) / 2 : loser.score + EPS;
       }
       saveDB();
       updateUndoBtn();
