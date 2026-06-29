@@ -5994,7 +5994,7 @@
           }
         } catch (e) { /* keep */ }
 
-        renderDetail(data, mediaType, videos);
+        renderDetail(data, mediaType, videos, _nav);
       } catch (e) {
         if (reqId !== detailReqId) return;
         detailBody.innerHTML = '<div class="detail-error">Konnte nicht geladen werden.<br>Internet prüfen?</div>';
@@ -6058,7 +6058,7 @@
       });
     }
 
-    function renderDetail(data, mediaType, videos) {
+    function renderDetail(data, mediaType, videos, _nav) {   // R21-FIX: _nav was an undefined ref (round-20 bug) → renderDetail threw, masked as "Internet prüfen"
       const isTv  = mediaType === "tv";
       const title = isTv ? (data.name || data.original_name) : (data.title || data.original_title);
       const date  = isTv ? data.first_air_date : data.release_date;
@@ -6221,7 +6221,7 @@
       detailBody.innerHTML = html;
       detailBody.scrollTop = 0;
       detailEl.scrollTop = 0;
-      if (!_nav) restoreDetailScroll(mediaType + ":" + id);   // Fix #21: returning via Back → restore scroll
+      if (!_nav) restoreDetailScroll(mediaType + ":" + data.id);   // Fix #21: returning via Back → restore scroll
 
       // wire up dynamic bits
       document.getElementById("detail-log").addEventListener("click", () => {
@@ -6474,14 +6474,14 @@
         if (!res.ok) throw new Error();
         const data = await res.json();
         if (reqId !== detailReqId) return;
-        renderPerson(data);
+        renderPerson(data, _nav);
       } catch (e) {
         if (reqId !== detailReqId) return;
         detailBody.innerHTML = '<div class="detail-error">Konnte nicht geladen werden.</div>';
       }
     }
 
-    function renderPerson(data) {
+    function renderPerson(data, _nav) {   // R21-FIX: _nav was an undefined ref (round-20 bug) → renderPerson threw, masked as the error
       const cc = data.combined_credits || {};
       const seen = {};
       const credits = [];
@@ -10306,14 +10306,46 @@
       const myName = (_myProfile && _myProfile.username) || "Du";
       if (myUid) Object.values(db.items).forEach(it => addWatcher(it.mediaType + ":" + it.id, myUid, myName, true));
 
-      if (!_feedPosts.length) {
+      // R21-FIX: HYBRID feed. Friends' recentlyWatched highlights (which every friend's
+      // profile carries, even on the OLD app version) are the reliable base; persistent
+      // posts (richer #5 types + #8 persistence, from updated users) are merged on top.
+      const tsOf = p => {
+        const t = p.timestamp;
+        if (t && typeof t.toMillis === "function") return t.toMillis();
+        if (typeof t === "number") return t;
+        return p._ts || 0;
+      };
+      const idKey = p => (p.userId || "") + "|" + (p.mediaType || "movie") + ":" + p.itemId;
+      // pseudo-posts from friends' recentlyWatched highlights (matches the old feed)
+      const pseudo = [];
+      accepted.forEach(f => {
+        const profile = _feedProfiles[f.uid];
+        if (!profile || profile.privacy?.shareWatched === false) return;
+        (profile.recentlyWatched || []).forEach(it => {
+          if (!feedIsHighlight(it.bucket)) return;   // keep the feed to highlights, as before
+          pseudo.push({
+            type: it.bucket ? "rated" : "watched",
+            userId: f.uid, username: f.username || f.uid,
+            itemId: it.id, mediaType: it.mediaType || "movie",
+            title: it.title || "", posterPath: it.posterPath || null,
+            bucket: it.bucket || null, note: it.note || "",
+            timestamp: it.watchedAt || 0, _ts: it.watchedAt || 0, _pseudo: true
+          });
+        });
+      });
+      // real posts win over a pseudo-post for the same (user, item)
+      const realKeys = new Set(_feedPosts.map(idKey));
+      const merged = _feedPosts.concat(pseudo.filter(p => !realKeys.has(idKey(p))));
+      merged.sort((a, b) => tsOf(b) - tsOf(a));
+
+      if (!merged.length) {
         host.innerHTML = '<div class="feed-empty">' +
           '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
           'Noch keine Aktivität von deinen Freunden.<br><span style="font-size:12px;opacity:.7">Sobald ihr Filme schaut, bewertet oder rankt, erscheint es hier.</span></div>';
         return;
       }
 
-      const cards   = _feedPosts.map(p => renderFeedCard(p, watchers)).join("");
+      const cards   = merged.map(p => renderFeedCard(p, watchers)).join("");
       const moreBtn = _feedDone ? "" : '<button class="feed-more-btn" id="feed-more-btn" type="button">Mehr laden</button>';
       host.innerHTML = cards + moreBtn;
 
