@@ -1883,6 +1883,8 @@
     .reco-title { font-size: 17px; font-weight: 700; margin-bottom: 3px; }
     .reco-rating { color: var(--accent); font-size: 13px; margin-bottom: 5px; }
     .reco-note { color: var(--text-dim); font-size: 13px; font-style: italic; margin-bottom: 12px; line-height: 1.4; }
+    .reco-incoming { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px 12px 12px 4px; padding: 9px 12px; margin-bottom: 12px; font-size: 13px; line-height: 1.4; color: var(--text); }
+    .reco-incoming-label { display: block; font-size: 11px; font-weight: 600; color: var(--text-mute); margin-bottom: 3px; }
     .reco-actions { display: flex; gap: 10px; }
     .reco-actions button { flex: 1; padding: 11px; border-radius: 12px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
     .reco-watchlist-btn { background: var(--accent); color: #1a1206; }
@@ -2388,6 +2390,10 @@
       <!-- Step 1: choose action -->
       <div id="sheet-step1">
         <button id="sheet-watched-btn" class="sheet-btn-primary" type="button">Watched</button>
+        <button id="sheet-share-btn" class="sheet-btn-ghost" type="button" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
+          Mit Freunden teilen
+        </button>
         <button id="sheet-watchlist-btn" class="sheet-btn-ghost" type="button">
           <svg viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></svg>
           Watchlist
@@ -2561,6 +2567,8 @@
         <div class="reco-title" id="reco-title"></div>
         <div class="reco-rating" id="reco-rating"></div>
         <div class="reco-note" id="reco-note"></div>
+        <!-- Fix #3: latest incoming reply when this card was opened from a reply notification -->
+        <div class="reco-incoming" id="reco-incoming" hidden></div>
         <div class="reco-counter" id="reco-counter"></div>
         <div class="reco-actions">
           <button class="reco-watchlist-btn" id="reco-watchlist" type="button">Zur Watchlist</button>
@@ -4841,6 +4849,12 @@
         sheetPoster.style.visibility = "hidden";
       }
 
+      // Fix #2: label reflects watched state ("Watch" = not seen yet, "Watched" = already seen).
+      // Fix #1: share button only when the title is already watched (needs a persisted record).
+      const watched = !!db.items[keyOf(r.media_type, r.id)];
+      document.getElementById("sheet-watched-btn").textContent = watched ? "Watched" : "Watch";
+      document.getElementById("sheet-share-btn").hidden = !watched;
+
       // always start at step 1 (action choice)
       document.getElementById("sheet-step1").hidden = false;
       document.getElementById("sheet-step2").hidden = true;
@@ -5081,6 +5095,14 @@
     document.getElementById("sheet-cancel2").addEventListener("click", closeSheet);
     document.getElementById("sheet-watched-btn").addEventListener("click", () => {
       if (sheetItem) showSheetStep2(sheetItem);
+    });
+    // Fix #1: share an already-watched title with friends (same flow as detail/feed/discover).
+    document.getElementById("sheet-share-btn").addEventListener("click", () => {
+      if (!sheetItem) return;
+      const rec = db.items[keyOf(sheetItem.media_type, sheetItem.id)];
+      if (!rec) return;            // guard: button is only shown for watched titles
+      closeSheet();
+      openShareSheet(rec);
     });
     document.getElementById("sheet-watchlist-btn").addEventListener("click", () => {
       if (!sheetItem) return;
@@ -9822,8 +9844,10 @@
           if (el.dataset.type === "friend_request" || el.dataset.type === "friend_accepted") {
             closeNotifCenter();
             switchTab("social");
-          } else if (el.dataset.type === "item_shared") {
-            // R21-#9: re-open the original recommendation popup (works for any age).
+          } else if (el.dataset.type === "item_shared" || el.dataset.type === "reco_reply") {
+            // R21-#9: re-open the recommendation popup (works for any age).
+            // Fix #3: reco_reply too → tapping a reply reopens the popup so the
+            // conversation can continue back-and-forth without limit.
             const full = _notifCache.find(x => x.id === nid);
             if (full) { closeNotifCenter(); openSingleReco(full); }
           }
@@ -9937,6 +9961,17 @@
       document.getElementById("reco-rating").textContent = n.bucket ? bucketToStars(n.bucket) : "";
       document.getElementById("reco-note").textContent = n.note ? "„" + n.note + "“" : "";
       document.getElementById("reco-note").hidden = !n.note;
+      // Fix #3: if opened from a reply notification, show the incoming message for chat context.
+      const incomingEl = document.getElementById("reco-incoming");
+      if (incomingEl) {
+        if (n.type === "reco_reply" && n.replyText) {
+          incomingEl.innerHTML = '<span class="reco-incoming-label">' +
+            socialEsc(n.fromUsername || "Jemand") + " schrieb</span>" + socialEsc(n.replyText);
+          incomingEl.hidden = false;
+        } else {
+          incomingEl.hidden = true;
+        }
+      }
       document.getElementById("reco-counter").textContent = _recoItems.length > 1 ? `${_recoCurrent + 1} / ${_recoItems.length}` : "";
       // nav dots
       const navEl = document.getElementById("reco-nav");
