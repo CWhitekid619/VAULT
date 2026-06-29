@@ -1900,6 +1900,20 @@
     .reco-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.3); }
     .reco-dot.active { background: var(--accent); }
 
+    /* R21-#3: match popup */
+    #match-popup { position: fixed; inset: 0; z-index: 205; background: rgba(0,0,0,.88); display: flex; align-items: center; justify-content: center; padding: 24px; animation: fade-in .3s ease; }
+    .match-card { background: var(--surface); border-radius: 22px; overflow: hidden; width: 100%; max-width: 330px; box-shadow: 0 24px 70px rgba(0,0,0,.65); border: 1px solid var(--accent); animation: match-pop .42s cubic-bezier(.2,1.2,.3,1); }
+    @keyframes match-pop { 0% { transform: scale(.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    .match-poster-wrap { position: relative; }
+    .match-poster { width: 100%; height: 230px; object-fit: cover; display: block; }
+    .match-poster-ph { width: 100%; height: 230px; background: var(--surface-2); }
+    .match-badge { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: var(--accent); color: #1a1206; font-size: 15px; font-weight: 800; letter-spacing: .02em; padding: 6px 16px; border-radius: 99px; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
+    .match-body { padding: 18px 16px; text-align: center; }
+    .match-title { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+    .match-text { font-size: 14px; color: var(--text-dim); line-height: 1.45; margin-bottom: 16px; }
+    .match-text b { color: var(--accent); }
+    .match-close-btn { width: 100%; padding: 12px; border-radius: 12px; border: none; background: var(--accent); color: #1a1206; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+
     .social-empty { text-align: center; padding: 40px 24px; color: var(--text-mute); font-size: 14px; line-height: 1.6; }
     .social-empty svg { width: 44px; height: 44px; stroke: var(--text-mute); fill: none; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; display: block; margin: 0 auto 14px; }
     .social-invite-wrap { margin-top: 20px; }
@@ -1954,6 +1968,10 @@
     .feed-bm.on svg { fill: var(--accent); }
     .feed-eye.on { color: var(--accent); }                 /* R21-#1/#11: eye reflects "already watched" */
     .feed-eye.on svg { fill: rgba(212,160,40,.22); stroke: var(--accent); }
+    .feed-actionline { padding: 0 14px 10px; font-size: 14px; color: var(--text-dim); line-height: 1.35; }   /* R21-#5: "X hat … gerankt/geschaut" */
+    .feed-more-btn { display: block; width: 100%; margin: 6px 0 24px; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--accent); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .feed-more-btn:active { background: var(--surface-2); }
+    .feed-more-btn:disabled { opacity: .6; }
     .feed-note { padding: 2px 14px 4px; font-size: 14px; color: var(--text-dim); font-style: italic; line-height: 1.45; }
     .feed-titleline { padding: 2px 14px 12px; font-size: 13px; color: var(--text-mute); }
     .feed-alsoseen { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; padding: 0 14px 14px; }
@@ -2565,6 +2583,22 @@
     <div class="reco-nav" id="reco-nav"></div>
   </div>
 
+  <!-- ============ R21-#3: TINDER-STYLE MATCH POPUP ============ -->
+  <div id="match-popup" hidden>
+    <div class="match-card">
+      <div class="match-poster-wrap">
+        <img id="match-poster" class="match-poster" alt="" style="display:none" />
+        <div class="match-poster-ph" id="match-poster-ph"></div>
+        <div class="match-badge">Match! 🎬</div>
+      </div>
+      <div class="match-body">
+        <div class="match-title" id="match-title"></div>
+        <div class="match-text" id="match-text"></div>
+        <button class="match-close-btn" id="match-close-btn" type="button">Stark!</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ============ PERSON FILMOGRAPHY SHEET (people duel long-press) ============ -->
   <div id="psheet-backdrop" class="psheet-backdrop" hidden>
     <div id="psheet" class="psheet" role="dialog" aria-modal="true">
@@ -2925,7 +2959,7 @@
     import {
       getFirestore, doc, getDoc, setDoc, serverTimestamp,
       collection, addDoc, getDocs, updateDoc, deleteDoc,
-      query, where, orderBy, limit, onSnapshot, writeBatch
+      query, where, orderBy, limit, onSnapshot, writeBatch, startAfter
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -3243,6 +3277,42 @@
             read: false, createdAt: serverTimestamp(), ...(payload || {})
           });
         } catch (e) { /* best-effort: a notification failure must never break the action */ }
+      },
+      // R21-#8/#5: persistent activity-feed posts (top-level "posts" collection).
+      // A post is owned by its author (userId) and never auto-deleted.
+      async createPost(userId, username, post) {
+        if (!userId || !post || !post.type) return;
+        const id = post.type + "_" + userId + "_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+        try {
+          await setDoc(doc(firestore, "posts", id), {
+            userId, username: username || "", timestamp: serverTimestamp(), ...post
+          });
+        } catch (e) { /* best-effort: a feed post must never break the underlying action */ }
+      },
+      // R21-#8: cursor-based pagination. uids = friend UIDs (+ self). Firestore "in"
+      // supports up to 30 values — fine for a personal app. Returns { posts, cursor, done }.
+      // NOTE: needs a composite index (userId + timestamp); Firestore prints a create-link
+      // on first run. Falls back gracefully to [] if the query is rejected.
+      async getFeedPosts(uids, pageSize, afterDoc) {
+        const ids = (uids || []).slice(0, 30);
+        if (!ids.length) return { posts: [], cursor: null, done: true };
+        const size = pageSize || 20;
+        try {
+          const parts = [where("userId", "in", ids), orderBy("timestamp", "desc")];
+          if (afterDoc) parts.push(startAfter(afterDoc));
+          parts.push(limit(size));
+          const snap = await getDocs(query(collection(firestore, "posts"), ...parts));
+          return {
+            posts: snap.docs.map(d => ({ id: d.id, ...d.data() })),
+            cursor: snap.docs.length ? snap.docs[snap.docs.length - 1] : null,
+            done: snap.docs.length < size
+          };
+        } catch (e) {
+          return { posts: [], cursor: null, done: true, error: (e && e.message) || "query failed" };
+        }
+      },
+      async deletePost(postId) {
+        try { await deleteDoc(doc(firestore, "posts", postId)); } catch (e) {}
       }
     };
 
@@ -3498,13 +3568,14 @@
             manualRankOrder: (parsed.manualRankOrder && typeof parsed.manualRankOrder === "object") ? parsed.manualRankOrder : {},  // R10-P3: manual ranking order per mediaType
             settings: (parsed.settings && typeof parsed.settings === "object") ? parsed.settings : {},  // R3: user prefs incl. settings.privacy (sharing groundwork)
             recentlyWatchedExcluded: (parsed.recentlyWatchedExcluded && typeof parsed.recentlyWatchedExcluded === "object") ? parsed.recentlyWatchedExcluded : {},  // R16-#3: keys excluded from "Zuletzt gesehen" display
-            spotlight: (parsed.spotlight && typeof parsed.spotlight === "object") ? parsed.spotlight : null  // R19-#6 Part C: {mediaType,id} of the spotlighted title, or null
+            spotlight: (parsed.spotlight && typeof parsed.spotlight === "object") ? parsed.spotlight : null,  // R19-#6 Part C: {mediaType,id} of the spotlighted title, or null
+            matchSeen: (parsed.matchSeen && typeof parsed.matchSeen === "object") ? parsed.matchSeen : {}  // R21-#3: item keys whose match popup was already shown
           };
           migrateTags(out);
           return out;
         }
       } catch (e) { /* corrupted store — start fresh */ }
-      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, trackedSeries: {}, homeCustomSections: [], homeSections: null, people: {}, recoExcludeLists: {}, recoExcludeTags: {}, recoSnoozed: {}, manualRankOrder: {}, settings: {}, recentlyWatchedExcluded: {}, spotlight: null };
+      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, trackedSeries: {}, homeCustomSections: [], homeSections: null, people: {}, recoExcludeLists: {}, recoExcludeTags: {}, recoSnoozed: {}, manualRankOrder: {}, settings: {}, recentlyWatchedExcluded: {}, spotlight: null, matchSeen: {} };
     }
     let db = loadDB();
     function saveDB() {
@@ -3576,6 +3647,8 @@
         db.people[personId] = { id: personId, name: name || "", photo: photo || "", known_for: knownFor || "", score: 1400, unranked: true, addedAt: Date.now() };
         saveDB();
         showToast("Ins Ranking hinzugefügt");
+        // R21-#5: post the actor-ranking to the activity feed.
+        if (typeof addFeedPost === "function") addFeedPost({ type: "actor_ranked", actorId: personId, actorName: name || "", actorPhoto: photo || null });
       }
       if (rankMedia === "person") renderRanking();
     }
@@ -4789,6 +4862,8 @@
 
     function logItem(r, bucket) {
       const key = keyOf(r.media_type, r.id);
+      const _prev = db.items[key];
+      const _prevBucket = (_prev && !_prev.unranked) ? _prev.bucket : null;   // R21-#5: post only on a real change
       const rec = db.items[key] || recordFrom(r, bucket);
       rec.bucket = bucket;
       rec.unranked = false;             // explicit rating places the title (P3)
@@ -4808,6 +4883,15 @@
       refreshResults();
       refreshDetailStatus();
       if (document.body.dataset.tab === "ranking") renderRanking();   // point 9b: reflect re-rate live
+      // R21-#5: post the rating to the activity feed (only on a genuine change).
+      if (_prevBucket !== bucket) {
+        addFeedPost({ type: "rated", itemId: rec.id, mediaType: rec.mediaType,
+          title: rec.title || "", posterPath: rec.poster || null, bucket });
+      }
+      // R21-#3: surface a "Match!" if friends have also seen this title.
+      if (typeof checkMatchAndShow === "function") {
+        checkMatchAndShow({ id: rec.id, mediaType: rec.mediaType, title: rec.title || "", posterPath: rec.poster || null });
+      }
       // R21-#6/#11: if this rating originated from a friend's feed post, notify the
       // owner and repaint the feed so the eye reflects the new "watched" state.
       if (typeof _feedRateCtx !== "undefined" && _feedRateCtx && _feedRateCtx.key === key) {
@@ -4846,6 +4930,9 @@
       showToast("Als gesehen markiert · Ungerankt");
       refreshResults();
       refreshDetailStatus();
+      // R21-#5: post the watch to the activity feed.
+      addFeedPost({ type: "watched", itemId: rec.id, mediaType: rec.mediaType,
+        title: rec.title || "", posterPath: rec.poster || null });
     }
 
     // ---------- Quick-rate popup (points 5 + 8) ----------
@@ -7668,6 +7755,13 @@
           refreshEpGridCell(tvId, s, e, b.id);  // sync grid colors when rated from the list
           refreshEpDots(tvId, s, e, b.id);
           if (epRateCtx && epRateCtx.onChange) epRateCtx.onChange();
+          // R21-#5: post the watched+rated episode to the activity feed.
+          if (typeof addFeedPost === "function" && data) {
+            const star = (typeof FEED_STAR !== "undefined" && FEED_STAR[b.id]) || null;
+            addFeedPost({ type: "episode_watched", itemId: data.id, mediaType: "tv",
+              title: data.name || data.title || "", posterPath: data.poster_path || null,
+              season: s, episode: e, epRating: star });
+          }
           closeEpRateSheet();
         });
         epRateBucketsEl.appendChild(btn);
@@ -9895,6 +9989,10 @@
       _notifyRecoSender(n, { type: "reco_seen" });
       showToast("Als gesehen markiert");
       advanceReco();
+      // R21-#3: a recommended title is a prime match candidate
+      if (typeof checkMatchAndShow === "function") {
+        checkMatchAndShow({ id: n.tmdbId, mediaType: n.itemType, title: n.itemTitle || "", posterPath: n.itemPoster || null });
+      }
     });
     // R21-#10: "Zu Liste hinzufügen" — list picker, then notify the sender.
     document.getElementById("reco-addlist-btn").addEventListener("click", () => {
@@ -9997,6 +10095,78 @@
     const FEED_EYE      = '<svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>';
     const FEED_PEOPLE   = '<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
 
+    // R21-#5/#8: write an activity post to the persistent feed. Respects the
+    // "share watched" privacy toggle and requires a username (so the author shows).
+    function addFeedPost(post) {
+      try {
+        if (!window.__vaultUser || !window.__vaultSocial || !window.__vaultSocial.createPost || !post || !post.type) return;
+        const username = (typeof _myProfile !== "undefined" && _myProfile && _myProfile.username) || "";
+        if (!username) return;
+        const priv = (typeof ensurePrivacy === "function") ? ensurePrivacy() : null;
+        if (priv && priv.shareWatched === false) return;
+        window.__vaultSocial.createPost(window.__vaultUser.uid, username, post);
+      } catch (e) { /* a feed post must never break the underlying action */ }
+    }
+
+    // R21-#3: after a watch, show a Tinder-style "Match!" popup if friends saw it too.
+    // Triggers at most once per item (db.matchSeen). Match data = friends' shared
+    // recentlyWatched / topRanked snapshots.
+    async function checkMatchAndShow(item) {
+      try {
+        if (!item || !window.__vaultUser || !window.__vaultSocial) return;
+        const mediaType = item.mediaType || "movie";
+        const key = mediaType + ":" + item.id;
+        db.matchSeen = db.matchSeen || {};
+        if (db.matchSeen[key]) return;
+        const accepted = (typeof _socialFriends !== "undefined" ? _socialFriends : []).filter(f => f.status === "accepted");
+        if (!accepted.length) return;
+        const profs = await Promise.all(accepted.map(async f => {
+          let p = _feedProfiles[f.uid];
+          if (!p) { try { p = await window.__vaultSocial.getProfile(f.uid); _feedProfiles[f.uid] = p; } catch (e) {} }
+          return { f, p };
+        }));
+        const names = [];
+        const hit = (arr) => (arr || []).some(it => String(it.id) === String(item.id) && (it.mediaType || "movie") === mediaType);
+        profs.forEach(({ f, p }) => {
+          if (!p || (p.privacy && p.privacy.shareWatched === false)) return;
+          if (hit(p.recentlyWatched) || hit(p.topRanked)) names.push(f.username || f.uid);
+        });
+        if (!names.length) return;
+        db.matchSeen[key] = Date.now(); saveDB();
+        showMatchPopup(item, names);
+      } catch (e) { /* match popup is a nicety; never break the watch flow */ }
+    }
+    function showMatchPopup(item, names) {
+      const pop = document.getElementById("match-popup");
+      if (!pop) return;
+      const posterEl = document.getElementById("match-poster");
+      const phEl = document.getElementById("match-poster-ph");
+      const poster = item.posterPath || item.poster || null;
+      if (poster) { posterEl.src = IMG_BASE + "w500" + poster; posterEl.style.display = "block"; phEl.style.display = "none"; }
+      else { posterEl.style.display = "none"; phEl.style.display = "block"; }
+      document.getElementById("match-title").textContent = item.title || "";
+      const nameStr = names.map(n => `<b>${socialEsc(n)}</b>`).join(", ");
+      const verb = names.length > 1 ? "haben" : "hat";
+      document.getElementById("match-text").innerHTML = `${nameStr} ${verb} das auch gesehen 🎬`;
+      pop.hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+    function closeMatchPopup() {
+      const pop = document.getElementById("match-popup");
+      if (pop) pop.hidden = true;
+      document.body.style.overflow = "";
+    }
+    (function wireMatchPopup() {
+      const btn = document.getElementById("match-close-btn");
+      const pop = document.getElementById("match-popup");
+      if (btn) btn.addEventListener("click", closeMatchPopup);
+      if (pop) pop.addEventListener("click", e => { if (e.target === pop) closeMatchPopup(); });
+    })();
+
+    // R21-#8/#5: the feed is now backed by the persistent "posts" collection
+    // (cursor-paginated), instead of the rolling recentlyWatched snapshot.
+    let _feedPosts = [], _feedCursor = null, _feedDone = false, _feedLoading = false;
+
     async function renderFeed() {
       const host = document.getElementById("social-feed-list");
       if (!host) return;
@@ -10011,24 +10181,30 @@
 
       host.innerHTML = '<div style="color:var(--text-mute);font-size:13px;padding:12px 0">Lade Feed …</div>';
 
-      // Initial fetch — recentlyWatched lives on each friend's profile.
+      // Profiles still power the "Auch gesehen von" watcher index (recentlyWatched).
       const results = await Promise.all(accepted.map(f =>
         (window.__vaultSocial ? window.__vaultSocial.getProfile(f.uid) : Promise.resolve(null))
           .catch(() => null).then(p => ({ friend: f, profile: p }))));
       results.forEach(({ friend, profile }) => { _feedProfiles[friend.uid] = profile; });
 
+      // First page of persistent posts.
+      _feedPosts = []; _feedCursor = null; _feedDone = false;
+      await loadMoreFeedPosts(accepted, true);
       paintFeed(host, accepted);
+    }
 
-      // A4: live updates — re-paint whenever a friend's profile changes.
-      stopFeedSubs();
-      if (window.__vaultSocial && window.__vaultSocial.subscribeProfile) {
-        accepted.forEach(f => {
-          _feedUnsubs.push(window.__vaultSocial.subscribeProfile(f.uid, p => {
-            _feedProfiles[f.uid] = p;
-            if (_socialActivePane === "feed" && document.body.dataset.tab === "social") paintFeed(host, accepted);
-          }));
-        });
-      }
+    // R21-#8: cursor pagination over the posts collection.
+    async function loadMoreFeedPosts(accepted, reset) {
+      if (!window.__vaultSocial || !window.__vaultSocial.getFeedPosts) { _feedDone = true; return; }
+      if (_feedLoading) return;
+      if (_feedDone && !reset) return;
+      _feedLoading = true;
+      const uids = accepted.map(f => f.uid);
+      const res = await window.__vaultSocial.getFeedPosts(uids, 20, reset ? null : _feedCursor);
+      _feedPosts = reset ? (res.posts || []) : _feedPosts.concat(res.posts || []);
+      _feedCursor = res.cursor;
+      _feedDone = !!res.done;
+      _feedLoading = false;
     }
 
     let _lastFeedHost = null, _lastFeedAccepted = null;
@@ -10038,77 +10214,123 @@
         paintFeed(_lastFeedHost, _lastFeedAccepted);
       }
     }
+
+    // R21-#5: human-readable "X hat …" line per post type.
+    function feedActionLabel(p) {
+      const title = socialEsc(p.title || "");
+      const epRef = `S${p.season}E${p.episode}` + (p.episodeName ? " – " + socialEsc(p.episodeName) : "");
+      switch (p.type) {
+        case "watched":         return `hat ${title} geschaut`;
+        case "rated":           return `hat ${title} bewertet`;
+        case "ranked":          return `hat ${title}${p.rank ? " auf Platz " + p.rank : ""} gerankt`;
+        case "episode_watched": return `hat ${epRef} geschaut`;
+        case "episode_rated":   return `hat eine Folge bewertet`;
+        case "episode_shared":  return `hat eine Folge geteilt`;
+        case "actor_ranked":    return `hat ${socialEsc(p.actorName || "")} ins Ranking geschickt`;
+        case "actor_number_one":return `${socialEsc(p.actorName || "")}s Film ${title} ist jetzt Nr. 1 im Duell`;
+        default:                return `hat ${title} geschaut`;
+      }
+    }
+
+    // R21-#5/#8: render one feed card for a post.
+    function renderFeedCard(p, watchers) {
+      const type      = p.mediaType || "movie";
+      const id        = p.itemId;
+      const author    = p.username || "?";
+      const ownerUid  = p.userId || "";
+      const isActor   = p.type === "actor_ranked" || p.type === "actor_number_one";
+      const head = `<div class="feed-head">
+            <div class="feed-av" data-uid="${socialEsc(ownerUid)}">${avatarInitial(author)}</div>
+            <div class="feed-author" data-uid="${socialEsc(ownerUid)}">${socialEsc(author)}</div>
+            <div class="feed-time">${relativeTime(p.timestamp)}</div>
+          </div>`;
+      const action = `<div class="feed-actionline">${feedActionLabel(p)}</div>`;
+
+      if (isActor) {
+        const img = p.actorPhoto
+          ? `<img class="feed-poster" src="${IMG_BASE}w500${p.actorPhoto}" alt="" loading="lazy">`
+          : `<div class="feed-poster feed-poster-ph"><span>${socialEsc(p.actorName || "")}</span></div>`;
+        return `<div class="feed-card">${head}${action}
+          <div class="feed-poster-wrap" data-person="${p.actorId || ""}">${img}</div>
+        </div>`;
+      }
+
+      const key        = keyOf(type, id);
+      const posterInner = p.posterPath
+        ? `<img class="feed-poster" src="${IMG_BASE}w500${p.posterPath}" alt="" loading="lazy">`
+        : `<div class="feed-poster feed-poster-ph"><span>${socialEsc(p.title || "")}</span></div>`;
+      const stars      = p.bucket ? bucketToStars(p.bucket) : (p.epRating ? "★".repeat(Math.max(0, Math.min(5, p.epRating))) : "");
+      const mediaLabel = type === "tv" ? "Serie" : "Film";
+      const titleLine  = [socialEsc(p.title || ""), mediaLabel].filter(Boolean).join(" · ");
+      const inWl       = !!db.watchlist[key];
+      const iWatched   = !!db.items[key];
+      // R21-#2: exclude the poster AND the current user from "Auch gesehen von"
+      const seen = (watchers[key] || []).filter(w => w.uid !== ownerUid && !w.self);
+      const seenHtml = seen.length
+        ? `<div class="feed-alsoseen"><span class="feed-alsoseen-ic">${FEED_PEOPLE}</span>` +
+          `<span class="feed-alsoseen-lbl">Auch gesehen von</span><div class="feed-alsoseen-avs">` +
+          seen.slice(0, 8).map(w =>
+            `<div class="feed-mini-av" data-uid="${socialEsc(w.uid)}" title="${socialEsc(w.username)}">${avatarInitial(w.username)}</div>`).join("") +
+          `</div></div>`
+        : "";
+      return `<div class="feed-card">${head}${action}
+          <div class="feed-poster-wrap" data-id="${id}" data-type="${type}">${posterInner}</div>
+          <div class="feed-engage">
+            <div class="feed-stars">${stars || ""}</div>
+            <div class="feed-icons">
+              <button class="feed-icon-btn feed-bm${inWl ? " on" : ""}" data-id="${id}" data-type="${type}" data-title="${socialEsc(p.title || "")}" data-poster="${socialEsc(p.posterPath || "")}" data-owner="${socialEsc(ownerUid)}" data-ownername="${socialEsc(author)}" aria-label="Watchlist">${FEED_BOOKMARK}</button>
+              <button class="feed-icon-btn feed-eye${iWatched ? " on" : ""}" data-id="${id}" data-type="${type}" data-title="${socialEsc(p.title || "")}" data-poster="${socialEsc(p.posterPath || "")}" data-owner="${socialEsc(ownerUid)}" data-ownername="${socialEsc(author)}" aria-label="Ich hab den auch gesehen">${FEED_EYE}</button>
+            </div>
+          </div>
+          ${p.note ? `<div class="feed-note">„${socialEsc(p.note)}"</div>` : ""}
+          <div class="feed-titleline">${titleLine}</div>
+          ${seenHtml}
+        </div>`;
+    }
+
     function paintFeed(host, accepted) {
       _lastFeedHost = host; _lastFeedAccepted = accepted;
-      // "Auch gesehen von" index: key → [{uid, username, self}]
+      // "Auch gesehen von" index from friends' recentlyWatched + own library.
       const watchers = {};
       const addWatcher = (key, uid, username, self) => {
         if (!watchers[key]) watchers[key] = [];
         if (!watchers[key].some(w => w.uid === uid)) watchers[key].push({ uid, username, self: !!self });
       };
-
-      const items = [];
       accepted.forEach(f => {
         const profile = _feedProfiles[f.uid];
         if (!profile || profile.privacy?.shareWatched === false) return;
-        (profile.recentlyWatched || []).forEach(it => {
-          const key = (it.mediaType || "movie") + ":" + it.id;
-          addWatcher(key, f.uid, f.username || f.uid);                       // anyone who saw it
-          if (feedIsHighlight(it.bucket)) items.push({ friend: f, item: it, ts: it.watchedAt || 0 }); // only highlights as posts
-        });
+        (profile.recentlyWatched || []).forEach(it =>
+          addWatcher((it.mediaType || "movie") + ":" + it.id, f.uid, f.username || f.uid));
       });
       const myUid  = window.__vaultUser && window.__vaultUser.uid;
       const myName = (_myProfile && _myProfile.username) || "Du";
       if (myUid) Object.values(db.items).forEach(it => addWatcher(it.mediaType + ":" + it.id, myUid, myName, true));
 
-      items.sort((a, b) => b.ts - a.ts);
-
-      if (!items.length) {
+      if (!_feedPosts.length) {
         host.innerHTML = '<div class="feed-empty">' +
           '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
-          'Noch keine Aktivität von deinen Freunden.</div>';
+          'Noch keine Aktivität von deinen Freunden.<br><span style="font-size:12px;opacity:.7">Sobald ihr Filme schaut, bewertet oder rankt, erscheint es hier.</span></div>';
         return;
       }
 
-      host.innerHTML = items.map(({ friend, item }) => {
-        const type = item.mediaType || "movie";
-        const key  = keyOf(type, item.id);
-        const posterInner = item.posterPath
-          ? `<img class="feed-poster" src="${IMG_BASE}w500${item.posterPath}" alt="" loading="lazy">`
-          : `<div class="feed-poster feed-poster-ph"><span>${socialEsc(item.title || "")}</span></div>`;
-        const stars      = bucketToStars(item.bucket);
-        const mediaLabel = type === "tv" ? "Serie" : "Film";
-        const titleLine  = [socialEsc(item.title || ""), mediaLabel, (item.year || "")].filter(Boolean).join(" · ");
-        const inWl       = !!db.watchlist[key];
-        const iWatched   = !!db.items[key];                                     // R21-#1/#11: pre-activate eye
-        // R21-#2: exclude the poster AND the current user from "Auch gesehen von"
-        const seen = (watchers[key] || []).filter(w => w.uid !== friend.uid && !w.self);
-        const seenHtml = seen.length
-          ? `<div class="feed-alsoseen"><span class="feed-alsoseen-ic">${FEED_PEOPLE}</span>` +
-            `<span class="feed-alsoseen-lbl">Auch gesehen von</span><div class="feed-alsoseen-avs">` +
-            seen.slice(0, 8).map(w =>
-              `<div class="feed-mini-av${w.self ? " self" : ""}"${w.self ? "" : ` data-uid="${socialEsc(w.uid)}"`} title="${socialEsc(w.username)}">${avatarInitial(w.username)}</div>`).join("") +
-            `</div></div>`
-          : "";
-        return `<div class="feed-card">
-          <div class="feed-head">
-            <div class="feed-av" data-uid="${socialEsc(friend.uid)}">${avatarInitial(friend.username || friend.uid)}</div>
-            <div class="feed-author" data-uid="${socialEsc(friend.uid)}">${socialEsc(friend.username || friend.uid)}</div>
-            <div class="feed-time">${relativeTime(item.watchedAt)}</div>
-          </div>
-          <div class="feed-poster-wrap" data-id="${item.id}" data-type="${type}">${posterInner}</div>
-          <div class="feed-engage">
-            <div class="feed-stars">${stars || ""}</div>
-            <div class="feed-icons">
-              <button class="feed-icon-btn feed-bm${inWl ? " on" : ""}" data-id="${item.id}" data-type="${type}" data-title="${socialEsc(item.title || "")}" data-poster="${socialEsc(item.posterPath || "")}" data-owner="${socialEsc(friend.uid)}" data-ownername="${socialEsc(friend.username || friend.uid)}" aria-label="Watchlist">${FEED_BOOKMARK}</button>
-              <button class="feed-icon-btn feed-eye${iWatched ? " on" : ""}" data-id="${item.id}" data-type="${type}" data-title="${socialEsc(item.title || "")}" data-poster="${socialEsc(item.posterPath || "")}" data-owner="${socialEsc(friend.uid)}" data-ownername="${socialEsc(friend.username || friend.uid)}" aria-label="Ich hab den auch gesehen">${FEED_EYE}</button>
-            </div>
-          </div>
-          ${item.note ? `<div class="feed-note">„${socialEsc(item.note)}"</div>` : ""}
-          <div class="feed-titleline">${titleLine}</div>
-          ${seenHtml}
-        </div>`;
-      }).join("");
+      const cards   = _feedPosts.map(p => renderFeedCard(p, watchers)).join("");
+      const moreBtn = _feedDone ? "" : '<button class="feed-more-btn" id="feed-more-btn" type="button">Mehr laden</button>';
+      host.innerHTML = cards + moreBtn;
+
+      // R21-#5: actor cards open the person page
+      host.querySelectorAll(".feed-poster-wrap[data-person]").forEach(el => {
+        const pid = parseInt(el.dataset.person, 10);
+        if (!pid) return;
+        el.style.cursor = "pointer";
+        el.addEventListener("click", () => { if (typeof openPerson === "function") openPerson(pid); });
+      });
+      // R21-#8: load older posts
+      const moreEl = document.getElementById("feed-more-btn");
+      if (moreEl) moreEl.addEventListener("click", async () => {
+        moreEl.textContent = "Lädt …"; moreEl.disabled = true;
+        await loadMoreFeedPosts(accepted, false);
+        paintFeed(host, accepted);
+      });
 
       // wiring
       host.querySelectorAll(".feed-av[data-uid], .feed-author[data-uid]").forEach(el =>
