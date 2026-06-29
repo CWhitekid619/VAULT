@@ -3176,17 +3176,25 @@
         const now = Date.now();
         const filteredUids = [];
         for (const toUid of toUids) {
-          const recent = await getDocs(query(
-            collection(firestore, "users", toUid, "notifications"),
-            where("type",    "==", "item_shared"),
-            where("fromUid", "==", fromUid),
-            where("tmdbId",  "==", item.id)
-          ));
-          const isDup = recent.docs.some(d => {
-            const ts = d.data().createdAt;
-            const ms = ts && ts.toMillis ? ts.toMillis() : 0;
-            return now - ms < dedupWindow;
-          });
+          // R21-FIX: this dedup check reads the RECIPIENT's notifications, which the
+          // security rules (correctly) forbid for a non-owner. It therefore throws
+          // permission-denied and used to abort the whole send. Treat any failure as
+          // "not a duplicate" and send anyway — double-tap is already guarded by
+          // _shareSubmitting + the disabled button.
+          let isDup = false;
+          try {
+            const recent = await getDocs(query(
+              collection(firestore, "users", toUid, "notifications"),
+              where("type",    "==", "item_shared"),
+              where("fromUid", "==", fromUid),
+              where("tmdbId",  "==", item.id)
+            ));
+            isDup = recent.docs.some(d => {
+              const ts = d.data().createdAt;
+              const ms = ts && ts.toMillis ? ts.toMillis() : 0;
+              return now - ms < dedupWindow;
+            });
+          } catch (e) { isDup = false; }
           if (!isDup) filteredUids.push(toUid);
         }
         if (!filteredUids.length) return;
@@ -11018,6 +11026,10 @@
         }, note, _shareRating);
         closeShareSheet();
         showToast("Empfehlung gesendet");
+      } catch (e) {
+        // R21-FIX: never fail silently — the "Empfehlen" button used to look dead.
+        console.error("VAULT: Empfehlen fehlgeschlagen:", e);
+        showToast("Empfehlung fehlgeschlagen – bitte erneut versuchen");
       } finally {
         _shareSubmitting = false;
         if (btn) btn.disabled = false;
