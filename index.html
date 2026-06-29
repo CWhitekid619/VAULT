@@ -157,6 +157,12 @@
     .log-home-title-link { cursor: pointer; display: flex; align-items: center; gap: 4px; user-select: none; }
     .log-home-title-link:active { opacity: .65; }
     .section-chevron { font-size: 16px; color: var(--text-mute); font-weight: 400; margin-left: 1px; }
+    /* Fix #8 (R20-G2): make the "Aktuelle Serien" header obviously tappable with an
+       explicit, accent-coloured "Alle anzeigen" affordance pushed to the right edge.
+       Scoped to #lh-progress so the inert genre/tag headers keep their plain look. */
+    #lh-progress .log-home-title-link { justify-content: space-between; }
+    .section-seeall { display: inline-flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--accent); flex: 0 0 auto; }
+    .section-seeall .section-chevron { color: var(--accent); font-size: 15px; }
 
     /* Home Section full-list overlay */
     #hso-overlay {
@@ -2005,7 +2011,7 @@
         </div>
         <div id="lh-reorder" hidden></div>
         <div id="lh-progress" class="log-home-row" hidden>
-          <div class="log-home-title log-home-title-link" data-section="lh-progress">Aktuelle Serien <span class="section-chevron">›</span></div>
+          <div class="log-home-title log-home-title-link" data-section="lh-progress"><span>Aktuelle Serien</span><span class="section-seeall">Alle anzeigen <span class="section-chevron">›</span></span></div>
           <div id="lh-progress-list" class="progress-list"></div>
         </div>
         <div id="lh-recent" class="log-home-row" hidden></div>
@@ -3319,6 +3325,35 @@
     function _pushDetailNav(entry) {
       navStack.push(entry);
       history.pushState({ vaultOverlay: "detail", depth: navStack.length }, "");
+    }
+
+    // Fix #21 (R20-G2): remember the scroll position of a detail/person page so that
+    // returning to it (via Back) lands where the user left off — e.g. Film → scroll to
+    // cast → tap actor → Back restores the cast scroll instead of jumping to the top.
+    // Keyed by page id ("movie:27205" / "tv:1399" / "person:287"). Entries expire after
+    // 30 min of inactivity; a fresh (non-Back) open always starts at the top.
+    const scrollMem = {};
+    const SCROLL_TTL = 30 * 60 * 1000;
+    function _pageIdFor(entry) {
+      return entry.type === "person" ? ("person:" + entry.personId) : (entry.mediaType + ":" + entry.id);
+    }
+    // Save the scroll of the page currently shown (top of navStack) before leaving it.
+    function saveCurrentDetailScroll() {
+      if (detailEl.hidden || !navStack.length) return;
+      scrollMem[_pageIdFor(navStack[navStack.length - 1])] = { y: detailEl.scrollTop, t: Date.now() };
+    }
+    // Read a remembered scroll position (0 if none / expired); expired entries are pruned.
+    function takeDetailScroll(pageId) {
+      const e = scrollMem[pageId];
+      if (!e) return 0;
+      if (Date.now() - e.t > SCROLL_TTL) { delete scrollMem[pageId]; return 0; }
+      return e.y;
+    }
+    // Restore after layout settles (covers late image reflow) — only when going Back.
+    function restoreDetailScroll(pageId) {
+      const y = takeDetailScroll(pageId);
+      if (!y) return;
+      requestAnimationFrame(() => { requestAnimationFrame(() => { detailEl.scrollTop = y; }); });
     }
 
     function armHsoBack() {
@@ -5778,6 +5813,7 @@
       if (_nav) {
         // P11: ignore rapid re-tap if already showing exactly this item
         if (!detailEl.hidden && detailCtx && detailCtx.mediaType === mediaType && detailCtx.id === id) return;
+        saveCurrentDetailScroll();   // Fix #21: remember where we were before stacking a new page
         _pushDetailNav({ type: "detail", mediaType, id });
       }
       detailEl.hidden = false;
@@ -6040,6 +6076,7 @@
       detailBody.innerHTML = html;
       detailBody.scrollTop = 0;
       detailEl.scrollTop = 0;
+      if (!_nav) restoreDetailScroll(mediaType + ":" + id);   // Fix #21: returning via Back → restore scroll
 
       // wire up dynamic bits
       document.getElementById("detail-log").addEventListener("click", () => {
@@ -6278,7 +6315,7 @@
 
     // ---------- Person page (reuses the detail overlay) ----------
     async function openPerson(personId, name, _nav = true) {
-      if (_nav) _pushDetailNav({ type: "person", personId, name });
+      if (_nav) { saveCurrentDetailScroll(); _pushDetailNav({ type: "person", personId, name }); }   // Fix #21
       detailEl.hidden = false;
       detailEl.scrollTop = 0;
       document.body.style.overflow = "hidden";
@@ -6360,6 +6397,7 @@
       detailBody.innerHTML = html;
       detailBody.scrollTop = 0;
       detailEl.scrollTop = 0;
+      if (!_nav) restoreDetailScroll("person:" + personId);   // Fix #21: returning via Back → restore scroll
 
       // Ranking toggle
       const rankBtn = document.getElementById("person-rank-btn");
