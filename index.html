@@ -557,6 +557,7 @@
     }
 
     /* ---------- Bottom action sheet ---------- */
+    #picker-backdrop.over-reco { z-index: 210; }   /* R21-#10: raise list picker above the reco popup (z200) */
     .sheet-backdrop {
       position: fixed; inset: 0; z-index: 170;   /* Fix #1: modal — above the bottom bar */
       background: rgba(0,0,0,.55);
@@ -1867,8 +1868,13 @@
     .share-star.active { opacity: 1; }
     .share-no-friends { color: var(--text-mute); font-size: 14px; text-align: center; padding: 20px 0; }
 
-    #reco-popup { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.85); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; animation: fade-in .3s ease; }
+    /* R21-#10: flex-start + overflow-y:auto + margin auto on the card → centers when it fits,
+       scrolls (no bottom clipping) when content is taller than the viewport. */
+    #reco-popup { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.85); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 24px; overflow-y: auto; -webkit-overflow-scrolling: touch; animation: fade-in .3s ease; }
     .reco-card { background: var(--surface); border-radius: 20px; overflow: hidden; width: 100%; max-width: 340px; box-shadow: 0 24px 60px rgba(0,0,0,.6); }
+    /* R21-#10: the shared .reco-card class (home rail) sets aspect-ratio + flex-basis +
+       overflow:hidden, which clipped the popup card's buttons. Reset them here. */
+    #reco-popup .reco-card { margin: auto 0; flex: 0 0 auto; aspect-ratio: auto; height: auto; }
     .reco-poster-wrap { position: relative; }
     .reco-poster { width: 100%; height: 200px; object-fit: cover; display: block; }
     .reco-poster-ph { width: 100%; height: 200px; background: var(--surface-2); }
@@ -1881,6 +1887,14 @@
     .reco-actions button { flex: 1; padding: 11px; border-radius: 12px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
     .reco-watchlist-btn { background: var(--accent); color: #1a1206; }
     .reco-detail-btn { background: var(--surface-2); color: var(--text); border: 1px solid var(--border) !important; }
+    .reco-actions-2 { margin-top: 8px; }
+    .reco-seen-btn, .reco-addlist-btn { background: var(--surface-2); color: var(--text); border: 1px solid var(--border) !important; font-size: 13px !important; }
+    .reco-reply { display: flex; gap: 8px; margin-top: 10px; }
+    .reco-reply-input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-family: inherit; font-size: 14px; }
+    .reco-reply-input:focus { outline: none; border-color: var(--accent); }
+    .reco-reply-send { flex: 0 0 auto; width: 40px; border-radius: 12px; border: none; background: var(--accent); color: #1a1206; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .reco-reply-send svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .reco-reply-done { margin-top: 8px; font-size: 13px; color: var(--accent); font-weight: 600; text-align: center; }
     .reco-skip-btn { width: 100%; padding: 10px; margin-top: 6px; border-radius: 12px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border: none; background: none; color: var(--text-mute); }
     .reco-nav { display: flex; gap: 8px; margin-top: 12px; }
     .reco-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.3); }
@@ -1938,6 +1952,8 @@
     .feed-icon-btn:active { color: var(--accent); }
     .feed-bm.on { color: var(--accent); }
     .feed-bm.on svg { fill: var(--accent); }
+    .feed-eye.on { color: var(--accent); }                 /* R21-#1/#11: eye reflects "already watched" */
+    .feed-eye.on svg { fill: rgba(212,160,40,.22); stroke: var(--accent); }
     .feed-note { padding: 2px 14px 4px; font-size: 14px; color: var(--text-dim); font-style: italic; line-height: 1.45; }
     .feed-titleline { padding: 2px 14px 12px; font-size: 13px; color: var(--text-mute); }
     .feed-alsoseen { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; padding: 0 14px 14px; }
@@ -2530,6 +2546,19 @@
           <button class="reco-watchlist-btn" id="reco-watchlist" type="button">Zur Watchlist</button>
           <button class="reco-detail-btn" id="reco-detail-btn" type="button">Zur Detailseite</button>
         </div>
+        <!-- R21-#10: inline actions on incoming recommendations -->
+        <div class="reco-actions reco-actions-2">
+          <button class="reco-seen-btn" id="reco-seen-btn" type="button">Als gesehen markieren</button>
+          <button class="reco-addlist-btn" id="reco-addlist-btn" type="button">Zu Liste hinzufügen</button>
+        </div>
+        <!-- R21-#9: reply to the recommendation -->
+        <div class="reco-reply">
+          <input id="reco-reply-input" class="reco-reply-input" type="text" placeholder="Antworten …" maxlength="240" autocomplete="off" />
+          <button class="reco-reply-send" id="reco-reply-send" type="button" aria-label="Senden">
+            <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+        <div class="reco-reply-done" id="reco-reply-done" hidden>Antwort gesendet ✓</div>
         <button class="reco-skip-btn" id="reco-skip-btn" type="button">Überspringen</button>
       </div>
     </div>
@@ -3204,6 +3233,16 @@
       async getUserLists(uid) {
         try { const s = await getDoc(doc(firestore, "userLists", uid)); return s.exists() ? (s.data().lists || []) : []; }
         catch (e) { return []; }
+      },
+      // R21-#6/#16: generic notification writer used by feed interactions, comments, replies, etc.
+      async pushNotification(toUid, payload) {
+        if (!toUid) return;
+        const id = ((payload && payload.type) || "n") + "_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+        try {
+          await setDoc(doc(firestore, "users", toUid, "notifications", id), {
+            read: false, createdAt: serverTimestamp(), ...(payload || {})
+          });
+        } catch (e) { /* best-effort: a notification failure must never break the action */ }
       }
     };
 
@@ -4769,6 +4808,22 @@
       refreshResults();
       refreshDetailStatus();
       if (document.body.dataset.tab === "ranking") renderRanking();   // point 9b: reflect re-rate live
+      // R21-#6/#11: if this rating originated from a friend's feed post, notify the
+      // owner and repaint the feed so the eye reflects the new "watched" state.
+      if (typeof _feedRateCtx !== "undefined" && _feedRateCtx && _feedRateCtx.key === key) {
+        const ctx = _feedRateCtx; _feedRateCtx = null;
+        const myUid = window.__vaultUser && window.__vaultUser.uid;
+        if (ctx.ownerUid && myUid && ctx.ownerUid !== myUid && window.__vaultSocial && window.__vaultSocial.pushNotification) {
+          const myName = (typeof _myProfile !== "undefined" && _myProfile && _myProfile.username) || "Jemand";
+          window.__vaultSocial.pushNotification(ctx.ownerUid, {
+            type: ctx.wasWatched ? "feed_rerated" : "feed_watched",
+            fromUid: myUid, fromUsername: myName,
+            itemTitle: ctx.title || "", itemPoster: ctx.poster || "",
+            itemType: ctx.type || "movie", tmdbId: parseInt(key.split(":")[1], 10) || null
+          });
+        }
+        if (typeof repaintFeedIfOpen === "function") repaintFeedIfOpen();
+      }
     }
 
     // Quick "Watch" action (P3): mark as watched immediately, no rating popup.
@@ -5985,6 +6040,10 @@
       // ---- per-episode ratings grid (tv only) ----
       if (isTv) html += '<div id="detail-ep-ratings"></div>';
 
+      // ---- "Auch gesehen von" — R21-#4: friends who saw this, ABOVE the notes ----
+      // (filled async after render; kept below the main film info, above personal notes)
+      html += '<div id="detail-also-seen"></div>';
+
       // ---- personal notes / tags / rewatch ----
       html += '<div id="detail-personal"></div>';
 
@@ -6067,8 +6126,7 @@
       // Filled after innerHTML below: collection needs an extra fetch; both use card style.
       if (!isTv) html += '<div id="detail-collection"></div>';   // movies can belong to a collection
       html += '<div id="detail-recs"></div>';
-      // R17-B5: "Auch gesehen von" — filled async after render
-      html += '<div id="detail-also-seen"></div>';
+      // R17-B5/R21-#4: "Auch gesehen von" now lives above the notes (see #detail-also-seen above)
 
       // ---- block / unblock (point 12): subtle, at the very bottom ----
       html += '<div class="detail-block-row"><button id="detail-block" class="detail-block-btn" type="button"></button></div>';
@@ -7339,9 +7397,11 @@
     let pendingPickItem  = null;
 
     let pickerCustomOnly = false;
-    function openListPicker(r, customOnly) {
+    let _listPickerOnPick = null;   // R21-#10: optional callback(list) after a successful add
+    function openListPicker(r, customOnly, onPick) {
       pendingPickItem = r;
       pickerCustomOnly = !!customOnly;
+      _listPickerOnPick = (typeof onPick === "function") ? onPick : null;
       const key = keyOf(r.media_type, r.id);
       pickerLists.innerHTML = "";
       for (const list of allLists()) {
@@ -7361,7 +7421,9 @@
           } else {
             addToList(list.id, pendingPickItem);
             showToast("Hinzugefügt zu " + list.name);
+            if (_listPickerOnPick) { try { _listPickerOnPick(list); } catch (e) {} }
           }
+          _listPickerOnPick = null;
           closeListPicker();
           refreshResults();
           refreshDetailStatus();
@@ -7373,7 +7435,9 @@
     }
     function closeListPicker() {
       pickerBackdrop.hidden = true;
+      pickerBackdrop.classList.remove("over-reco");
       document.body.style.overflow = "";
+      _listPickerOnPick = null;   // R21-#10: drop any pending callback on cancel/close
       refreshAllCardActions();  // R7-P3: refresh card WL button states after picker closes
     }
     document.getElementById("picker-cancel").addEventListener("click", closeListPicker);
@@ -9646,6 +9710,10 @@
           if (el.dataset.type === "friend_request" || el.dataset.type === "friend_accepted") {
             closeNotifCenter();
             switchTab("social");
+          } else if (el.dataset.type === "item_shared") {
+            // R21-#9: re-open the original recommendation popup (works for any age).
+            const full = _notifCache.find(x => x.id === nid);
+            if (full) { closeNotifCenter(); openSingleReco(full); }
           }
         });
       });
@@ -9677,6 +9745,12 @@
       if (type === "item_shared") return "🎬";
       if (type === "list_item_added" || type === "list_item_removed") return "📋";
       if (type === "list_shared" || type === "list_unshared") return "👥";
+      if (type === "feed_watched")   return "👁️";
+      if (type === "feed_watchlist") return "🔖";
+      if (type === "feed_rerated")   return "⭐";
+      if (type === "reco_reply")     return "💬";
+      if (type === "reco_seen")      return "👁️";
+      if (type === "reco_added_list")return "📋";
       return "🔔";
     }
     function notifText(n) {
@@ -9691,6 +9765,14 @@
       if (n.type === "list_item_removed")return `${from} hat ${item} aus eurer Liste ${list} entfernt`;
       if (n.type === "list_shared")      return `${from} hat die Liste ${list} mit dir geteilt`;
       if (n.type === "list_unshared")    return `${from} hat die Freigabe der Liste ${list} beendet`;
+      if (n.type === "feed_watched")     return `${from} hat ${item} geschaut, weil du es geschaut hast`;
+      if (n.type === "feed_watchlist")   return `${from} hat ${item} auf seine Watchlist gepackt, weil du es geschaut hast`;
+      if (n.type === "feed_rerated")     return `${from} hat ${item} nochmal bewertet, nachdem du es geschaut hast`;
+      if (n.type === "reco_reply")       return `${from} hat auf deine Empfehlung geantwortet: „${socialEsc(n.replyText || "")}“`;
+      if (n.type === "reco_seen")        return `${from} hat ${item} bereits gesehen`;
+      if (n.type === "reco_added_list")  return n.listName
+                                           ? `Den Film den du empfohlen hast hat ${from} jetzt in „${socialEsc(n.listName)}“ gepackt`
+                                           : `Den Film den du empfohlen hast hat ${from} jetzt in eine Liste gelegt`;
       return "Neue Benachrichtigung";
     }
 
@@ -9705,6 +9787,15 @@
       const notifSettings = (db.settings && db.settings.notificationSettings) || {};
       if (notifSettings.recommendations === false) return;
       _recoItems = recos;
+      _recoCurrent = 0;
+      renderRecoCard();
+      document.getElementById("reco-popup").hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+    // R21-#9: open the recommendation popup for a single notification, bypassing the
+    // "recommendations disabled" setting (the user tapped it deliberately).
+    function openSingleReco(n) {
+      _recoItems = [n];
       _recoCurrent = 0;
       renderRecoCard();
       document.getElementById("reco-popup").hidden = false;
@@ -9739,6 +9830,32 @@
       const navEl = document.getElementById("reco-nav");
       navEl.innerHTML = _recoItems.length > 1 ? _recoItems.map((_, i) =>
         `<div class="reco-dot${i === _recoCurrent ? " active" : ""}"></div>`).join("") : "";
+      // R21-#9/#10: reset reply + action state for this card
+      const replyInput = document.getElementById("reco-reply-input");
+      if (replyInput) replyInput.value = "";
+      const replyDone = document.getElementById("reco-reply-done");
+      if (replyDone) replyDone.hidden = true;
+      const seenBtn = document.getElementById("reco-seen-btn");
+      if (seenBtn) {
+        const alreadyWatched = !!(n.tmdbId && n.itemType && db.items[n.itemType + ":" + n.tmdbId]);
+        seenBtn.disabled = alreadyWatched;
+        seenBtn.textContent = alreadyWatched ? "Schon gesehen ✓" : "Als gesehen markieren";
+      }
+    }
+    // R21-#9/#10: current recommendation + helper to notify its sender
+    function _currentReco() { return _recoItems[_recoCurrent] || null; }
+    function _recoItemR(n) {
+      return { id: n.tmdbId, media_type: n.itemType, title: n.itemTitle, poster_path: n.itemPoster || null };
+    }
+    function _notifyRecoSender(n, payload) {
+      const myUid = window.__vaultUser && window.__vaultUser.uid;
+      if (!n || !n.fromUid || !myUid || n.fromUid === myUid || !window.__vaultSocial || !window.__vaultSocial.pushNotification) return;
+      const myName = (_myProfile && _myProfile.username) || "Jemand";
+      window.__vaultSocial.pushNotification(n.fromUid, {
+        fromUid: myUid, fromUsername: myName,
+        itemTitle: n.itemTitle || "", itemPoster: n.itemPoster || "",
+        itemType: n.itemType || "movie", tmdbId: n.tmdbId || null, ...payload
+      });
     }
     document.getElementById("reco-watchlist").addEventListener("click", () => {
       const n = _recoItems[_recoCurrent];
@@ -9767,6 +9884,45 @@
       if (_recoCurrent >= _recoItems.length) closeRecoPopup();
       else renderRecoCard();
     }
+
+    // R21-#10: "Als gesehen markieren" — mark watched + notify the sender.
+    document.getElementById("reco-seen-btn").addEventListener("click", () => {
+      const n = _currentReco();
+      if (!n || !n.tmdbId || !n.itemType) { advanceReco(); return; }
+      const r = _recoItemR(n);
+      const key = n.itemType + ":" + n.tmdbId;
+      if (!db.items[key]) logWatched(r);
+      _notifyRecoSender(n, { type: "reco_seen" });
+      showToast("Als gesehen markiert");
+      advanceReco();
+    });
+    // R21-#10: "Zu Liste hinzufügen" — list picker, then notify the sender.
+    document.getElementById("reco-addlist-btn").addEventListener("click", () => {
+      const n = _currentReco();
+      if (!n || !n.tmdbId || !n.itemType) return;
+      const r = _recoItemR(n);
+      pickerBackdrop.classList.add("over-reco");   // raise above the reco popup
+      openListPicker(r, false, (list) => {
+        // private list → the sender only learns "in eine Liste gelegt"
+        const isPrivate = !(list && (list.shared || list.public));
+        _notifyRecoSender(n, { type: "reco_added_list", listName: isPrivate ? null : list.name });
+        showToast("Hinzugefügt zu " + (list ? list.name : "Liste"));
+      });
+    });
+    // R21-#9: reply to a recommendation — notify the sender with the reply text.
+    function sendRecoReply() {
+      const n = _currentReco();
+      const input = document.getElementById("reco-reply-input");
+      const text = (input && input.value || "").trim();
+      if (!n || !text) return;
+      _notifyRecoSender(n, { type: "reco_reply", replyText: text });
+      if (input) input.value = "";
+      const done = document.getElementById("reco-reply-done");
+      if (done) done.hidden = false;
+      showToast("Antwort gesendet");
+    }
+    document.getElementById("reco-reply-send").addEventListener("click", sendRecoReply);
+    document.getElementById("reco-reply-input").addEventListener("keydown", e => { if (e.key === "Enter") sendRecoReply(); });
 
     // --- social tab ---
     let _socialFriends = [];
@@ -9875,7 +10031,15 @@
       }
     }
 
+    let _lastFeedHost = null, _lastFeedAccepted = null;
+    let _feedRateCtx = null;   // R21-#6/#11: set when the eye is tapped from the feed
+    function repaintFeedIfOpen() {
+      if (_lastFeedHost && _lastFeedAccepted && _socialActivePane === "feed" && document.body.dataset.tab === "social") {
+        paintFeed(_lastFeedHost, _lastFeedAccepted);
+      }
+    }
     function paintFeed(host, accepted) {
+      _lastFeedHost = host; _lastFeedAccepted = accepted;
       // "Auch gesehen von" index: key → [{uid, username, self}]
       const watchers = {};
       const addWatcher = (key, uid, username, self) => {
@@ -9916,7 +10080,9 @@
         const mediaLabel = type === "tv" ? "Serie" : "Film";
         const titleLine  = [socialEsc(item.title || ""), mediaLabel, (item.year || "")].filter(Boolean).join(" · ");
         const inWl       = !!db.watchlist[key];
-        const seen = (watchers[key] || []).filter(w => w.uid !== friend.uid);  // exclude the poster
+        const iWatched   = !!db.items[key];                                     // R21-#1/#11: pre-activate eye
+        // R21-#2: exclude the poster AND the current user from "Auch gesehen von"
+        const seen = (watchers[key] || []).filter(w => w.uid !== friend.uid && !w.self);
         const seenHtml = seen.length
           ? `<div class="feed-alsoseen"><span class="feed-alsoseen-ic">${FEED_PEOPLE}</span>` +
             `<span class="feed-alsoseen-lbl">Auch gesehen von</span><div class="feed-alsoseen-avs">` +
@@ -9934,8 +10100,8 @@
           <div class="feed-engage">
             <div class="feed-stars">${stars || ""}</div>
             <div class="feed-icons">
-              <button class="feed-icon-btn feed-bm${inWl ? " on" : ""}" data-id="${item.id}" data-type="${type}" data-title="${socialEsc(item.title || "")}" data-poster="${socialEsc(item.posterPath || "")}" aria-label="Watchlist">${FEED_BOOKMARK}</button>
-              <button class="feed-icon-btn feed-eye" data-id="${item.id}" data-type="${type}" data-title="${socialEsc(item.title || "")}" data-poster="${socialEsc(item.posterPath || "")}" aria-label="Ich hab den auch gesehen">${FEED_EYE}</button>
+              <button class="feed-icon-btn feed-bm${inWl ? " on" : ""}" data-id="${item.id}" data-type="${type}" data-title="${socialEsc(item.title || "")}" data-poster="${socialEsc(item.posterPath || "")}" data-owner="${socialEsc(friend.uid)}" data-ownername="${socialEsc(friend.username || friend.uid)}" aria-label="Watchlist">${FEED_BOOKMARK}</button>
+              <button class="feed-icon-btn feed-eye${iWatched ? " on" : ""}" data-id="${item.id}" data-type="${type}" data-title="${socialEsc(item.title || "")}" data-poster="${socialEsc(item.posterPath || "")}" data-owner="${socialEsc(friend.uid)}" data-ownername="${socialEsc(friend.username || friend.uid)}" aria-label="Ich hab den auch gesehen">${FEED_EYE}</button>
             </div>
           </div>
           ${item.note ? `<div class="feed-note">„${socialEsc(item.note)}"</div>` : ""}
@@ -9959,10 +10125,34 @@
         else {
           db.watchlist[k] = { id: parseInt(btn.dataset.id, 10), mediaType: btn.dataset.type, title: btn.dataset.title, poster: btn.dataset.poster, loggedAt: Date.now() };
           saveDB(); btn.classList.add("on"); showToast("Auf Watchlist gespeichert");
+          // R21-#6/#16: notify the post owner that you watchlisted their item
+          notifyFeedOwner(btn, "feed_watchlist");
         }
       }));
-      host.querySelectorAll(".feed-eye").forEach(btn => btn.addEventListener("click", () =>
-        openQuickRate({ id: parseInt(btn.dataset.id, 10), media_type: btn.dataset.type, title: btn.dataset.title, poster_path: btn.dataset.poster || null })));
+      host.querySelectorAll(".feed-eye").forEach(btn => btn.addEventListener("click", () => {
+        // R21-#6/#11: remember which feed post this rating came from so logItem can
+        // notify the owner and repaint the eye once the rating is saved.
+        _feedRateCtx = {
+          key: keyOf(btn.dataset.type, btn.dataset.id),
+          ownerUid: btn.dataset.owner, ownerName: btn.dataset.ownername,
+          title: btn.dataset.title, poster: btn.dataset.poster || "",
+          type: btn.dataset.type, wasWatched: !!db.items[keyOf(btn.dataset.type, btn.dataset.id)]
+        };
+        openQuickRate({ id: parseInt(btn.dataset.id, 10), media_type: btn.dataset.type, title: btn.dataset.title, poster_path: btn.dataset.poster || null });
+      }));
+    }
+
+    // R21-#6/#16: write a notification to a feed post's owner after an interaction.
+    function notifyFeedOwner(btn, type) {
+      const ownerUid = btn.dataset.owner;
+      const myUid    = window.__vaultUser && window.__vaultUser.uid;
+      if (!ownerUid || !myUid || ownerUid === myUid || !window.__vaultSocial || !window.__vaultSocial.pushNotification) return;
+      const myName = (_myProfile && _myProfile.username) || "Jemand";
+      window.__vaultSocial.pushNotification(ownerUid, {
+        type, fromUid: myUid, fromUsername: myName,
+        itemTitle: btn.dataset.title || "", itemPoster: btn.dataset.poster || "",
+        itemType: btn.dataset.type || "movie", tmdbId: parseInt(btn.dataset.id, 10) || null
+      });
     }
 
     // "Kein Benutzername" banner → jump to Profil where the username is set.
