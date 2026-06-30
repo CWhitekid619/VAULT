@@ -1978,6 +1978,25 @@
     .feed-more-btn:disabled { opacity: .6; }
     .feed-note { padding: 2px 14px 4px; font-size: 14px; color: var(--text-dim); font-style: italic; line-height: 1.45; }
     .feed-titleline { padding: 2px 14px 12px; font-size: 13px; color: var(--text-mute); }
+    /* R23-#17: inline comments */
+    .feed-comment-btn { position: relative; }
+    .feed-comment-btn.on { color: var(--accent); }
+    .feed-cmt-count { font-size: 12px; font-weight: 700; color: var(--text-mute); margin-left: 2px; align-self: center; }
+    .feed-comment-btn.on .feed-cmt-count { color: var(--accent); }
+    .feed-comments { border-top: 1px solid var(--border); padding: 10px 14px 12px; }
+    .feed-comment { display: flex; gap: 9px; align-items: flex-start; padding: 6px 0; }
+    .feed-cmt-av { flex: 0 0 auto; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #1a1206; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .feed-cmt-body { flex: 1; min-width: 0; }
+    .feed-cmt-name { font-size: 13px; font-weight: 700; color: var(--accent); cursor: pointer; }
+    .feed-cmt-text { font-size: 14px; color: var(--text); line-height: 1.4; word-wrap: break-word; }
+    .feed-cmt-time { font-size: 11px; color: var(--text-mute); margin-top: 2px; }
+    .feed-cmt-empty { font-size: 13px; color: var(--text-mute); padding: 4px 0 8px; }
+    .feed-cmt-form { display: flex; gap: 8px; align-items: flex-end; margin-top: 8px; }
+    .feed-cmt-input { flex: 1; background: var(--surface-2); border: 1px solid var(--border); border-radius: 18px; color: var(--text); font-family: inherit; font-size: 14px; padding: 8px 14px; resize: none; outline: none; max-height: 90px; }
+    .feed-cmt-input:focus { border-color: var(--accent); }
+    .feed-cmt-send { flex: 0 0 auto; background: var(--accent); color: #1a1206; border: none; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .feed-cmt-send svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .feed-cmt-send:disabled { opacity: .45; cursor: default; }
     .feed-alsoseen { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; padding: 0 14px 14px; }
     .feed-alsoseen-ic { display: inline-flex; color: var(--text-mute); }
     .feed-alsoseen-ic svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
@@ -2930,6 +2949,7 @@
       <div class="sheet-handle"></div>
       <div class="sheet-section-label" id="ep-rate-title">Episode bewerten</div>
       <div class="bucket-list" id="ep-rate-buckets"></div>
+      <button id="ep-rate-share" class="sheet-btn-primary" type="button">Mit Freunden teilen</button>
       <button id="ep-rate-remove" class="sheet-btn-cancel" type="button" hidden>Bewertung entfernen</button>
       <button id="ep-rate-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
     </div>
@@ -2969,7 +2989,7 @@
     import {
       getFirestore, doc, getDoc, setDoc, serverTimestamp,
       collection, addDoc, getDocs, updateDoc, deleteDoc,
-      query, where, orderBy, limit, onSnapshot, writeBatch, startAfter
+      query, where, orderBy, limit, onSnapshot, writeBatch, startAfter, getCountFromServer
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -3228,6 +3248,33 @@
           });
         } catch (e) { /* sharing already succeeded; history is non-critical */ }
       },
+      // R23-#6: share a single episode with friends. Mirrors shareItem but carries
+      // season / episode / episode name / sender rating so the recipient sees it all.
+      async shareEpisode(fromUid, fromUsername, toUids, ep, note) {
+        if (!toUids || !toUids.length) return;
+        const batch = writeBatch(firestore);
+        toUids.forEach(toUid => {
+          const id = "epshare_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+          batch.set(doc(firestore, "users", toUid, "notifications", id), {
+            type: "episode_shared", fromUid, fromUsername,
+            itemTitle: ep.seriesTitle, itemPoster: ep.poster || "",
+            itemType: "tv", tmdbId: ep.seriesId,
+            season: ep.season, episode: ep.episode, episodeName: ep.episodeName || "",
+            bucket: ep.bucket || null, note: note || "",
+            read: false, createdAt: serverTimestamp()
+          });
+        });
+        await batch.commit();
+        // Best-effort sender history (outside the batch — non-critical).
+        try {
+          await addDoc(collection(firestore, "users", fromUid, "sharedItems"), {
+            toUids, itemTitle: ep.seriesTitle, itemPoster: ep.poster || "",
+            itemType: "tv", tmdbId: ep.seriesId,
+            season: ep.season, episode: ep.episode, episodeName: ep.episodeName || "",
+            bucket: ep.bucket || null, note: note || "", createdAt: serverTimestamp()
+          });
+        } catch (e) { /* sharing already succeeded; history is non-critical */ }
+      },
       async createSharedList(creatorUid, friendUid, listName, items) {
         const ref = await addDoc(collection(firestore, "sharedLists"), {
           name: listName, createdBy: creatorUid, members: [creatorUid, friendUid], createdAt: serverTimestamp()
@@ -3331,6 +3378,33 @@
       },
       async deletePost(postId) {
         try { await deleteDoc(doc(firestore, "posts", postId)); } catch (e) {}
+      },
+      // R23-#17: comments live under posts/{postId}/comments (rules deployed R21).
+      async addComment(postId, userId, username, text) {
+        if (!postId || !userId || !text) return null;
+        const ref = await addDoc(collection(firestore, "posts", postId, "comments"), {
+          userId, username: username || "", text, timestamp: serverTimestamp()
+        });
+        return { id: ref.id, userId, username: username || "", text, timestamp: Date.now() };
+      },
+      async getComments(postId) {
+        if (!postId) return [];
+        try {
+          const snap = await getDocs(query(
+            collection(firestore, "posts", postId, "comments"), orderBy("timestamp", "asc")));
+          return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        } catch (e) { return []; }
+      },
+      async countComments(postId) {
+        if (!postId) return 0;
+        try {
+          const snap = await getCountFromServer(collection(firestore, "posts", postId, "comments"));
+          return snap.data().count || 0;
+        } catch (e) {
+          // Fallback for environments without aggregate support.
+          try { return (await getDocs(collection(firestore, "posts", postId, "comments"))).size; }
+          catch (e2) { return 0; }
+        }
       }
     };
 
@@ -3587,13 +3661,14 @@
             settings: (parsed.settings && typeof parsed.settings === "object") ? parsed.settings : {},  // R3: user prefs incl. settings.privacy (sharing groundwork)
             recentlyWatchedExcluded: (parsed.recentlyWatchedExcluded && typeof parsed.recentlyWatchedExcluded === "object") ? parsed.recentlyWatchedExcluded : {},  // R16-#3: keys excluded from "Zuletzt gesehen" display
             spotlight: (parsed.spotlight && typeof parsed.spotlight === "object") ? parsed.spotlight : null,  // R19-#6 Part C: {mediaType,id} of the spotlighted title, or null
-            matchSeen: (parsed.matchSeen && typeof parsed.matchSeen === "object") ? parsed.matchSeen : {}  // R21-#3: item keys whose match popup was already shown
+            matchSeen: (parsed.matchSeen && typeof parsed.matchSeen === "object") ? parsed.matchSeen : {},  // R21-#3: item keys whose match popup was already shown
+            autoTaggedKeys: (parsed.autoTaggedKeys && typeof parsed.autoTaggedKeys === "object") ? parsed.autoTaggedKeys : {}  // R23-#23b: item keys already evaluated for auto-tags
           };
           migrateTags(out);
           return out;
         }
       } catch (e) { /* corrupted store — start fresh */ }
-      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, trackedSeries: {}, homeCustomSections: [], homeSections: null, people: {}, recoExcludeLists: {}, recoExcludeTags: {}, recoSnoozed: {}, manualRankOrder: {}, settings: {}, recentlyWatchedExcluded: {}, spotlight: null, matchSeen: {} };
+      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, trackedSeries: {}, homeCustomSections: [], homeSections: null, people: {}, recoExcludeLists: {}, recoExcludeTags: {}, recoSnoozed: {}, manualRankOrder: {}, settings: {}, recentlyWatchedExcluded: {}, spotlight: null, matchSeen: {}, autoTaggedKeys: {} };
     }
     let db = loadDB();
     function saveDB() {
@@ -4901,6 +4976,7 @@
         if (!db.lists[id].permanent && db.lists[id].items && db.lists[id].items[key]) delete db.lists[id].items[key];
       }
       saveDB();
+      autoTagItem(r.media_type, r.id);   // R23-#23b: silent content auto-tagging
       heroItemCount = -1; // force hero rebuild on next Home visit
       closeSheet();
       showToast("Eingetragen: " + bucketLabel(bucket));
@@ -4957,6 +5033,7 @@
       // R21-#5: post the watch to the activity feed.
       addFeedPost({ type: "watched", itemId: rec.id, mediaType: rec.mediaType,
         title: rec.title || "", posterPath: rec.poster || null });
+      autoTagItem(r.media_type, r.id);   // R23-#23b: silent content auto-tagging
     }
 
     // ---------- Quick-rate popup (points 5 + 8) ----------
@@ -5109,6 +5186,7 @@
       const r = sheetItem;
       db.watchlist[keyOf(r.media_type, r.id)] = recordFrom(r, null);
       saveDB();
+      autoTagItem(r.media_type, r.id);   // R23-#23b: silent content auto-tagging
       closeSheet();
       showToast("Auf Watchlist gespeichert");
       refreshResults();
@@ -6285,6 +6363,7 @@
         else {
           db.watchlist[key] = recordFrom(r, null); saveDB(); showToast("Auf Watchlist gespeichert");
           applyStudioTags(key, data.production_companies);   // N1: auto-tag studios on log
+          autoTagItem(mediaType, data.id);                   // R23-#23b: content auto-tagging
           renderPersonal(mediaType, data.id);
         }
         refreshDetailStatus();
@@ -6331,7 +6410,10 @@
       if (isTv) renderEpRatings(data);
       // N1: retro-apply studio tags if this title is already logged (covers card-logged titles)
       const dkey = keyOf(mediaType, data.id);
-      if (db.items[dkey] || db.watchlist[dkey]) applyStudioTags(dkey, data.production_companies);
+      if (db.items[dkey] || db.watchlist[dkey]) {
+        applyStudioTags(dkey, data.production_companies);
+        autoTagItem(mediaType, data.id);   // R23-#23b: retro content auto-tagging
+      }
       renderPersonal(mediaType, data.id);
       refreshDetailStatus();
     }
@@ -6706,6 +6788,99 @@
       if (changed) saveMeta(key, meta);
     }
 
+    // ---------- Content auto-tagging (R23-#23b) ----------
+    // Derive content tags from TMDB genre ids + keywords + cast. Pure function.
+    const AT_MARTIAL_CAST = ["jackie chan", "jet li", "bruce lee", "tony jaa", "donnie yen"];
+    const AT_RELIGIOUS_KW = ["christian", "christianity", "faith", "religion", "church", "bible", "god", "jesus", "gospel"];
+    const AT_MARTIAL_KW   = ["martial arts", "kung fu", "karate", "wushu"];
+    const GENRE_DOCUMENTARY = 99, GENRE_ANIMATION = 16;   // language-independent TMDB ids
+
+    function autoTagsFor(info) {
+      const gids = new Set((info.genreIds || []).map(Number));
+      const kw   = (info.keywords || []).map(k => String(k).toLowerCase());
+      const cast = (info.cast || []).map(c => String(c).toLowerCase());
+      // word-boundary match against the joined keyword text (avoids "god" → "godzilla")
+      const kwText = " " + kw.join(" | ") + " ";
+      const kwHas  = term => new RegExp("\\b" + term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(kwText);
+      const tags = new Set();
+
+      if (AT_RELIGIOUS_KW.some(kwHas)) tags.add("Christlich");
+      if (cast.some(n => AT_MARTIAL_CAST.some(a => n.includes(a))) || AT_MARTIAL_KW.some(kwHas)) tags.add("Martial Arts");
+      if (gids.has(GENRE_DOCUMENTARY)) tags.add("Doku");
+      if (gids.has(GENRE_ANIMATION))   tags.add("Animation");
+      if (kwHas("based on true story") || kwHas("true story")) tags.add("Wahre Geschichte");
+
+      return [...tags];
+    }
+
+    // Additively apply content tags (same removal-respecting contract as applyStudioTags).
+    function applyAutoTags(key, info) {
+      const tags = autoTagsFor(info);
+      if (!tags.length) return false;
+      const meta = getMeta(key);
+      let changed = false;
+      tags.forEach(t => {
+        if (meta.removedTags.includes(t)) return;   // user removed it manually → don't re-add
+        addTagDef(t);
+        if (!meta.tags.includes(t)) { meta.tags.push(t); changed = true; }
+      });
+      if (changed) saveMeta(key, meta);
+      return changed;
+    }
+
+    // Fetch genres + keywords + cast for one title in a single request.
+    async function fetchAutoTagData(mediaType, id) {
+      try {
+        const res = await fetch("https://api.themoviedb.org/3/" + mediaType + "/" + id +
+          "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG + "&append_to_response=keywords,credits");
+        if (!res.ok) return null;
+        const data = await res.json();
+        const kwRaw = mediaType === "tv" ? (data.keywords && data.keywords.results) : (data.keywords && data.keywords.keywords);
+        return {
+          genreIds: (data.genres || []).map(g => g.id),
+          keywords: (kwRaw || []).map(k => k.name || ""),
+          cast: ((data.credits && data.credits.cast) || []).map(c => c.name || "")
+        };
+      } catch (e) { return null; }
+    }
+
+    // Silent, idempotent: evaluate a library title once, set its auto-tags in the background.
+    async function autoTagItem(mediaType, id) {
+      if (!mediaType || !id) return;
+      const key = keyOf(mediaType, id);
+      db.autoTaggedKeys = db.autoTaggedKeys || {};
+      if (db.autoTaggedKeys[key]) return;             // already evaluated → no re-fetch
+      const info = await fetchAutoTagData(mediaType, id);
+      if (!info) return;                              // fetch failed → retry on a later trigger
+      applyAutoTags(key, info);
+      db.autoTaggedKeys[key] = 1; saveDB();
+      // refresh the tag chips if this title's detail page is currently open
+      if (typeof detailCtx !== "undefined" && detailCtx &&
+          detailCtx.mediaType === mediaType && String(detailCtx.id) === String(id)) {
+        renderPersonal(mediaType, id);
+      }
+    }
+
+    // One-time backfill across the existing library (runs once; flag in localStorage).
+    let _autoTagBackfillRan = false;
+    async function runAutoTagBackfill() {
+      if (_autoTagBackfillRan) return;
+      const FLAG = "vault.autoTagBackfill.v1";
+      try { if (localStorage.getItem(FLAG)) return; } catch (e) { return; }
+      _autoTagBackfillRan = true;
+      const keys = [...new Set([...Object.keys(db.items || {}), ...Object.keys(db.watchlist || {})])];
+      for (const key of keys) {
+        const idx = key.indexOf(":");
+        const mt  = key.slice(0, idx);
+        const id  = parseInt(key.slice(idx + 1), 10);
+        if ((mt === "movie" || mt === "tv") && id) {
+          await autoTagItem(mt, id);
+          await new Promise(r => setTimeout(r, 120));   // gentle throttle (~8 req/s)
+        }
+      }
+      try { localStorage.setItem(FLAG, "1"); } catch (e) {}
+    }
+
     let personalNoteTimer = null;
 
     function renderPersonal(mediaType, id) {
@@ -7003,7 +7178,7 @@
         row.addEventListener("click", () => {
           if (!isEpWatched(tvId, season, e.n)) { toggleEp(tvId, season, e.n, true); refreshRow(true); }
           ensureSeriesWatched(data);              // P6: enters ranking as Ungerankt (rating stays optional)
-          openEpRateSheet(tvId, season, e.n, null, () => refreshRow(true), data);
+          openEpRateSheet(tvId, season, e.n, null, () => refreshRow(true), data, e.name);
         });
         frag.appendChild(row);
       });
@@ -7776,11 +7951,14 @@
     const epRateTitleEl  = document.getElementById("ep-rate-title");
     const epRateBucketsEl = document.getElementById("ep-rate-buckets");
 
-    function openEpRateSheet(tvId, s, e, cell, onChange, data) {
-      epRateCtx = { tvId, s, e, cell, onChange: onChange || null, data: data || null };
+    function openEpRateSheet(tvId, s, e, cell, onChange, data, epName) {
+      epRateCtx = { tvId, s, e, cell, onChange: onChange || null, data: data || null, epName: epName || "" };
       epRateTitleEl.textContent =
         "S" + String(s).padStart(2, "0") + "E" + String(e).padStart(2, "0") + " bewerten";
       const current = getEpRating(tvId, s, e);
+      // R23-#6: "Mit Freunden teilen" only makes sense once the episode is rated.
+      const shareBtn = document.getElementById("ep-rate-share");
+      if (shareBtn) shareBtn.hidden = !current;
       epRateBucketsEl.innerHTML = "";
       BUCKETS.forEach((b, i) => {
         const btn = document.createElement("button");
@@ -7840,6 +8018,22 @@
     document.getElementById("ep-rate-cancel").addEventListener("click", closeEpRateSheet);
     epRateBackdrop.addEventListener("click", e => { if (e.target === epRateBackdrop) closeEpRateSheet(); });
 
+    // R23-#6: share this episode with friends (reuses the recommendation share sheet).
+    document.getElementById("ep-rate-share").addEventListener("click", () => {
+      if (!epRateCtx) return;
+      const { tvId, s, e, data, epName } = epRateCtx;
+      const bucket = getEpRating(tvId, s, e);
+      if (!bucket) { showToast("Bitte zuerst bewerten"); return; }
+      const seriesTitle = (data && (data.name || data.title)) || "";
+      const seriesId = data ? data.id : parseInt(String(tvId).split(":")[1], 10);
+      const poster = data ? (data.poster_path || "") : "";
+      closeEpRateSheet();
+      openShareSheet({
+        title: seriesTitle, poster, mediaType: "tv", id: seriesId, bucket,
+        _episode: { season: s, episode: e, episodeName: epName || "" }
+      });
+    });
+
     function renderEpRatings(data) {
       const host = document.getElementById("detail-ep-ratings");
       if (!host) return;
@@ -7891,7 +8085,7 @@
         const rating = getEpRating(tvId, season, ep.n);
         if (rating) { cell.dataset.b = rating; cell.title = bucketLabel(rating); }
         else { cell.title = ep.name || ("Episode " + ep.n); }
-        cell.addEventListener("click", () => openEpRateSheet(tvId, season, ep.n, cell, undefined, data));
+        cell.addEventListener("click", () => openEpRateSheet(tvId, season, ep.n, cell, undefined, data, ep.name));
         grid.appendChild(cell);
       });
       gridEl.appendChild(grid);
@@ -9691,6 +9885,9 @@
     renderLogHome();
     searchInput.focus();
 
+    // R23-#23b: one-time content auto-tag backfill over the existing library (background).
+    setTimeout(() => { runAutoTagBackfill(); }, 2500);
+
     window.VAULT = { TMDB_KEY, TMDB_LANG, TMDB_REGION, db };
 
     // ============================================================
@@ -9850,6 +10047,13 @@
             // conversation can continue back-and-forth without limit.
             const full = _notifCache.find(x => x.id === nid);
             if (full) { closeNotifCenter(); openSingleReco(full); }
+          } else if (el.dataset.type === "episode_shared") {
+            // R23-#6: open the series the shared episode belongs to.
+            const full = _notifCache.find(x => x.id === nid);
+            if (full && full.tmdbId) { closeNotifCenter(); openDetail("tv", full.tmdbId); }
+          } else if (el.dataset.type === "post_comment") {
+            // R23-#17: jump to the activity feed where the commented post lives.
+            closeNotifCenter(); switchTab("social");
           }
         });
       });
@@ -9879,12 +10083,14 @@
     function notifTypeIcon(type) {
       if (type === "friend_request" || type === "friend_accepted") return "👤";
       if (type === "item_shared") return "🎬";
+      if (type === "episode_shared") return "📺";
       if (type === "list_item_added" || type === "list_item_removed") return "📋";
       if (type === "list_shared" || type === "list_unshared") return "👥";
       if (type === "feed_watched")   return "👁️";
       if (type === "feed_watchlist") return "🔖";
       if (type === "feed_rerated")   return "⭐";
       if (type === "reco_reply")     return "💬";
+      if (type === "post_comment")   return "💬";
       if (type === "reco_seen")      return "👁️";
       if (type === "reco_added_list")return "📋";
       return "🔔";
@@ -9897,6 +10103,14 @@
       if (n.type === "friend_request")   return `${from} möchte dein Freund sein`;
       if (n.type === "friend_accepted")  return `${from} hat deine Anfrage angenommen`;
       if (n.type === "item_shared")      return `${from} empfiehlt dir ${item}`;
+      if (n.type === "episode_shared") {
+        const epRef = "S" + String(n.season).padStart(2, "0") + "E" + String(n.episode).padStart(2, "0")
+          + (n.episodeName ? " – " + socialEsc(n.episodeName) : "");
+        const stars = n.bucket && typeof FEED_STAR !== "undefined" && FEED_STAR[n.bucket]
+          ? " " + "★".repeat(FEED_STAR[n.bucket]) : "";
+        const noteTxt = n.note ? `<div class="notif-time" style="margin-top:4px">„${socialEsc(n.note)}“</div>` : "";
+        return `${from} hat dir eine Folge geteilt: ${item} ${epRef}${stars}${noteTxt}`;
+      }
       if (n.type === "list_item_added")  return `${from} hat ${item} zu eurer Liste ${list} hinzugefügt`;
       if (n.type === "list_item_removed")return `${from} hat ${item} aus eurer Liste ${list} entfernt`;
       if (n.type === "list_shared")      return `${from} hat die Liste ${list} mit dir geteilt`;
@@ -9905,6 +10119,7 @@
       if (n.type === "feed_watchlist")   return `${from} hat ${item} auf seine Watchlist gepackt, weil du es geschaut hast`;
       if (n.type === "feed_rerated")     return `${from} hat ${item} nochmal bewertet, nachdem du es geschaut hast`;
       if (n.type === "reco_reply")       return `${from} hat auf deine Empfehlung geantwortet: „${socialEsc(n.replyText || "")}“`;
+      if (n.type === "post_comment")     return `${from} hat deinen Post${n.itemTitle ? " zu " + item : ""} kommentiert${n.commentText ? `: „${socialEsc(n.commentText)}“` : ""}`;
       if (n.type === "reco_seen")        return `${from} hat ${item} bereits gesehen`;
       if (n.type === "reco_added_list")  return n.listName
                                            ? `Den Film den du empfohlen hast hat ${from} jetzt in „${socialEsc(n.listName)}“ gepackt`
@@ -10147,6 +10362,7 @@
     const FEED_BOOKMARK = '<svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
     const FEED_EYE      = '<svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>';
     const FEED_PEOPLE   = '<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+    const FEED_COMMENT  = '<svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg>';
 
     // R21-#5/#8: write an activity post to the persistent feed. Respects the
     // "share watched" privacy toggle and requires a username (so the author shows).
@@ -10219,6 +10435,8 @@
     // R21-#8/#5: the feed is now backed by the persistent "posts" collection
     // (cursor-paginated), instead of the rolling recentlyWatched snapshot.
     let _feedPosts = [], _feedCursor = null, _feedDone = false, _feedLoading = false;
+    const _commentCounts = {};   // R23-#17: postId -> comment count (cache)
+    const _commentCache  = {};   // R23-#17: postId -> loaded comments array
 
     async function renderFeed() {
       const host = document.getElementById("social-feed-list");
@@ -10278,7 +10496,7 @@
         case "ranked":          return `hat ${title}${p.rank ? " auf Platz " + p.rank : ""} gerankt`;
         case "episode_watched": return `hat ${epRef} geschaut`;
         case "episode_rated":   return `hat eine Folge bewertet`;
-        case "episode_shared":  return `hat eine Folge geteilt`;
+        case "episode_shared":  return `hat ${epRef}${title ? " von " + title : ""} geteilt`;
         case "actor_ranked":    return `hat ${socialEsc(p.actorName || "")} ins Ranking geschickt`;
         case "actor_number_one":return `${socialEsc(p.actorName || "")}s Film ${title} ist jetzt Nr. 1 im Duell`;
         default:                return `hat ${title} geschaut`;
@@ -10317,6 +10535,9 @@
       const titleLine  = [socialEsc(p.title || ""), mediaLabel].filter(Boolean).join(" · ");
       const inWl       = !!db.watchlist[key];
       const iWatched   = !!db.items[key];
+      // R23-#17: comments only attach to persistent posts (pseudo-posts have no doc id)
+      const canComment = !!(p.id && !p._pseudo);
+      const cmtCount   = canComment ? (_commentCounts[p.id] || 0) : 0;
       // R21-#2: exclude the poster AND the current user from "Auch gesehen von"
       const seen = (watchers[key] || []).filter(w => w.uid !== ownerUid && !w.self);
       const seenHtml = seen.length
@@ -10333,11 +10554,13 @@
             <div class="feed-icons">
               <button class="feed-icon-btn feed-bm${inWl ? " on" : ""}" data-id="${id}" data-type="${type}" data-title="${socialEsc(p.title || "")}" data-poster="${socialEsc(p.posterPath || "")}" data-owner="${socialEsc(ownerUid)}" data-ownername="${socialEsc(author)}" aria-label="Watchlist">${FEED_BOOKMARK}</button>
               <button class="feed-icon-btn feed-eye${iWatched ? " on" : ""}" data-id="${id}" data-type="${type}" data-title="${socialEsc(p.title || "")}" data-poster="${socialEsc(p.posterPath || "")}" data-owner="${socialEsc(ownerUid)}" data-ownername="${socialEsc(author)}" aria-label="Ich hab den auch gesehen">${FEED_EYE}</button>
+              ${canComment ? `<button class="feed-icon-btn feed-comment-btn" data-post="${socialEsc(p.id)}" data-owner="${socialEsc(ownerUid)}" data-ownername="${socialEsc(author)}" data-title="${socialEsc(p.title || "")}" data-poster="${socialEsc(p.posterPath || "")}" data-type="${type}" data-id="${id}" aria-label="Kommentare">${FEED_COMMENT}<span class="feed-cmt-count">${cmtCount > 0 ? cmtCount : ""}</span></button>` : ""}
             </div>
           </div>
           ${p.note ? `<div class="feed-note">„${socialEsc(p.note)}"</div>` : ""}
           <div class="feed-titleline">${titleLine}</div>
           ${seenHtml}
+          ${canComment ? `<div class="feed-comments" data-post="${socialEsc(p.id)}" hidden></div>` : ""}
         </div>`;
     }
 
@@ -10447,6 +10670,117 @@
         };
         openQuickRate({ id: parseInt(btn.dataset.id, 10), media_type: btn.dataset.type, title: btn.dataset.title, poster_path: btn.dataset.poster || null });
       }));
+      // R23-#17: comment buttons — lazy count badges + expand/collapse
+      host.querySelectorAll(".feed-comment-btn").forEach(btn => {
+        const postId = btn.dataset.post;
+        // backfill the count badge once per post
+        if (postId && !(postId in _commentCounts) && window.__vaultSocial && window.__vaultSocial.countComments) {
+          window.__vaultSocial.countComments(postId).then(n => {
+            _commentCounts[postId] = n;
+            updateCommentBadge(postId, n);
+          });
+        }
+        btn.addEventListener("click", () => toggleCommentSection(btn));
+      });
+    }
+
+    // R23-#17: reflect a post's comment count on every visible badge for that post.
+    function updateCommentBadge(postId, n) {
+      document.querySelectorAll(`.feed-comment-btn[data-post="${cssEsc(postId)}"]`).forEach(b => {
+        const span = b.querySelector(".feed-cmt-count");
+        if (span) span.textContent = n > 0 ? String(n) : "";
+      });
+    }
+    // Minimal CSS.escape fallback (post ids are alnum+_ so this is just a guard).
+    function cssEsc(s) {
+      return (window.CSS && CSS.escape) ? CSS.escape(s) : String(s).replace(/["\\\]]/g, "\\$&");
+    }
+
+    async function toggleCommentSection(btn) {
+      const postId = btn.dataset.post;
+      const card   = btn.closest(".feed-card");
+      const section = card && card.querySelector(`.feed-comments[data-post="${cssEsc(postId)}"]`);
+      if (!section) return;
+      const opening = section.hidden;
+      section.hidden = !opening;
+      btn.classList.toggle("on", opening);
+      if (!opening) return;
+      // First open: build the section (input + list) and load comments.
+      if (!section.dataset.built) {
+        section.dataset.built = "1";
+        section.innerHTML =
+          `<div class="feed-cmt-list"><div class="feed-cmt-empty">Lädt …</div></div>
+           <div class="feed-cmt-form">
+             <textarea class="feed-cmt-input" rows="1" placeholder="Kommentar …" maxlength="500"></textarea>
+             <button class="feed-cmt-send" type="button" disabled aria-label="Senden">
+               <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+             </button>
+           </div>`;
+        const input = section.querySelector(".feed-cmt-input");
+        const send  = section.querySelector(".feed-cmt-send");
+        input.addEventListener("input", () => {
+          send.disabled = !input.value.trim();
+          input.style.height = "auto"; input.style.height = Math.min(90, input.scrollHeight) + "px";
+        });
+        input.addEventListener("keydown", e => {
+          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!send.disabled) submitComment(btn, section, input, send); }
+        });
+        send.addEventListener("click", () => submitComment(btn, section, input, send));
+      }
+      const list = section.querySelector(".feed-cmt-list");
+      const comments = _commentCache[postId] || (window.__vaultSocial ? await window.__vaultSocial.getComments(postId) : []);
+      _commentCache[postId] = comments;
+      _commentCounts[postId] = comments.length;
+      updateCommentBadge(postId, comments.length);
+      renderCommentList(list, comments);
+    }
+
+    function renderCommentList(list, comments) {
+      if (!comments.length) { list.innerHTML = '<div class="feed-cmt-empty">Noch keine Kommentare. Schreib den ersten!</div>'; return; }
+      list.innerHTML = comments.map(c =>
+        `<div class="feed-comment">
+          <div class="feed-cmt-av" data-uid="${socialEsc(c.userId || "")}">${avatarInitial(c.username || "?")}</div>
+          <div class="feed-cmt-body">
+            <span class="feed-cmt-name" data-uid="${socialEsc(c.userId || "")}">${socialEsc(c.username || "?")}</span>
+            <div class="feed-cmt-text">${socialEsc(c.text || "")}</div>
+            <div class="feed-cmt-time">${relativeTime(c.timestamp)}</div>
+          </div>
+        </div>`).join("");
+      list.querySelectorAll("[data-uid]").forEach(el =>
+        el.addEventListener("click", () => { const u = el.dataset.uid; if (u) openFriendProfile(u); }));
+    }
+
+    async function submitComment(btn, section, input, send) {
+      const postId = btn.dataset.post;
+      const text   = input.value.trim();
+      if (!text || !window.__vaultUser || !window.__vaultSocial) return;
+      send.disabled = true;
+      try {
+        const myName = (_myProfile && _myProfile.username) || (window.__vaultUser.email || "");
+        const comment = await window.__vaultSocial.addComment(postId, window.__vaultUser.uid, myName, text);
+        if (!comment) { showToast("Kommentar fehlgeschlagen"); send.disabled = false; return; }
+        const arr = _commentCache[postId] || [];
+        arr.push(comment);
+        _commentCache[postId] = arr;
+        _commentCounts[postId] = arr.length;
+        renderCommentList(section.querySelector(".feed-cmt-list"), arr);
+        updateCommentBadge(postId, arr.length);
+        input.value = ""; input.style.height = "auto";
+        // Notify the post owner — but never notify yourself.
+        const ownerUid = btn.dataset.owner;
+        if (ownerUid && ownerUid !== window.__vaultUser.uid && window.__vaultSocial.pushNotification) {
+          window.__vaultSocial.pushNotification(ownerUid, {
+            type: "post_comment", fromUid: window.__vaultUser.uid, fromUsername: myName,
+            itemTitle: btn.dataset.title || "", itemPoster: btn.dataset.poster || "",
+            itemType: btn.dataset.type || "movie", tmdbId: parseInt(btn.dataset.id, 10) || null,
+            commentText: text
+          });
+        }
+      } catch (e) {
+        console.error("VAULT: Kommentar fehlgeschlagen:", e);
+        showToast("Kommentar fehlgeschlagen – bitte erneut versuchen");
+        send.disabled = false;
+      }
     }
 
     // R21-#6/#16: write a notification to a feed post's owner after an interaction.
@@ -10985,6 +11319,7 @@
     const shareBackdrop = document.getElementById("share-backdrop");
     let _shareItem = null;
     let _shareRating = null;
+    let _shareEpisode = null;   // R23-#6: set when the share sheet is in episode mode
 
     document.getElementById("share-cancel").addEventListener("click", closeShareSheet);
     shareBackdrop.addEventListener("click", e => { if (e.target === shareBackdrop) closeShareSheet(); });
@@ -11001,7 +11336,7 @@
       const notifOpen    = document.getElementById("notif-center") && !document.getElementById("notif-center").hidden;
       if (!detailOpen && !qrOpen && !profOpen && !notifOpen) document.body.style.overflow = "";
       if (shareBackdrop.contains(document.activeElement)) document.activeElement.blur();
-      _shareItem = null; _shareRating = null;
+      _shareItem = null; _shareRating = null; _shareEpisode = null;
     }
 
     function openShareSheet(itemRecord) {
@@ -11010,11 +11345,15 @@
       if (!friends.length) { showToast("Noch keine Freunde hinzugefügt"); return; }
       _shareItem   = itemRecord;
       _shareRating = itemRecord.bucket || null;
+      _shareEpisode = itemRecord._episode || null;   // R23-#6: episode-share context
       const posterSrc = itemRecord.poster ? "https://image.tmdb.org/t/p/w92" + itemRecord.poster : "";
       document.getElementById("share-poster").src = posterSrc;
       document.getElementById("share-poster").hidden = !posterSrc;
       document.getElementById("share-title").textContent = itemRecord.title || "";
-      document.getElementById("share-sub").textContent   = itemRecord.mediaType === "tv" ? "Serie" : "Film";
+      document.getElementById("share-sub").textContent = _shareEpisode
+        ? "S" + String(_shareEpisode.season).padStart(2, "0") + "E" + String(_shareEpisode.episode).padStart(2, "0")
+          + (_shareEpisode.episodeName ? " – " + _shareEpisode.episodeName : "")
+        : (itemRecord.mediaType === "tv" ? "Serie" : "Film");
       document.getElementById("share-note").value = "";
       // Friends checkboxes
       document.getElementById("share-friends-list").innerHTML = friends.map(f =>
@@ -11055,12 +11394,31 @@
         if (!toUids.length) { showToast("Mindestens einen Freund auswählen"); return; }
         const note = document.getElementById("share-note").value.trim();
         const myName = (_myProfile && _myProfile.username) || (window.__vaultUser.email || "");
-        await window.__vaultSocial.shareItem(window.__vaultUser.uid, myName, toUids, {
-          title: _shareItem.title, poster: _shareItem.poster,
-          type: _shareItem.mediaType, id: _shareItem.id
-        }, note, _shareRating);
-        closeShareSheet();
-        showToast("Empfehlung gesendet");
+        if (_shareEpisode) {
+          // R23-#6: episode share — carries season/episode/name/rating to the recipient
+          const ep = _shareEpisode;
+          await window.__vaultSocial.shareEpisode(window.__vaultUser.uid, myName, toUids, {
+            seriesTitle: _shareItem.title, seriesId: _shareItem.id, poster: _shareItem.poster,
+            season: ep.season, episode: ep.episode, episodeName: ep.episodeName || "",
+            bucket: _shareRating
+          }, note);
+          // Feed post for the sender (type already known to feedActionLabel).
+          if (typeof addFeedPost === "function") {
+            addFeedPost({ type: "episode_shared", itemId: _shareItem.id, mediaType: "tv",
+              title: _shareItem.title, posterPath: _shareItem.poster || null,
+              season: ep.season, episode: ep.episode, episodeName: ep.episodeName || "",
+              epRating: (typeof FEED_STAR !== "undefined" && FEED_STAR[_shareRating]) || null });
+          }
+          closeShareSheet();
+          showToast("Folge geteilt");
+        } else {
+          await window.__vaultSocial.shareItem(window.__vaultUser.uid, myName, toUids, {
+            title: _shareItem.title, poster: _shareItem.poster,
+            type: _shareItem.mediaType, id: _shareItem.id
+          }, note, _shareRating);
+          closeShareSheet();
+          showToast("Empfehlung gesendet");
+        }
       } catch (e) {
         // R21-FIX: never fail silently — the "Empfehlen" button used to look dead.
         console.error("VAULT: Empfehlen fehlgeschlagen:", e);
