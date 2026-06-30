@@ -7959,6 +7959,8 @@
       // R23-#6: "Mit Freunden teilen" only makes sense once the episode is rated.
       const shareBtn = document.getElementById("ep-rate-share");
       if (shareBtn) shareBtn.hidden = !current;
+      const cancelBtn0 = document.getElementById("ep-rate-cancel");
+      if (cancelBtn0) cancelBtn0.textContent = "Abbrechen";
       epRateBucketsEl.innerHTML = "";
       BUCKETS.forEach((b, i) => {
         const btn = document.createElement("button");
@@ -7980,7 +7982,14 @@
               title: data.name || data.title || "", posterPath: data.poster_path || null,
               season: s, episode: e, epRating: star });
           }
-          closeEpRateSheet();
+          // R23-#6: keep the sheet open after rating so "Mit Freunden teilen" is
+          // reachable in one flow. Reflect the new selection + reveal share/remove.
+          epRateBucketsEl.querySelectorAll(".bucket").forEach(x => x.classList.remove("selected"));
+          btn.classList.add("selected");
+          document.getElementById("ep-rate-share").hidden = false;
+          document.getElementById("ep-rate-remove").hidden = false;
+          const cancelBtn = document.getElementById("ep-rate-cancel");
+          if (cancelBtn) cancelBtn.textContent = "Fertig";
         });
         epRateBucketsEl.appendChild(btn);
       });
