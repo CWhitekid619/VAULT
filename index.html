@@ -6757,12 +6757,13 @@
     // ====================================================================
     function getMeta(key) {
       const m = db.meta[key];
-      return { note: (m && m.note) || "", tags: (m && m.tags) || [], rewatch: !!(m && m.rewatch), flagged: !!(m && m.flagged), removedTags: (m && m.removedTags) || [] };
+      return { note: (m && m.note) || "", tags: (m && m.tags) || [], rewatch: !!(m && m.rewatch), flagged: !!(m && m.flagged), removedTags: (m && m.removedTags) || [], autoTags: (m && m.autoTags) || [] };
     }
     function saveMeta(key, meta) {
       const removed = meta.removedTags || [];
+      const auto = meta.autoTags || [];
       if (!meta.note && (!meta.tags || !meta.tags.length) && !meta.rewatch && !meta.flagged && !removed.length) delete db.meta[key];
-      else db.meta[key] = { note: meta.note || "", tags: meta.tags || [], rewatch: !!meta.rewatch, flagged: !!meta.flagged, removedTags: removed };
+      else db.meta[key] = { note: meta.note || "", tags: meta.tags || [], rewatch: !!meta.rewatch, flagged: !!meta.flagged, removedTags: removed, autoTags: auto };
       saveDB();
     }
 
@@ -6838,31 +6839,37 @@
       if (changed) saveMeta(key, meta);
     }
 
-    // ---------- Content auto-tagging (R23-#23b, ausgebaut R24-#23b) ----------
-    // Deklarative, leicht erweiterbare Regeltabellen. Ein Titel bekommt einen Tag, wenn
-    // ENTWEDER eine Keyword-Regel (TMDB-Keyword-Text ODER Genre-Id) passt ODER eine
-    // Actor-Regel auf die Besetzung. Bewusster Bias zu Über-Tagging: ein falscher Tag ist
-    // günstiger als ein fehlender. Genre-Ids sind sprachunabhängig.
-    // → Neue Regeln/Actors: einfach unten in die jeweilige Tabelle eintragen.
-    const AT_GENRE = { ANIMATION: 16, DOCUMENTARY: 99, HORROR: 27, WAR: 10752, TV_WAR: 10768, WESTERN: 37, MUSIC: 10402, FAMILY: 10751 };
+    // ---------- Content auto-tagging (R23-#23b, ausgebaut R24-#23b, umgestellt R25-#tag) ----------
+    // Zwei Quellen (R25): (1) die offiziellen TMDB-Genres eines Titels werden 1:1 als Basis-
+    // Tags übernommen (lokalisierte Namen, siehe autoTagsFor). (2) Darüber kommen kuratierte
+    // Spezial-Tags für Dinge, die TMDB NICHT als Genre führt (Christlich, Martial Arts, Anime …).
+    // Genre-Duplikate (Doku/Krieg/Horror/Animation) sind aus den Regeln raus, da die Genres sie
+    // schon liefern. Regeln matchen wortgrenzen-genau; kein Über-Tagging-Bias mehr, weil
+    // applyAutoTags jetzt selbst-korrigierend ist (setzt UND entfernt seine eigenen Tags wieder).
+    // → Neue Spezial-Regeln/Actors: einfach unten in die jeweilige Tabelle eintragen.
 
-    // { tag, kw?: [keywords], genres?: [genre ids] } — Keyword-Treffer sind wortgrenzen-genau.
+    // { tag, kw: [keywords] } — Keyword-Treffer sind wortgrenzen-genau.
     const AT_KEYWORD_RULES = [
-      { tag: "Christlich",       kw: ["christian", "christianity", "christian film", "faith-based", "faith", "church", "bible", "biblical", "jesus", "gospel", "catholic", "pastor", "evangelical", "born again", "nun", "priest"] },
+      { tag: "Christlich",       kw: ["christian", "faith-based", "born again", "evangelical"] },
       { tag: "Martial Arts",     kw: ["martial arts", "kung fu", "karate", "wushu", "taekwondo", "jiu jitsu", "judo", "muay thai", "ninja", "samurai", "mixed martial arts", "mma"] },
       { tag: "Wahre Geschichte", kw: ["based on true story", "true story", "based on a true story", "based on real events", "real events", "biography", "biographical", "based on memoir", "historical figure"] },
       { tag: "Anime",            kw: ["anime", "based on manga", "manga", "japanese animation", "shounen", "shonen"] },
-      { tag: "Animation",        kw: ["animation", "animated"], genres: [AT_GENRE.ANIMATION] },
-      { tag: "Doku",             kw: ["documentary"], genres: [AT_GENRE.DOCUMENTARY] },
       { tag: "Superheld",        kw: ["superhero", "based on comic", "comic book", "based on graphic novel", "marvel comic", "dc comics", "based on comic book"] },
       { tag: "Weihnachten",      kw: ["christmas", "santa claus", "advent", "christmas eve", "nativity"] },
       { tag: "Sport",            kw: ["boxing", "boxer", "american football", "basketball", "baseball", "soccer", "wrestling", "sports"] },
       { tag: "Zombie",           kw: ["zombie", "zombie apocalypse", "living dead", "undead"] },
       { tag: "Vampir",           kw: ["vampire", "vampires", "dracula"] },
       { tag: "Weltraum",         kw: ["outer space", "spacecraft", "astronaut", "space travel", "space station", "space opera"] },
-      { tag: "Krieg",            kw: ["world war", "world war ii", "world war i", "battlefield", "war film"], genres: [AT_GENRE.WAR, AT_GENRE.TV_WAR] },
-      { tag: "Horror",           kw: ["slasher", "haunting", "haunted house", "supernatural horror"], genres: [AT_GENRE.HORROR] },
     ];
+
+    // Kuratierte Tag-Namen, die der Auto-Tagger je vergeben konnte (inkl. Alt-Regeln
+    // "Doku"/"Krieg"/"Horror"/"Animation"). Nur für das einmalige Aufräumen alter, ungetrackter
+    // Auto-Tags beim v3-Backfill. TMDB-Genre-Namen stehen bewusst NICHT drin — die gab es vorher
+    // nicht, können also keine Altlast sein; ab jetzt werden alle Auto-Tags pro Titel getrackt.
+    const AUTO_TAG_VOCAB = new Set([
+      "Christlich", "Martial Arts", "Wahre Geschichte", "Anime", "Superheld", "Weihnachten",
+      "Sport", "Zombie", "Vampir", "Weltraum", "Animation", "Doku", "Horror", "Krieg"
+    ]);
 
     // { tag, actors: [Namensteile in Kleinschreibung] } — feuert, wenn ein Cast-Mitglied passt.
     const AT_ACTOR_RULES = [
@@ -6870,7 +6877,6 @@
     ];
 
     function autoTagsFor(info) {
-      const gids = new Set((info.genreIds || []).map(Number));
       const kw   = (info.keywords || []).map(k => String(k).toLowerCase());
       const cast = (info.cast || []).map(c => String(c).toLowerCase());
       // word-boundary match against the joined keyword text (avoids "god" → "godzilla")
@@ -6878,8 +6884,12 @@
       const kwHas  = term => new RegExp("\\b" + term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(kwText);
       const tags = new Set();
 
+      // (1) TMDB-Genres direkt als Basis-Tags (lokalisierte Namen, sprachabhängig).
+      (info.genreNames || []).forEach(n => { const s = String(n).trim(); if (s) tags.add(s); });
+
+      // (2) Kuratierte Spezial-Tags obendrauf.
       for (const rule of AT_KEYWORD_RULES) {
-        if ((rule.kw && rule.kw.some(kwHas)) || (rule.genres && rule.genres.some(g => gids.has(g)))) tags.add(rule.tag);
+        if (rule.kw && rule.kw.some(kwHas)) tags.add(rule.tag);
       }
       for (const rule of AT_ACTOR_RULES) {
         if (rule.actors.some(a => cast.some(n => n.includes(a)))) tags.add(rule.tag);
@@ -6887,17 +6897,36 @@
       return [...tags];
     }
 
-    // Additively apply content tags (same removal-respecting contract as applyStudioTags).
+    // Self-correcting content tags: sets AND removes its own tags so rule changes take effect
+    // retroactively. Owned auto-tags are tracked per item in meta.autoTags; the curated
+    // AUTO_TAG_VOCAB additionally lets us clean up legacy, untracked auto-tags on first pass.
+    // Manually removed tags (meta.removedTags) are still respected and never re-added.
     function applyAutoTags(key, info) {
-      const tags = autoTagsFor(info);
-      if (!tags.length) return false;
-      const meta = getMeta(key);
+      const want    = autoTagsFor(info);
+      const wantSet = new Set(want);
+      const meta    = getMeta(key);
+      const prevAuto = meta.autoTags || [];
       let changed = false;
-      tags.forEach(t => {
+
+      // (1) Stale Auto-Tags entfernen: was wir früher selbst gesetzt haben (prevAuto) oder was
+      //     aus dem kuratierten Alt-Vokabular stammt, aber jetzt nicht mehr gewollt ist.
+      meta.tags = meta.tags.filter(t => {
+        if ((prevAuto.includes(t) || AUTO_TAG_VOCAB.has(t)) && !wantSet.has(t)) { changed = true; return false; }
+        return true;
+      });
+
+      // (2) Gewollte Tags hinzufügen (manuell entfernte respektieren).
+      want.forEach(t => {
         if (meta.removedTags.includes(t)) return;   // user removed it manually → don't re-add
         addTagDef(t);
         if (!meta.tags.includes(t)) { meta.tags.push(t); changed = true; }
       });
+
+      // (3) Auto-Besitz für den nächsten Durchlauf merken (ohne manuell entfernte).
+      const newAuto = want.filter(t => !meta.removedTags.includes(t));
+      if (newAuto.join("") !== prevAuto.join("")) changed = true;
+      meta.autoTags = newAuto;
+
       if (changed) saveMeta(key, meta);
       return changed;
     }
@@ -6912,6 +6941,7 @@
         const kwRaw = mediaType === "tv" ? (data.keywords && data.keywords.results) : (data.keywords && data.keywords.keywords);
         return {
           genreIds: (data.genres || []).map(g => g.id),
+          genreNames: (data.genres || []).map(g => g.name || "").filter(Boolean),
           keywords: (kwRaw || []).map(k => k.name || ""),
           cast: ((data.credits && data.credits.cast) || []).map(c => c.name || "")
         };
@@ -6939,9 +6969,10 @@
     let _autoTagBackfillRan = false;
     async function runAutoTagBackfill() {
       if (_autoTagBackfillRan) return;
-      // R24-#23b: v2 = expanded rule tables. Re-run over the whole library so the new
-      // keyword/actor rules retroactively tag titles the v1 pass missed.
-      const FLAG = "vault.autoTagBackfill.v2";
+      // R25-#tag: v3 = TMDB-Genres als Basis-Tags + enge "Christlich"-Regel + selbst-korrigierendes
+      // applyAutoTags. Re-run über die ganze Bibliothek: setzt Genre-Tags neu UND räumt falsche
+      // Alt-Auto-Tags (v1/v2) weg — allen voran die über-breiten "Christlich"-Treffer.
+      const FLAG = "vault.autoTagBackfill.v3";
       try { if (localStorage.getItem(FLAG)) return; } catch (e) { return; }
       _autoTagBackfillRan = true;
       db.autoTaggedKeys = {};   // clear v1 evaluation marks so autoTagItem re-evaluates every title
