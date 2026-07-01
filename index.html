@@ -1978,6 +1978,7 @@
     .feed-more-btn:disabled { opacity: .6; }
     .feed-note { padding: 2px 14px 4px; font-size: 14px; color: var(--text-dim); font-style: italic; line-height: 1.45; }
     .feed-titleline { padding: 2px 14px 12px; font-size: 13px; color: var(--text-mute); }
+    .profile-version { text-align: center; font-size: 12px; color: var(--text-mute); letter-spacing: .08em; padding: 18px 0 calc(var(--nav-h) + var(--safe-bottom) + 20px); opacity: .7; }
     /* R23-#17: inline comments */
     .feed-comment-btn { position: relative; }
     .feed-comment-btn.on { color: var(--accent); }
@@ -2352,6 +2353,8 @@
           Daten exportieren
         </button>
       </div>
+      <!-- R23: version stamp so you can tell which build is live -->
+      <div id="profile-version" class="profile-version">VAULT · R24.4</div>
     </section>
 
   </div>
@@ -2417,6 +2420,10 @@
           <svg viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></svg>
           Watchlist
         </button>
+        <button id="sheet-list-btn" class="sheet-btn-ghost" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          Zu Liste hinzufügen
+        </button>
         <button id="sheet-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
       </div>
 
@@ -2424,6 +2431,13 @@
       <div id="sheet-step2" hidden>
         <div class="sheet-section-label">Wie war's?</div>
         <div id="sheet-buckets" class="bucket-list"></div>
+        <div class="qr-share-row" id="sheet-share-row" hidden>
+          <span class="qr-share-label">Mit Freunden teilen</span>
+          <label class="qr-toggle">
+            <input type="checkbox" id="sheet-share-toggle">
+            <span class="qr-toggle-track"><span class="qr-toggle-thumb"></span></span>
+          </label>
+        </div>
         <button id="sheet-cancel2" class="sheet-btn-cancel" type="button">Abbrechen</button>
       </div>
     </div>
@@ -2695,9 +2709,13 @@
       <div class="sheet-section-label">Name der Liste</div>
       <input id="newlist-input" class="modal-input" type="text" maxlength="40"
              placeholder="z. B. Date Night" autocomplete="off" />
-      <button id="newlist-permanent" class="rewatch-toggle" type="button" style="margin:4px 0 14px">
+      <button id="newlist-permanent" class="rewatch-toggle" type="button" style="margin:4px 0 10px">
         <span class="ep-check"></span>
         <span>Ewige Liste <span style="color:var(--text-mute);font-weight:400">— Titel bleiben auch nach „Watched"</span></span>
+      </button>
+      <button id="newlist-share" class="rewatch-toggle" type="button" style="margin:0 0 14px" hidden>
+        <span class="ep-check"></span>
+        <span>Liste teilen <span style="color:var(--text-mute);font-weight:400">— nach dem Erstellen Freund wählen</span></span>
       </button>
       <button id="newlist-create" class="sheet-btn-primary" type="button">Erstellen</button>
       <button id="newlist-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
@@ -2949,7 +2967,13 @@
       <div class="sheet-handle"></div>
       <div class="sheet-section-label" id="ep-rate-title">Episode bewerten</div>
       <div class="bucket-list" id="ep-rate-buckets"></div>
-      <button id="ep-rate-share" class="sheet-btn-primary" type="button">Mit Freunden teilen</button>
+      <div class="qr-share-row" id="ep-rate-share-row" hidden>
+        <span class="qr-share-label">Mit Freunden teilen</span>
+        <label class="qr-toggle">
+          <input type="checkbox" id="ep-rate-share-toggle">
+          <span class="qr-toggle-track"><span class="qr-toggle-thumb"></span></span>
+        </label>
+      </div>
       <button id="ep-rate-remove" class="sheet-btn-cancel" type="button" hidden>Bewertung entfernen</button>
       <button id="ep-rate-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
     </div>
@@ -3748,7 +3772,18 @@
 
     // ---------- TMDB helpers ----------
     const keyOf   = (mediaType, id) => mediaType + ":" + id;
-    const titleOf = r => r.media_type === "tv" ? (r.name || r.original_name) : (r.title || r.original_title);
+    // R24-#7: always DISPLAY the ORIGINAL title (original_title / original_name).
+    // `mt` optionally overrides o.media_type for objects that carry the type separately.
+    const origTitleOf = (o, mt) => {
+      const isTv = (mt || o.media_type) === "tv";
+      return isTv ? (o.original_name || o.name) : (o.original_title || o.title);
+    };
+    // The localized/translated title, kept alongside so search can still match it.
+    const locTitleOf = (o, mt) => {
+      const isTv = (mt || o.media_type) === "tv";
+      return isTv ? (o.name || o.original_name) : (o.title || o.original_title);
+    };
+    const titleOf = r => origTitleOf(r);
     const yearOf  = r => { const d = r.media_type === "tv" ? r.first_air_date : r.release_date; return d ? d.slice(0, 4) : ""; };
     const kindOf  = r => r.media_type === "tv" ? "Serie" : "Film";
 
@@ -3757,6 +3792,7 @@
         id: r.id,
         mediaType: r.media_type,
         title: titleOf(r) || "Ohne Titel",
+        titleLoc: locTitleOf(r) || "",   // R24-#7: keep localized title for search
         year: yearOf(r),
         poster: r.poster_path || null,
         bucket: bucket,
@@ -4946,9 +4982,22 @@
         el.className = "bucket" + (existing && existing.bucket === b.id ? " selected" : "");
         el.type = "button";
         el.innerHTML = '<span class="bucket-rank">' + (i + 1) + '</span><span>' + b.label + '</span>';
-        el.addEventListener("click", () => logItem(r, b.id));
+        el.addEventListener("click", () => {
+          // R23.2: if the share toggle is on, rate then open the share sheet.
+          const sharing = document.getElementById("sheet-share-toggle")?.checked;
+          logItem(r, b.id);   // logItem closes the sheet
+          if (sharing) {
+            const rec = db.items[keyOf(r.media_type, r.id)];
+            if (rec) openShareSheet(rec);
+          }
+        });
         bucketListEl.appendChild(el);
       });
+      // R23.2: share toggle, consistent with the quick-rate + episode flows.
+      const shareToggle = document.getElementById("sheet-share-toggle");
+      if (shareToggle) shareToggle.checked = false;
+      const shareRow = document.getElementById("sheet-share-row");
+      if (shareRow) shareRow.hidden = false;   // R23.3: always visible — no login/friend gating
       document.getElementById("sheet-step1").hidden = true;
       document.getElementById("sheet-step2").hidden = false;
     }
@@ -5076,15 +5125,8 @@
         qrBuckets.appendChild(el);
       });
       // A1: Show share toggle when logged in and has friends; refresh if not yet loaded
-      const hasFriends = !!(window.__vaultUser && typeof _socialFriends !== "undefined" && _socialFriends.some(f => f.status === "accepted"));
       const shareRow = document.getElementById("qr-share-row");
-      if (shareRow) shareRow.hidden = !hasFriends;
-      if (window.__vaultUser && window.__vaultSocial && !hasFriends) {
-        loadSocialFriends().then(() => {
-          const sr = document.getElementById("qr-share-row");
-          if (sr && !qrBackdrop.hidden) sr.hidden = !_socialFriends.some(f => f.status === "accepted");
-        }).catch(() => {});
-      }
+      if (shareRow) shareRow.hidden = false;   // R23.3: always visible — no login/friend gating
       // A3: if opened from a friend-profile stacked detail, raise z-index above it
       const detailOverlay = document.getElementById("detail");
       if (detailOverlay && detailOverlay.classList.contains("over-profile")) {
@@ -5193,6 +5235,13 @@
       refreshDetailStatus();
       // optional: also add to a custom list
       if (Object.keys(db.lists).length > 0) openListPicker(r);
+    });
+    // R24-#33: add directly to a custom list (or create a new one) — no Watchlist detour.
+    document.getElementById("sheet-list-btn").addEventListener("click", () => {
+      if (!sheetItem) return;
+      const r = sheetItem;
+      closeSheet();
+      openListPicker(r, true);   // custom lists only; "+ Neue Liste" lives inside the picker
     });
     backdrop.addEventListener("click", e => { if (e.target === backdrop) closeSheet(); });
 
@@ -5959,7 +6008,7 @@
       if (bd.hidden) return;   // sheet was closed while loading
       if (!films.length) { body.innerHTML = '<div class="psheet-empty">Keine bekannten Titel gefunden.</div>'; return; }
       body.innerHTML = films.map(c => {
-        const title = c.title || c.name || "";
+        const title = origTitleOf(c) || "";   // R24-#7: original title (c carries media_type)
         const date = c.release_date || c.first_air_date || "";
         const year = date ? date.slice(0, 4) : "";
         return '<div class="psheet-film">' +
@@ -6174,7 +6223,7 @@
 
     function renderDetail(data, mediaType, videos, _nav) {   // R21-FIX: _nav was an undefined ref (round-20 bug) → renderDetail threw, masked as "Internet prüfen"
       const isTv  = mediaType === "tv";
-      const title = isTv ? (data.name || data.original_name) : (data.title || data.original_title);
+      const title = origTitleOf(data, mediaType);   // R24-#7: original title
       const date  = isTv ? data.first_air_date : data.release_date;
       const year  = date ? date.slice(0, 4) : "";
       const runtime = isTv ? (Array.isArray(data.episode_run_time) ? data.episode_run_time[0] : null) : data.runtime;
@@ -6183,6 +6232,7 @@
       const r = {
         media_type: mediaType, id: data.id,
         title: data.title, name: data.name,
+        original_title: data.original_title, original_name: data.original_name,   // R24-#7
         poster_path: data.poster_path,
         release_date: data.release_date, first_air_date: data.first_air_date,
         vote_average: data.vote_average, genres: data.genres, runtime: data.runtime
@@ -6788,12 +6838,36 @@
       if (changed) saveMeta(key, meta);
     }
 
-    // ---------- Content auto-tagging (R23-#23b) ----------
-    // Derive content tags from TMDB genre ids + keywords + cast. Pure function.
-    const AT_MARTIAL_CAST = ["jackie chan", "jet li", "bruce lee", "tony jaa", "donnie yen"];
-    const AT_RELIGIOUS_KW = ["christian", "christianity", "faith", "religion", "church", "bible", "god", "jesus", "gospel"];
-    const AT_MARTIAL_KW   = ["martial arts", "kung fu", "karate", "wushu"];
-    const GENRE_DOCUMENTARY = 99, GENRE_ANIMATION = 16;   // language-independent TMDB ids
+    // ---------- Content auto-tagging (R23-#23b, ausgebaut R24-#23b) ----------
+    // Deklarative, leicht erweiterbare Regeltabellen. Ein Titel bekommt einen Tag, wenn
+    // ENTWEDER eine Keyword-Regel (TMDB-Keyword-Text ODER Genre-Id) passt ODER eine
+    // Actor-Regel auf die Besetzung. Bewusster Bias zu Über-Tagging: ein falscher Tag ist
+    // günstiger als ein fehlender. Genre-Ids sind sprachunabhängig.
+    // → Neue Regeln/Actors: einfach unten in die jeweilige Tabelle eintragen.
+    const AT_GENRE = { ANIMATION: 16, DOCUMENTARY: 99, HORROR: 27, WAR: 10752, TV_WAR: 10768, WESTERN: 37, MUSIC: 10402, FAMILY: 10751 };
+
+    // { tag, kw?: [keywords], genres?: [genre ids] } — Keyword-Treffer sind wortgrenzen-genau.
+    const AT_KEYWORD_RULES = [
+      { tag: "Christlich",       kw: ["christian", "christianity", "christian film", "faith-based", "faith", "church", "bible", "biblical", "jesus", "gospel", "catholic", "pastor", "evangelical", "born again", "nun", "priest"] },
+      { tag: "Martial Arts",     kw: ["martial arts", "kung fu", "karate", "wushu", "taekwondo", "jiu jitsu", "judo", "muay thai", "ninja", "samurai", "mixed martial arts", "mma"] },
+      { tag: "Wahre Geschichte", kw: ["based on true story", "true story", "based on a true story", "based on real events", "real events", "biography", "biographical", "based on memoir", "historical figure"] },
+      { tag: "Anime",            kw: ["anime", "based on manga", "manga", "japanese animation", "shounen", "shonen"] },
+      { tag: "Animation",        kw: ["animation", "animated"], genres: [AT_GENRE.ANIMATION] },
+      { tag: "Doku",             kw: ["documentary"], genres: [AT_GENRE.DOCUMENTARY] },
+      { tag: "Superheld",        kw: ["superhero", "based on comic", "comic book", "based on graphic novel", "marvel comic", "dc comics", "based on comic book"] },
+      { tag: "Weihnachten",      kw: ["christmas", "santa claus", "advent", "christmas eve", "nativity"] },
+      { tag: "Sport",            kw: ["boxing", "boxer", "american football", "basketball", "baseball", "soccer", "wrestling", "sports"] },
+      { tag: "Zombie",           kw: ["zombie", "zombie apocalypse", "living dead", "undead"] },
+      { tag: "Vampir",           kw: ["vampire", "vampires", "dracula"] },
+      { tag: "Weltraum",         kw: ["outer space", "spacecraft", "astronaut", "space travel", "space station", "space opera"] },
+      { tag: "Krieg",            kw: ["world war", "world war ii", "world war i", "battlefield", "war film"], genres: [AT_GENRE.WAR, AT_GENRE.TV_WAR] },
+      { tag: "Horror",           kw: ["slasher", "haunting", "haunted house", "supernatural horror"], genres: [AT_GENRE.HORROR] },
+    ];
+
+    // { tag, actors: [Namensteile in Kleinschreibung] } — feuert, wenn ein Cast-Mitglied passt.
+    const AT_ACTOR_RULES = [
+      { tag: "Martial Arts", actors: ["jackie chan", "jet li", "bruce lee", "tony jaa", "donnie yen", "jean-claude van damme", "iko uwais", "scott adkins", "sammo hung", "michael jai white", "chuck norris", "steven seagal", "wu jing"] },
+    ];
 
     function autoTagsFor(info) {
       const gids = new Set((info.genreIds || []).map(Number));
@@ -6804,12 +6878,12 @@
       const kwHas  = term => new RegExp("\\b" + term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(kwText);
       const tags = new Set();
 
-      if (AT_RELIGIOUS_KW.some(kwHas)) tags.add("Christlich");
-      if (cast.some(n => AT_MARTIAL_CAST.some(a => n.includes(a))) || AT_MARTIAL_KW.some(kwHas)) tags.add("Martial Arts");
-      if (gids.has(GENRE_DOCUMENTARY)) tags.add("Doku");
-      if (gids.has(GENRE_ANIMATION))   tags.add("Animation");
-      if (kwHas("based on true story") || kwHas("true story")) tags.add("Wahre Geschichte");
-
+      for (const rule of AT_KEYWORD_RULES) {
+        if ((rule.kw && rule.kw.some(kwHas)) || (rule.genres && rule.genres.some(g => gids.has(g)))) tags.add(rule.tag);
+      }
+      for (const rule of AT_ACTOR_RULES) {
+        if (rule.actors.some(a => cast.some(n => n.includes(a)))) tags.add(rule.tag);
+      }
       return [...tags];
     }
 
@@ -6865,11 +6939,18 @@
     let _autoTagBackfillRan = false;
     async function runAutoTagBackfill() {
       if (_autoTagBackfillRan) return;
-      const FLAG = "vault.autoTagBackfill.v1";
+      // R24-#23b: v2 = expanded rule tables. Re-run over the whole library so the new
+      // keyword/actor rules retroactively tag titles the v1 pass missed.
+      const FLAG = "vault.autoTagBackfill.v2";
       try { if (localStorage.getItem(FLAG)) return; } catch (e) { return; }
       _autoTagBackfillRan = true;
-      const keys = [...new Set([...Object.keys(db.items || {}), ...Object.keys(db.watchlist || {})])];
-      for (const key of keys) {
+      db.autoTaggedKeys = {};   // clear v1 evaluation marks so autoTagItem re-evaluates every title
+      const keys = [
+        ...Object.keys(db.items || {}),
+        ...Object.keys(db.watchlist || {})
+      ];
+      Object.values(db.lists || {}).forEach(l => { if (l && l.items) keys.push(...Object.keys(l.items)); });   // cover custom lists too
+      for (const key of [...new Set(keys)]) {
         const idx = key.indexOf(":");
         const mt  = key.slice(0, idx);
         const id  = parseInt(key.slice(idx + 1), 10);
@@ -6878,6 +6959,50 @@
           await new Promise(r => setTimeout(r, 120));   // gentle throttle (~8 req/s)
         }
       }
+      try { localStorage.setItem(FLAG, "1"); } catch (e) {}
+    }
+
+    // ---------- Original-title backfill (R24-#7) ----------
+    // Existing library items were stored with the LOCALIZED title. Fetch each title's
+    // original name from TMDB once, move it into `title`, and keep the localized name in
+    // `titleLoc` (for search). Additive, idempotent, gentle throttle — mirrors
+    // runAutoTagBackfill. Items already carrying `titleLoc` are skipped.
+    let _origTitleBackfillRan = false;
+    async function runOrigTitleBackfill() {
+      if (_origTitleBackfillRan) return;
+      const FLAG = "vault.origTitleBackfill.v1";
+      try { if (localStorage.getItem(FLAG)) return; } catch (e) { return; }
+      _origTitleBackfillRan = true;
+      const stores = [db.items || {}, db.watchlist || {}];
+      Object.values(db.lists || {}).forEach(l => { if (l && l.items) stores.push(l.items); });   // R24-#7: cover custom lists too
+      const cache = {};   // TMDB response per key — an id across stores is fetched once
+      let changed = false;
+      for (const store of stores) {
+        for (const key of Object.keys(store)) {
+          const it = store[key];
+          if (!it || it.titleLoc) continue;             // already migrated
+          const idx = key.indexOf(":");
+          const mt  = key.slice(0, idx);
+          const id  = parseInt(key.slice(idx + 1), 10);
+          if ((mt !== "movie" && mt !== "tv") || !id) continue;
+          let data = cache[key];
+          if (data === undefined) {
+            try {
+              const res = await fetch("https://api.themoviedb.org/3/" + mt + "/" + id +
+                "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
+              data = res.ok ? await res.json() : null;
+            } catch (e) { data = null; }
+            cache[key] = data;
+            await new Promise(r => setTimeout(r, 120));   // ~8 req/s
+          }
+          if (data) {
+            const orig = mt === "tv" ? (data.original_name || data.name) : (data.original_title || data.title);
+            const loc  = mt === "tv" ? (data.name || data.original_name) : (data.title || data.original_title);
+            if (orig) { it.titleLoc = loc || it.title || ""; it.title = orig; changed = true; }
+          }
+        }
+      }
+      if (changed) saveDB();
       try { localStorage.setItem(FLAG, "1"); } catch (e) {}
     }
 
@@ -7009,6 +7134,7 @@
       logWatched({
         media_type: "tv", id: data.id,
         title: data.title, name: data.name,
+        original_title: data.original_title, original_name: data.original_name,   // R24-#7
         poster_path: data.poster_path,
         first_air_date: data.first_air_date,
         vote_average: data.vote_average, genres: data.genres
@@ -7760,11 +7886,27 @@
     }
     newlistPermBtn.addEventListener("click", () => { newlistPermanent = !newlistPermanent; setNewlistPermUI(); });
 
+    // R24-#24: "share this list" toggle — only offered when the user has accepted friends.
+    const newlistShareBtn = document.getElementById("newlist-share");
+    let newlistShare = false;
+    function hasAcceptedFriends() {
+      return (typeof _socialFriends !== "undefined") && _socialFriends.some(f => f.status === "accepted");
+    }
+    function setNewlistShareUI() {
+      newlistShareBtn.classList.toggle("on", newlistShare);
+      newlistShareBtn.querySelector(".ep-check").innerHTML = newlistShare
+        ? '<svg viewBox="0 0 24 24"><polyline points="5 12 10 17 19 7"/></svg>' : "";
+    }
+    newlistShareBtn.addEventListener("click", () => { newlistShare = !newlistShare; setNewlistShareUI(); });
+
     function openNewList(mode) {
       newlistMode = mode;
       newlistInput.value = "";
       newlistPermanent = false;
       setNewlistPermUI();
+      newlistShare = false;
+      setNewlistShareUI();
+      newlistShareBtn.hidden = !hasAcceptedFriends();   // R24-#24: hide toggle if sharing is impossible
       newlistBackdrop.hidden = false;
       document.body.style.overflow = "hidden";
       setTimeout(() => newlistInput.focus(), 60);
@@ -7777,12 +7919,16 @@
       const name = newlistInput.value.trim();
       if (!name) { showToast("Bitte einen Namen eingeben"); return; }
       const id = createList(name, newlistPermanent);
+      const wantShare = newlistShare && !newlistShareBtn.hidden;   // R24-#24
       closeNewList();
       if (newlistMode === "pick" && pendingPickItem) {
         addToList(id, pendingPickItem);
         showToast("Hinzugefügt zu " + name);
         refreshResults();
         refreshDetailStatus();
+        if (wantShare) openFriendPicker(id);   // R24-#24: pick friend to share the new list with
+      } else if (wantShare) {
+        openFriendPicker(id);                   // R24-#24: share instead of jumping into list detail
       } else {
         openListDetail(id);
       }
@@ -7956,11 +8102,12 @@
       epRateTitleEl.textContent =
         "S" + String(s).padStart(2, "0") + "E" + String(e).padStart(2, "0") + " bewerten";
       const current = getEpRating(tvId, s, e);
-      // R23-#6: "Mit Freunden teilen" only makes sense once the episode is rated.
-      const shareBtn = document.getElementById("ep-rate-share");
-      if (shareBtn) shareBtn.hidden = !current;
-      const cancelBtn0 = document.getElementById("ep-rate-cancel");
-      if (cancelBtn0) cancelBtn0.textContent = "Abbrechen";
+      // R23-#6: share is a TOGGLE (consistent with the movie quick-rate flow).
+      // Toggle on + pick a rating → rates the episode and opens the share sheet.
+      const shareToggle = document.getElementById("ep-rate-share-toggle");
+      if (shareToggle) shareToggle.checked = false;
+      const shareRow = document.getElementById("ep-rate-share-row");
+      if (shareRow) shareRow.hidden = false;   // R23.3: always visible — no login/friend gating
       epRateBucketsEl.innerHTML = "";
       BUCKETS.forEach((b, i) => {
         const btn = document.createElement("button");
@@ -7982,14 +8129,20 @@
               title: data.name || data.title || "", posterPath: data.poster_path || null,
               season: s, episode: e, epRating: star });
           }
-          // R23-#6: keep the sheet open after rating so "Mit Freunden teilen" is
-          // reachable in one flow. Reflect the new selection + reveal share/remove.
-          epRateBucketsEl.querySelectorAll(".bucket").forEach(x => x.classList.remove("selected"));
-          btn.classList.add("selected");
-          document.getElementById("ep-rate-share").hidden = false;
-          document.getElementById("ep-rate-remove").hidden = false;
-          const cancelBtn = document.getElementById("ep-rate-cancel");
-          if (cancelBtn) cancelBtn.textContent = "Fertig";
+          // R23-#6: if the share toggle is on, open the share sheet (episode mode).
+          const sharing = document.getElementById("ep-rate-share-toggle")?.checked;
+          if (sharing) {
+            const seriesTitle = (data && (data.name || data.title)) || "";
+            const seriesId = data ? data.id : parseInt(String(tvId).split(":")[1], 10);
+            const poster = data ? (data.poster_path || "") : "";
+            closeEpRateSheet();
+            openShareSheet({
+              title: seriesTitle, poster, mediaType: "tv", id: seriesId, bucket: b.id,
+              _episode: { season: s, episode: e, episodeName: epName || "" }
+            });
+          } else {
+            closeEpRateSheet();
+          }
         });
         epRateBucketsEl.appendChild(btn);
       });
@@ -8026,22 +8179,6 @@
     });
     document.getElementById("ep-rate-cancel").addEventListener("click", closeEpRateSheet);
     epRateBackdrop.addEventListener("click", e => { if (e.target === epRateBackdrop) closeEpRateSheet(); });
-
-    // R23-#6: share this episode with friends (reuses the recommendation share sheet).
-    document.getElementById("ep-rate-share").addEventListener("click", () => {
-      if (!epRateCtx) return;
-      const { tvId, s, e, data, epName } = epRateCtx;
-      const bucket = getEpRating(tvId, s, e);
-      if (!bucket) { showToast("Bitte zuerst bewerten"); return; }
-      const seriesTitle = (data && (data.name || data.title)) || "";
-      const seriesId = data ? data.id : parseInt(String(tvId).split(":")[1], 10);
-      const poster = data ? (data.poster_path || "") : "";
-      closeEpRateSheet();
-      openShareSheet({
-        title: seriesTitle, poster, mediaType: "tv", id: seriesId, bucket,
-        _episode: { season: s, episode: e, episodeName: epName || "" }
-      });
-    });
 
     function renderEpRatings(data) {
       const host = document.getElementById("detail-ep-ratings");
@@ -8115,7 +8252,7 @@
 
     // Render one rolled title into the Würfel result card (shared by both paths).
     function showDwResult(it, mediaType) {
-      const t    = mediaType === "tv" ? (it.name || it.original_name) : (it.title || it.original_title);
+      const t    = origTitleOf(it, mediaType);   // R24-#7: original title
       const yr   = (it.release_date || it.first_air_date || "").slice(0, 4);
       const rtng = it.vote_average ? it.vote_average.toFixed(1).replace(".", ",") : null;
       dwResult.innerHTML = "";
@@ -8363,7 +8500,7 @@
     function discPosterCard(item, mediaType) {
       const card = document.createElement("div");
       card.className = "pcard";
-      const title = mediaType === "tv" ? (item.name || item.original_name) : (item.title || item.original_title);
+      const title = origTitleOf(item, mediaType);   // R24-#7: original title
       const date  = mediaType === "tv" ? item.first_air_date : item.release_date;
       const year  = date ? date.slice(0, 4) : "";
       const poster = document.createElement("div"); poster.className = "pcard-poster";
@@ -8641,7 +8778,7 @@
 
     function buildRecoCard(item, label) {
       const mt = item._mt || (item.media_type === "tv" ? "tv" : "movie");
-      const title = mt === "tv" ? (item.name || item.original_name) : (item.title || item.original_title);
+      const title = origTitleOf(item, mt);   // R24-#7: original title
       const date = mt === "tv" ? item.first_air_date : item.release_date;
       const year = date ? date.slice(0, 4) : "";
       const card = document.createElement("div");
@@ -9896,6 +10033,8 @@
 
     // R23-#23b: one-time content auto-tag backfill over the existing library (background).
     setTimeout(() => { runAutoTagBackfill(); }, 2500);
+    // R24-#7: one-time original-title backfill (staggered so it doesn't race the tag backfill).
+    setTimeout(() => { runOrigTitleBackfill(); }, 6000);
 
     window.VAULT = { TMDB_KEY, TMDB_LANG, TMDB_REGION, db };
 
