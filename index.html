@@ -772,6 +772,76 @@
       font-size: 15px; font-weight: 700; color: var(--text-dim);
       font-variant-numeric: tabular-nums;
     }
+    /* R26-#19: rank number is tappable to edit the position directly */
+    .rank-num.editable { cursor: pointer; }
+    .rank-num.editable:active { color: var(--gold, #d9b45b); }
+    .rank-num-edit {
+      width: 42px; padding: 2px 3px; text-align: right;
+      font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;
+      background: var(--surface-2); color: var(--text);
+      border: 1px solid var(--gold, #d9b45b); border-radius: 5px;
+      -moz-appearance: textfield;
+    }
+    .rank-num-edit::-webkit-outer-spin-button,
+    .rank-num-edit::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .rank-row.rank-hit { background: rgba(217,180,91,.18); border-radius: 8px; }
+    /* R26-#19: in-list search bar + top-right toggle */
+    #view-ranking .view-head { position: relative; }
+    .rank-search-toggle {
+      position: absolute; top: 0; right: 0;
+      background: none; border: none; padding: 6px; cursor: pointer;
+      color: var(--text-dim); display: inline-flex; align-items: center;
+    }
+    .rank-search-toggle svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+    .rank-search {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 8px 10px; margin: 0 0 10px;
+    }
+    .rank-search.hidden { display: none; }
+    .rank-search > svg { width: 16px; height: 16px; stroke: var(--text-mute); fill: none; stroke-width: 2; stroke-linecap: round; flex: 0 0 auto; }
+    .rank-search input {
+      flex: 1; background: transparent; border: none; outline: none;
+      color: var(--text); font-size: 14px; min-width: 0;
+    }
+    .rank-search-clear { background: none; border: none; color: var(--text-mute); font-size: 20px; cursor: pointer; line-height: 1; padding: 0 2px; }
+    /* R26-#EXTRA-2: "more details" gold link inside the episode-rating sheet */
+    .ep-more-link {
+      background: none; border: none; color: var(--accent);
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      padding: 6px 2px; align-self: flex-start; text-align: left;
+    }
+    .ep-more-link:active { opacity: .8; }
+    /* R26-#EXTRA-2: full-screen episode detail overlay */
+    .ep-detail-backdrop {
+      position: fixed; inset: 0; z-index: 200;
+      background: var(--bg); overflow-y: auto;
+    }
+    .ep-detail-backdrop[hidden] { display: none; }
+    .ep-detail { max-width: 640px; margin: 0 auto; padding: 0 16px 48px; }
+    .ep-detail-close {
+      position: sticky; top: 12px; margin: 12px 0 0; z-index: 3;
+      background: rgba(0,0,0,.55); border: none; border-radius: 50%;
+      width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center;
+      color: #fff; cursor: pointer;
+    }
+    .ep-detail-close svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .ep-detail-still {
+      width: 100%; aspect-ratio: 16/9; object-fit: cover;
+      border-radius: 12px; background: var(--surface-2); margin-top: 8px; display: block;
+    }
+    .ep-detail-still.empty { display: flex; align-items: center; justify-content: center; color: var(--text-mute); font-size: 13px; }
+    .ep-detail-title { font-size: 21px; font-weight: 700; margin: 16px 0 2px; line-height: 1.2; }
+    .ep-detail-sub { color: var(--text-mute); font-size: 13px; margin-bottom: 6px; }
+    .ep-detail-rate-label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-mute); margin: 16px 0 8px; }
+    .ep-detail-loading { color: var(--text-mute); font-size: 14px; padding: 40px 0; text-align: center; }
+    /* R26 follow-up: actor photo gallery */
+    .person-photos { gap: 8px; }
+    .person-photo-thumb {
+      height: 132px; width: 88px; flex: 0 0 auto;
+      object-fit: cover; border-radius: 8px; background: var(--surface-2);
+      cursor: zoom-in;
+    }
     .rank-poster {
       width: 40px; height: 60px; flex: 0 0 auto;
       border-radius: 6px; object-fit: cover; background: var(--surface-2);
@@ -2300,12 +2370,21 @@
       <div class="view-head">
         <h1>Ranking</h1>
         <p>Deine persönliche Bestenliste.</p>
+        <button id="rank-search-toggle" class="rank-search-toggle" type="button" aria-label="Im Ranking suchen">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
       </div>
 
       <div class="segmented" id="rank-toggle">
         <button class="seg active" type="button" data-media="movie">Filme</button>
         <button class="seg" type="button" data-media="tv">Serien</button>
         <button class="seg" type="button" data-media="person">Schauspieler</button>
+      </div>
+
+      <div class="rank-search hidden" id="rank-search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="rank-search-input" type="text" placeholder="In dieser Liste suchen …" autocomplete="off" />
+        <button id="rank-search-clear" class="rank-search-clear" type="button" aria-label="Leeren">&times;</button>
       </div>
 
       <div class="rank-filters" id="rank-filters">
@@ -3008,6 +3087,7 @@
       <div class="sheet-handle"></div>
       <div class="sheet-section-label" id="ep-rate-title">Episode bewerten</div>
       <div class="bucket-list" id="ep-rate-buckets"></div>
+      <button id="ep-rate-more" class="ep-more-link" type="button">Mehr Details ›</button>
       <div class="qr-share-row" id="ep-rate-share-row" hidden>
         <span class="qr-share-label">Mit Freunden teilen</span>
         <label class="qr-toggle">
@@ -3017,6 +3097,16 @@
       </div>
       <button id="ep-rate-remove" class="sheet-btn-cancel" type="button" hidden>Bewertung entfernen</button>
       <button id="ep-rate-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
+    </div>
+  </div>
+
+  <!-- ============ EPISODE DETAIL VIEW (R26-#EXTRA-2) ============ -->
+  <div id="ep-detail-backdrop" class="ep-detail-backdrop" hidden>
+    <div class="ep-detail" role="dialog" aria-modal="true" aria-label="Episoden-Details">
+      <button id="ep-detail-close" class="ep-detail-close" type="button" aria-label="Zurück">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div id="ep-detail-body" class="ep-detail-body"></div>
     </div>
   </div>
 
@@ -3645,12 +3735,27 @@
       if (typeof friendProfileEl !== "undefined" && friendProfileEl && !friendProfileEl.hidden) {
         _fprofBackEntry = false; closeFriendProfile(); return;
       }
+      // R26 follow-up: episode detail overlay closes first (browser/gesture back).
+      const epbd = document.getElementById("ep-detail-backdrop");
+      if (epbd && !epbd.hidden) {
+        epbd.hidden = true; epDetailCtx = null;
+        if (navStack.length && navStack[navStack.length - 1].type === "episode") {
+          navStack.pop();
+          const prev = navStack[navStack.length - 1];
+          if (!prev) { _closeDetailFull(); return; }
+          if (prev.type === "person") openPerson(prev.personId, prev.name, false);
+          else if (prev.type !== "episode") openDetail(prev.mediaType, prev.id, false);
+        }
+        document.body.style.overflow = detailEl.hidden ? "" : "hidden";
+        return;
+      }
       const d = document.getElementById("detail");
       if (d && !d.hidden) {
         navStack.pop();
         if (navStack.length > 0) {
           const prev = navStack[navStack.length - 1];
           if (prev.type === "person") openPerson(prev.personId, prev.name, false);
+          else if (prev.type === "episode") openEpDetail(prev.ep);   // R26 follow-up
           else openDetail(prev.mediaType, prev.id, false);
         } else {
           _closeDetailFull();
@@ -3832,7 +3937,28 @@
       const isTv = (mt || o.media_type) === "tv";
       return isTv ? (o.name || o.original_name) : (o.title || o.original_title);
     };
-    const titleOf = r => origTitleOf(r);
+    // R26-#EXTRA-1: the user can't read non-Latin scripts (CJK, Hangul, Kana, Thai,
+    // Arabic, Hebrew, Cyrillic, Greek, Devanagari …). For such originals we DISPLAY the
+    // localized/international title instead; Latin-script originals (ES/FR/DE/IT …) keep
+    // their original title (R24-#7). "Majority non-Latin letters" = treated as unreadable.
+    function isNonLatinTitle(s) {
+      if (!s) return false;
+      const letters = String(s).match(/\p{L}/gu);
+      if (!letters) return false;
+      let nonLatin = 0;
+      for (const ch of letters) { if (!/\p{Script=Latin}/u.test(ch)) nonLatin++; }
+      return nonLatin > letters.length / 2;
+    }
+    // Display title for a live TMDB object: original for Latin scripts, localized otherwise.
+    const dispTitleOf = (o, mt) => {
+      const orig = origTitleOf(o, mt);
+      return isNonLatinTitle(orig) ? (locTitleOf(o, mt) || orig) : orig;
+    };
+    // Display title for a stored record (already carries title + titleLoc).
+    const dispTitle = rec => (rec && isNonLatinTitle(rec.title))
+      ? (rec.titleLoc || rec.title) : ((rec && rec.title) || "");
+    // titleOf now yields the DISPLAY title everywhere it's used (storage + inline display).
+    const titleOf = r => dispTitleOf(r);
     const yearOf  = r => { const d = r.media_type === "tv" ? r.first_air_date : r.release_date; return d ? d.slice(0, 4) : ""; };
     const kindOf  = r => r.media_type === "tv" ? "Serie" : "Film";
 
@@ -5413,12 +5539,20 @@
     function ratingInconsistent(media) {
       if (media === "person") return false;
       const ranked = Object.values(db.items)
-        .filter(it => it.mediaType === media && !it.unranked)
-        .sort((a, b) => b.score - a.score);
-      let seenLow = false;
-      for (const it of ranked) {
-        if (it.bucket === "watchable" || it.bucket === "meh" || it.bucket === "bad") seenLow = true;
-        else if (it.bucket === "great" && seenLow) return true;   // a 5★ sits below a ≤3★
+        .filter(it => it.mediaType === media && !it.unranked);
+      if (!ranked.length) return false;
+      ranked.forEach(ensureScore);
+      ranked.sort((a, b) => b.score - a.score);
+      // R26-#36: evaluate the order the user actually SEES (manual order re-clamped by
+      // star band) using the DISPLAYED star tier (deriveBucket of the score), not the raw
+      // explicit bucket. A violation = a higher star tier appears below a lower one. Since
+      // orderedRankedItems now enforces monotonic tiers, this is a silent safety net.
+      const displayed = orderedRankedItems(ranked, media);
+      let minTier = Infinity;
+      for (const it of displayed) {
+        const t = BUCKET_ORDER.indexOf(deriveBucket(it.score));
+        if (t > minTier) return true;   // a higher star tier sits below a lower one
+        if (t < minTier) minTier = t;
       }
       return false;
     }
@@ -5513,8 +5647,17 @@
       const addRow = (it, num, reorder) => {
         const row = document.createElement("div");
         row.className = "rank-row";
+        row.dataset.id = it.id;                                   // R26-#19: search + scroll-to
+        row.dataset.title = (isPerson ? (it.name || "") : (it.title || ""));
 
         const n = document.createElement("div"); n.className = "rank-num"; n.textContent = num;
+        // R26-#19: tap the rank number to type a new position directly (ranked rows only).
+        if (reorder) {
+          n.classList.add("editable");
+          n.title = "Rang direkt bearbeiten";
+          n.addEventListener("click", e => { e.stopPropagation(); openRankEdit(it, n, num); });
+          ["mousedown", "touchstart"].forEach(ev => n.addEventListener(ev, e => e.stopPropagation(), { passive: true }));
+        }
         row.appendChild(n);
 
         const posterSrc = isPerson ? it.photo : it.poster;
@@ -5634,12 +5777,26 @@
     }
     function orderedRankedItems(ranked, media) {
       const manual = db.manualRankOrder && db.manualRankOrder[media];
-      if (!manual || !manual.length) return ranked;   // `ranked` is already score-sorted
-      const byId = new Map(ranked.map(it => [String(it.id), it]));
-      const out = [];
-      manual.forEach(id => { const it = byId.get(String(id)); if (it) { out.push(it); byId.delete(String(id)); } });
-      [...byId.values()].sort((a, b) => b.score - a.score).forEach(it => out.push(it));   // new titles appended by Elo
-      return out;
+      let out;
+      if (!manual || !manual.length) {
+        out = ranked;                                   // `ranked` is already score-sorted
+      } else {
+        const byId = new Map(ranked.map(it => [String(it.id), it]));
+        out = [];
+        manual.forEach(id => { const it = byId.get(String(id)); if (it) { out.push(it); byId.delete(String(id)); } });
+        [...byId.values()].sort((a, b) => b.score - a.score).forEach(it => out.push(it));   // new titles appended by Elo
+      }
+      // R26-#36: stars follow position — a higher star tier must NEVER sit below a lower
+      // one. Stable-sort by star band (deriveBucket, best→worst), preserving the existing
+      // (manual/Elo) order within each band. Manual reordering therefore only ever moves a
+      // title WITHIN its own star tier; crossing tiers happens through duels, which change
+      // the score/band. Guarantees e.g. a 5★ can never rank below a 3★, on every render.
+      // Actors have no star buckets → they keep their free manual/Elo order untouched.
+      if (media === "person") return out;
+      return out
+        .map((it, i) => ({ it, i, t: BUCKET_ORDER.indexOf(deriveBucket(ensureScore(it))) }))
+        .sort((a, b) => (b.t - a.t) || (a.i - b.i))
+        .map(x => x.it);
     }
     function manualRankActive(media) {
       return !!(db.manualRankOrder && db.manualRankOrder[media] && db.manualRankOrder[media].length);
@@ -5650,6 +5807,18 @@
       const i = order.indexOf(String(id));
       const j = i + dir;
       if (i < 0 || j < 0 || j >= order.length) return;
+      // R26-#36: manual reordering stays WITHIN a star tier — a title can't be dragged
+      // across a star boundary (that only happens via duels). Without this guard the swap
+      // would silently no-op against the tier-monotonic display; instead, explain why.
+      // Actors have no star tiers → they may be reordered freely.
+      if (rankMedia !== "person") {
+        const byId   = new Map(ranked.map(it => [String(it.id), it]));
+        const tierOf = k => deriveBucket(ensureScore(byId.get(String(k))));
+        if (tierOf(order[i]) !== tierOf(order[j])) {
+          showToast("Über Sterne-Grenzen nur per Duell");
+          return;
+        }
+      }
       const tmp = order[i]; order[i] = order[j]; order[j] = tmp;
       db.manualRankOrder = db.manualRankOrder || {};
       db.manualRankOrder[rankMedia] = order;
@@ -5660,6 +5829,81 @@
       if (db.manualRankOrder) delete db.manualRankOrder[rankMedia];
       saveDB();
       renderRanking();
+    }
+
+    // ---------- R26-#19: in-list search (scroll-to) + direct rank editing ----------
+    function scrollRankToRow(row) {
+      if (!row) return;
+      row.scrollIntoView({ block: "center", behavior: "smooth" });
+      row.classList.add("rank-hit");
+      setTimeout(() => row.classList.remove("rank-hit"), 1600);
+    }
+    function scrollRankToId(id) {
+      const rows = rankListEl.querySelectorAll(".rank-row[data-id]");
+      for (const r of rows) { if (r.dataset.id === String(id)) { scrollRankToRow(r); return; } }
+    }
+    // Typing a title jumps the list to that item's position (does NOT filter — the rank
+    // number must stay meaningful). Matches the first row whose title contains the query.
+    function scrollRankToQuery(q) {
+      if (!q) return;
+      const ql = q.toLowerCase();
+      const rows = rankListEl.querySelectorAll(".rank-row[data-id]");
+      for (const r of rows) {
+        if ((r.dataset.title || "").toLowerCase().includes(ql)) { scrollRankToRow(r); return; }
+      }
+    }
+    // Inline editor: replace the rank number with a numeric input.
+    function openRankEdit(item, numEl, currentRank) {
+      if (numEl.querySelector("input")) return;
+      let done = false;
+      const inp = document.createElement("input");
+      inp.type = "number"; inp.className = "rank-num-edit"; inp.min = "1";
+      inp.value = String(currentRank);
+      ["click", "mousedown"].forEach(ev => inp.addEventListener(ev, e => e.stopPropagation()));
+      inp.addEventListener("touchstart", e => e.stopPropagation(), { passive: true });
+      const commit = () => {
+        if (done) return; done = true;
+        const v = parseInt(inp.value, 10);
+        if (!isNaN(v) && v >= 1) setRankPosition(item, v);
+        else renderRanking();
+      };
+      inp.addEventListener("keydown", e => {
+        if (e.key === "Enter")  { e.preventDefault(); commit(); }
+        else if (e.key === "Escape") { e.preventDefault(); done = true; renderRanking(); }
+      });
+      inp.addEventListener("blur", commit);
+      numEl.textContent = ""; numEl.appendChild(inp);
+      inp.focus(); inp.select();
+    }
+    // Move `item` to display position `targetRank` (1-based). Titles at/after that rank
+    // shift down by one — the same "insert above the target" placement a won duel performs.
+    // R36 consistency: for films/series the move is clamped to the item's OWN star tier
+    // (crossing star bands only happens via duels); actors have no tiers → free placement.
+    function setRankPosition(item, targetRank) {
+      const media  = rankMedia;
+      const ranked = rankedPool(media).sort((a, b) => b.score - a.score);
+      const byId   = new Map(ranked.map(it => [String(it.id), it]));
+      const ids    = orderedRankedItems(ranked, media).map(it => String(it.id));
+      const from   = ids.indexOf(String(item.id));
+      if (from < 0) { renderRanking(); return; }
+      ids.splice(from, 1);                                   // remove, then insert at target
+      let to = Math.max(0, Math.min(ids.length, (targetRank | 0) - 1));
+      if (media !== "person") {
+        const tierOf = id => deriveBucket(ensureScore(byId.get(id)));
+        const myTier = deriveBucket(ensureScore(item));
+        let lo = ids.length, hi = -1;
+        ids.forEach((id, k) => { if (tierOf(id) === myTier) { if (k < lo) lo = k; if (k > hi) hi = k; } });
+        if (hi < 0) { lo = Math.min(to, ids.length); hi = lo - 1; }   // alone in its tier
+        const clamped = Math.max(lo, Math.min(hi + 1, to));
+        if (clamped !== to) showToast("Innerhalb der Sterne-Kategorie platziert");
+        to = clamped;
+      }
+      ids.splice(to, 0, String(item.id));
+      db.manualRankOrder = db.manualRankOrder || {};
+      db.manualRankOrder[media] = ids;
+      saveDB();
+      renderRanking();
+      scrollRankToId(item.id);
     }
 
     rankToggle.addEventListener("click", e => {
@@ -5675,6 +5919,21 @@
     });
     rankGenreSel.addEventListener("change", renderRanking);
     rankTagSel.addEventListener("change", renderRanking);
+
+    // R26-#19: in-list search bar wiring (magnifier toggle → text → auto-scroll).
+    const rankSearchToggle = document.getElementById("rank-search-toggle");
+    const rankSearchBar    = document.getElementById("rank-search");
+    const rankSearchInput  = document.getElementById("rank-search-input");
+    const rankSearchClear  = document.getElementById("rank-search-clear");
+    if (rankSearchToggle && rankSearchBar) {
+      rankSearchToggle.addEventListener("click", () => {
+        const hidden = rankSearchBar.classList.toggle("hidden");
+        if (hidden) { rankSearchInput.value = ""; }
+        else { rankSearchInput.focus(); }
+      });
+      rankSearchInput.addEventListener("input", () => scrollRankToQuery(rankSearchInput.value.trim()));
+      rankSearchClear.addEventListener("click", () => { rankSearchInput.value = ""; rankSearchInput.focus(); });
+    }
 
     // ---------- Duel mode (Elo) ----------
     const duelEl    = document.getElementById("duel");
@@ -6084,7 +6343,7 @@
       if (bd.hidden) return;   // sheet was closed while loading
       if (!films.length) { body.innerHTML = '<div class="psheet-empty">Keine bekannten Titel gefunden.</div>'; return; }
       body.innerHTML = films.map(c => {
-        const title = origTitleOf(c) || "";   // R24-#7: original title (c carries media_type)
+        const title = dispTitleOf(c) || "";   // R26-#EXTRA-1: display title (c carries media_type)
         const date = c.release_date || c.first_air_date || "";
         const year = date ? date.slice(0, 4) : "";
         return '<div class="psheet-film">' +
@@ -6283,6 +6542,8 @@
 
     function _closeDetailFull() {
       navStack = [];
+      const _epbd = document.getElementById("ep-detail-backdrop");   // R26 follow-up: never strand the episode overlay
+      if (_epbd) _epbd.hidden = true;
       detailEl.hidden = true;
       detailEl.classList.remove("over-profile");   // R16-#2d: restore normal z-index
       detailCtx = null;
@@ -6340,7 +6601,7 @@
 
     function renderDetail(data, mediaType, videos, _nav) {   // R21-FIX: _nav was an undefined ref (round-20 bug) → renderDetail threw, masked as "Internet prüfen"
       const isTv  = mediaType === "tv";
-      const title = origTitleOf(data, mediaType);   // R24-#7: original title
+      const title = dispTitleOf(data, mediaType);   // R26-#EXTRA-1: display title
       const date  = isTv ? data.first_air_date : data.release_date;
       const year  = date ? date.slice(0, 4) : "";
       const runtime = isTv ? (Array.isArray(data.episode_run_time) ? data.episode_run_time[0] : null) : data.runtime;
@@ -6736,6 +6997,7 @@
         programmingGoingBack = true;
         history.back();
         if (prev.type === "person") openPerson(prev.personId, prev.name, false);
+        else if (prev.type === "episode") openEpDetail(prev.ep);   // R26 follow-up: back to the episode
         else openDetail(prev.mediaType, prev.id, false);
       }
     });
@@ -6745,6 +7007,13 @@
 
     // Tapping a cast member / director opens their person page; "Ins Ranking" button toggles ranking
     detailBody.addEventListener("click", e => {
+      // R26 follow-up: tap an actor photo → open the swipeable lightbox gallery.
+      const photo = e.target.closest(".person-photo-thumb");
+      if (photo) {
+        const imgs = [...detailBody.querySelectorAll(".person-photo-thumb")].map(im => im.dataset.full);
+        openLightbox(imgs, parseInt(photo.dataset.idx, 10) || 0);
+        return;
+      }
       const rankBtn = e.target.closest(".rank-in-btn[data-rank-person]");
       if (rankBtn) {
         const pid = parseInt(rankBtn.dataset.rankPerson, 10);
@@ -6771,7 +7040,7 @@
       let data;
       try {
         const res = await fetch("https://api.themoviedb.org/3/person/" + personId
-          + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG + "&append_to_response=combined_credits");
+          + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG + "&append_to_response=combined_credits,images");
         if (!res.ok) throw new Error("HTTP " + res.status);
         data = await res.json();
         if (reqId !== detailReqId) return;
@@ -6856,6 +7125,17 @@
 
       if (data.biography) {
         html += '<div class="detail-section"><h3>Biografie</h3><p class="detail-overview">' + esc(data.biography.slice(0, 600)) + (data.biography.length > 600 ? " …" : "") + "</p></div>";
+      }
+
+      // R26 follow-up: photo gallery — the person's `images.profiles` (tap → lightbox).
+      const profiles = ((data.images && data.images.profiles) || []).filter(p => p.file_path).slice(0, 16);
+      if (profiles.length > 1) {
+        html += '<div class="detail-section"><h3>Fotos</h3><div class="hscroll person-photos">';
+        html += profiles.map((p, i) =>
+          '<img class="person-photo-thumb" loading="lazy" data-idx="' + i +
+          '" data-full="' + IMG_BASE + "original" + p.file_path +
+          '" src="' + IMG_BASE + "w185" + p.file_path + '" alt="">').join("");
+        html += "</div></div>";
       }
 
       html += '<div class="detail-section"><h3>Filmografie</h3>';
@@ -7181,8 +7461,28 @@
           if (data) {
             const orig = mt === "tv" ? (data.original_name || data.name) : (data.original_title || data.title);
             const loc  = mt === "tv" ? (data.name || data.original_name) : (data.title || data.original_title);
-            if (orig) { it.titleLoc = loc || it.title || ""; it.title = orig; changed = true; }
+            // R26-#EXTRA-1: store the DISPLAY title (localized for non-Latin scripts).
+            if (orig) { it.titleLoc = loc || it.title || ""; it.title = isNonLatinTitle(orig) ? (loc || orig) : orig; changed = true; }
           }
+        }
+      }
+      if (changed) saveDB();
+      try { localStorage.setItem(FLAG, "1"); } catch (e) {}
+    }
+
+    // R26-#EXTRA-1: one-time LOCAL pass (no network) — records already migrated by R24
+    // still hold the non-Latin original in `title`. Swap those to their localized title
+    // so nothing unreadable is shown. Records without titleLoc are handled by the R24
+    // backfill above (which now applies the same rule).
+    function runNonLatinTitleBackfill() {
+      const FLAG = "vault.nonLatinTitle.v1";
+      try { if (localStorage.getItem(FLAG)) return; } catch (e) { return; }
+      const stores = [db.items || {}, db.watchlist || {}, db.blocklist || {}];
+      Object.values(db.lists || {}).forEach(l => { if (l && l.items) stores.push(l.items); });
+      let changed = false;
+      for (const store of stores) {
+        for (const it of Object.values(store)) {
+          if (it && it.titleLoc && isNonLatinTitle(it.title)) { it.title = it.titleLoc; changed = true; }
         }
       }
       if (changed) saveDB();
@@ -8364,6 +8664,149 @@
     document.getElementById("ep-rate-cancel").addEventListener("click", closeEpRateSheet);
     epRateBackdrop.addEventListener("click", e => { if (e.target === epRateBackdrop) closeEpRateSheet(); });
 
+    // ---------- R26-#EXTRA-2: full episode detail view (still + synopsis + cast) ----------
+    const epDetailBackdrop = document.getElementById("ep-detail-backdrop");
+    const epDetailBody     = document.getElementById("ep-detail-body");
+    let epDetailCtx = null;
+
+    // "Mehr Details ›" inside the rating sheet → open the episode detail view.
+    document.getElementById("ep-rate-more").addEventListener("click", () => {
+      if (!epRateCtx) return;
+      const ctx = epRateCtx;             // snapshot before the sheet closes (clears epRateCtx)
+      closeEpRateSheet();
+      openEpDetail(ctx);
+    });
+
+    function closeEpDetail() {
+      epDetailBackdrop.hidden = true;
+      epDetailCtx = null;
+      // R26 follow-up: if the episode is a nav-stack entry (reached via the cast-return
+      // flow), unwind it like a normal Back so the underlying series detail is restored.
+      if (navStack.length && navStack[navStack.length - 1].type === "episode") {
+        navStack.pop();
+        programmingGoingBack = true;
+        history.back();
+        const prev = navStack[navStack.length - 1];
+        if (!prev) { _closeDetailFull(); return; }
+        if (prev.type === "person") openPerson(prev.personId, prev.name, false);
+        else if (prev.type === "episode") openEpDetail(prev.ep);
+        else openDetail(prev.mediaType, prev.id, false);
+      }
+      document.body.style.overflow = detailEl.hidden ? "" : "hidden";
+    }
+    document.getElementById("ep-detail-close").addEventListener("click", closeEpDetail);
+
+    // Build/refresh the in-view rating control so the user can rate without going back.
+    function renderEpDetailRating(ctx, host) {
+      host.innerHTML = "";
+      const current = getEpRating(ctx.tvId, ctx.s, ctx.e);
+      BUCKETS.forEach((b, i) => {
+        const btn = document.createElement("button");
+        btn.className = "bucket" + (b.id === current ? " selected" : "");
+        btn.type = "button";
+        btn.innerHTML = '<span class="bucket-rank">' + (i + 1) + "</span><span>" + b.label + "</span>";
+        btn.addEventListener("click", () => {
+          setEpRating(ctx.tvId, ctx.s, ctx.e, b.id);
+          if (!isEpWatched(ctx.tvId, ctx.s, ctx.e)) toggleEp(ctx.tvId, ctx.s, ctx.e, true);
+          ensureSeriesWatched(ctx.data);
+          applyEpCell(ctx.cell, b.id);
+          refreshEpGridCell(ctx.tvId, ctx.s, ctx.e, b.id);
+          refreshEpDots(ctx.tvId, ctx.s, ctx.e, b.id);
+          if (ctx.onChange) ctx.onChange();
+          if (typeof addFeedPost === "function" && ctx.data) {
+            const star = (typeof FEED_STAR !== "undefined" && FEED_STAR[b.id]) || null;
+            addFeedPost({ type: "episode_watched", itemId: ctx.data.id, mediaType: "tv",
+              title: ctx.data.name || ctx.data.title || "", posterPath: ctx.data.poster_path || null,
+              season: ctx.s, episode: ctx.e, epRating: star });
+          }
+          renderEpDetailRating(ctx, host);   // reflect the new selection in place
+          showToast("Bewertet: " + b.label);
+        });
+        host.appendChild(btn);
+      });
+    }
+
+    async function openEpDetail(ctx) {
+      epDetailCtx = ctx;
+      const seriesId = (ctx.data && ctx.data.id) || parseInt(String(ctx.tvId).split(":")[1], 10);
+      const se = "S" + String(ctx.s).padStart(2, "0") + "E" + String(ctx.e).padStart(2, "0");
+      epDetailBody.innerHTML = '<div class="ep-detail-loading">Lädt …</div>';
+      epDetailBackdrop.hidden = false;
+      epDetailBackdrop.scrollTop = 0;
+      document.body.style.overflow = "hidden";
+
+      let ep = null;
+      try {
+        const res = await fetch("https://api.themoviedb.org/3/tv/" + seriesId +
+          "/season/" + ctx.s + "/episode/" + ctx.e +
+          "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG + "&append_to_response=credits");
+        ep = res.ok ? await res.json() : null;
+      } catch (e) { ep = null; }
+      if (epDetailCtx !== ctx) return;   // user already closed / navigated away
+
+      if (!ep) {
+        epDetailBody.innerHTML = '<div class="ep-detail-loading">Details konnten nicht geladen werden.</div>';
+        return;
+      }
+
+      const title = ep.name || ("Episode " + ctx.e);
+      const facts = [se];
+      if (ep.air_date) facts.push(fmtDateDe(ep.air_date));
+      if (typeof ep.vote_average === "number" && ep.vote_average > 0) facts.push("★ " + ep.vote_average.toFixed(1));
+
+      let html = "";
+      html += ep.still_path
+        ? '<img class="ep-detail-still" src="' + IMG_BASE + "w780" + ep.still_path + '" alt="">'
+        : '<div class="ep-detail-still empty">Kein Bild</div>';
+      html += '<div class="ep-detail-title">' + esc(title) + "</div>";
+      html += '<div class="ep-detail-sub">' + esc(facts.join("  ·  ")) + "</div>";
+      html += '<div class="ep-detail-rate-label">Deine Bewertung</div>';
+      html += '<div class="bucket-list" id="ep-detail-buckets"></div>';
+      html += '<div class="detail-section"><h3>Handlung</h3><p class="detail-overview">' +
+        esc(ep.overview || "Keine Beschreibung verfügbar.") + "</p></div>";
+
+      // Cast that appeared in THIS episode: episode credits (regulars) + guest stars.
+      const cr = ep.credits || {};
+      const seen = {};
+      const cast = [...(cr.cast || []), ...(cr.guest_stars || []), ...(ep.guest_stars || [])]
+        .filter(c => c && c.id && !seen[c.id] && (seen[c.id] = true));
+      if (cast.length) {
+        html += '<div class="detail-section"><h3>Besetzung dieser Folge</h3><div class="hscroll">';
+        html += cast.map(c =>
+          '<div class="person" data-person="' + c.id + '" data-name="' + esc(c.name || "") + '">' +
+          (c.profile_path
+            ? '<img src="' + IMG_BASE + "w185" + c.profile_path + '" alt="">'
+            : '<div class="person-noimg">' + esc((c.name || "?").charAt(0)) + "</div>") +
+          '<div class="person-name">' + esc(c.name || "") + "</div>" +
+          (c.character ? '<div class="person-role">' + esc(c.character) + "</div>" : "") +
+          "</div>"
+        ).join("");
+        html += "</div></div>";
+      }
+
+      epDetailBody.innerHTML = html;
+      epDetailBody.scrollTop = 0; epDetailBackdrop.scrollTop = 0;
+      renderEpDetailRating(ctx, document.getElementById("ep-detail-buckets"));
+
+      // Cast → person page. R26 follow-up: register the episode in the nav stack (unless
+      // it already is) and hide the overlay WITHOUT unwinding it, so Back from the actor
+      // returns to THIS episode rather than jumping to the series.
+      epDetailBody.querySelectorAll("[data-person]").forEach(el => {
+        el.addEventListener("click", () => {
+          const pid = parseInt(el.dataset.person, 10);
+          if (!pid) return;
+          const epCtx = epDetailCtx;
+          if (!(navStack.length && navStack[navStack.length - 1].type === "episode")) {
+            _pushDetailNav({ type: "episode", ep: epCtx });
+          }
+          epDetailBackdrop.hidden = true;
+          epDetailCtx = null;
+          document.body.style.overflow = "hidden";
+          openPerson(pid, el.dataset.name || "");
+        });
+      });
+    }
+
     function renderEpRatings(data) {
       const host = document.getElementById("detail-ep-ratings");
       if (!host) return;
@@ -8436,7 +8879,7 @@
 
     // Render one rolled title into the Würfel result card (shared by both paths).
     function showDwResult(it, mediaType) {
-      const t    = origTitleOf(it, mediaType);   // R24-#7: original title
+      const t    = dispTitleOf(it, mediaType);   // R26-#EXTRA-1: display title
       const yr   = (it.release_date || it.first_air_date || "").slice(0, 4);
       const rtng = it.vote_average ? it.vote_average.toFixed(1).replace(".", ",") : null;
       dwResult.innerHTML = "";
@@ -8684,7 +9127,7 @@
     function discPosterCard(item, mediaType) {
       const card = document.createElement("div");
       card.className = "pcard";
-      const title = origTitleOf(item, mediaType);   // R24-#7: original title
+      const title = dispTitleOf(item, mediaType);   // R26-#EXTRA-1: display title
       const date  = mediaType === "tv" ? item.first_air_date : item.release_date;
       const year  = date ? date.slice(0, 4) : "";
       const poster = document.createElement("div"); poster.className = "pcard-poster";
@@ -8962,7 +9405,7 @@
 
     function buildRecoCard(item, label) {
       const mt = item._mt || (item.media_type === "tv" ? "tv" : "movie");
-      const title = origTitleOf(item, mt);   // R24-#7: original title
+      const title = dispTitleOf(item, mt);   // R26-#EXTRA-1: display title
       const date = mt === "tv" ? item.first_air_date : item.release_date;
       const year = date ? date.slice(0, 4) : "";
       const card = document.createElement("div");
@@ -10219,6 +10662,8 @@
     setTimeout(() => { runAutoTagBackfill(); }, 2500);
     // R24-#7: one-time original-title backfill (staggered so it doesn't race the tag backfill).
     setTimeout(() => { runOrigTitleBackfill(); }, 6000);
+    // R26-#EXTRA-1: local swap of non-Latin titles to their localized form (no network).
+    runNonLatinTitleBackfill();
 
     window.VAULT = { TMDB_KEY, TMDB_LANG, TMDB_REGION, db };
 
