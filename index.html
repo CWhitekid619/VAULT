@@ -1914,6 +1914,7 @@
     .reco-body { padding: 14px; }
     .reco-title { font-size: 17px; font-weight: 700; margin-bottom: 3px; }
     .reco-rating { color: var(--accent); font-size: 13px; margin-bottom: 5px; }
+    .reco-episode { color: var(--text); font-size: 13px; font-weight: 600; margin-bottom: 5px; }
     .reco-note { color: var(--text-dim); font-size: 13px; font-style: italic; margin-bottom: 12px; line-height: 1.4; }
     .reco-incoming { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px 12px 12px 4px; padding: 9px 12px; margin-bottom: 12px; font-size: 13px; line-height: 1.4; color: var(--text); }
     .reco-incoming-label { display: block; font-size: 11px; font-weight: 600; color: var(--text-mute); margin-bottom: 3px; }
@@ -2636,6 +2637,8 @@
       </div>
       <div class="reco-body">
         <div class="reco-title" id="reco-title"></div>
+        <!-- R25-#12: episode reference shown when this card is a shared single episode -->
+        <div class="reco-episode" id="reco-episode" hidden></div>
         <div class="reco-rating" id="reco-rating"></div>
         <div class="reco-note" id="reco-note"></div>
         <!-- Fix #3: latest incoming reply when this card was opened from a reply notification -->
@@ -10387,9 +10390,11 @@
             const full = _notifCache.find(x => x.id === nid);
             if (full) { closeNotifCenter(); openSingleReco(full); }
           } else if (el.dataset.type === "episode_shared") {
-            // R23-#6: open the series the shared episode belongs to.
+            // R25-#12: open the reco popup (with reply/chat) instead of jumping
+            // straight to the detail page — a shared episode is now a conversation
+            // like any other recommendation. "Zur Detailseite" stays available inside.
             const full = _notifCache.find(x => x.id === nid);
-            if (full && full.tmdbId) { closeNotifCenter(); openDetail("tv", full.tmdbId); }
+            if (full) { closeNotifCenter(); openSingleReco(full); }
           } else if (el.dataset.type === "post_comment") {
             // R23-#17: jump to the activity feed where the commented post lives.
             closeNotifCenter(); switchTab("social");
@@ -10539,6 +10544,17 @@
       }
       document.getElementById("reco-from").textContent = "Von " + (n.fromUsername || "Jemand");
       document.getElementById("reco-title").textContent = n.itemTitle || "";
+      // R25-#12: episode reference (S01E02 – Name) when this is a shared single episode
+      const epEl = document.getElementById("reco-episode");
+      if (epEl) {
+        if (n.season != null && n.episode != null) {
+          epEl.textContent = "📺 S" + String(n.season).padStart(2, "0") + "E" + String(n.episode).padStart(2, "0")
+            + (n.episodeName ? " – " + n.episodeName : "");
+          epEl.hidden = false;
+        } else {
+          epEl.hidden = true;
+        }
+      }
       document.getElementById("reco-rating").textContent = n.bucket ? bucketToStars(n.bucket) : "";
       document.getElementById("reco-note").textContent = n.note ? "„" + n.note + "“" : "";
       document.getElementById("reco-note").hidden = !n.note;
@@ -10579,10 +10595,15 @@
       const myUid = window.__vaultUser && window.__vaultUser.uid;
       if (!n || !n.fromUid || !myUid || n.fromUid === myUid || !window.__vaultSocial || !window.__vaultSocial.pushNotification) return;
       const myName = (_myProfile && _myProfile.username) || "Jemand";
+      // R25-#12: carry episode context so a reply to a shared episode stays about
+      // that episode when the sender reopens the thread (no undefined → Firestore-safe).
+      const epCtx = (n.season != null && n.episode != null)
+        ? { season: n.season, episode: n.episode, episodeName: n.episodeName || "" }
+        : {};
       window.__vaultSocial.pushNotification(n.fromUid, {
         fromUid: myUid, fromUsername: myName,
         itemTitle: n.itemTitle || "", itemPoster: n.itemPoster || "",
-        itemType: n.itemType || "movie", tmdbId: n.tmdbId || null, ...payload
+        itemType: n.itemType || "movie", tmdbId: n.tmdbId || null, ...epCtx, ...payload
       });
     }
     document.getElementById("reco-watchlist").addEventListener("click", () => {
