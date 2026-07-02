@@ -1667,6 +1667,9 @@
       margin-bottom: 10px;
     }
     .ep-season-toggle:active { background: var(--surface); }
+    /* R27-#4: whole-series toggle sits in the progress header, tinted to stand out */
+    .whole-series-toggle { margin-top: 2px; margin-bottom: 14px; background: var(--surface); border-color: var(--accent); }
+    .whole-series-toggle:disabled { opacity: .6; cursor: default; }
     .ep-row {
       display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
       background: none; border: none; cursor: pointer;
@@ -2085,6 +2088,8 @@
     .feed-more-btn { display: block; width: 100%; margin: 6px 0 24px; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--accent); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
     .feed-more-btn:active { background: var(--surface-2); }
     .feed-more-btn:disabled { opacity: .6; }
+    /* R27-#8: infinite-scroll sentinel */
+    .feed-sentinel { text-align: center; color: var(--text-mute); font-size: 12px; padding: 18px 0 30px; cursor: pointer; }
     .feed-note { padding: 2px 14px 4px; font-size: 14px; color: var(--text-dim); font-style: italic; line-height: 1.45; }
     .feed-titleline { padding: 2px 14px 12px; font-size: 13px; color: var(--text-mute); }
     .profile-version { text-align: center; font-size: 12px; color: var(--text-mute); letter-spacing: .08em; padding: 18px 0 calc(var(--nav-h) + var(--safe-bottom) + 20px); opacity: .7; }
@@ -2111,7 +2116,7 @@
     .feed-alsoseen-ic { display: inline-flex; color: var(--text-mute); }
     .feed-alsoseen-ic svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
     .feed-alsoseen-lbl { font-size: 12px; color: var(--text-mute); }
-    .feed-alsoseen-avs { display: flex; }
+    .feed-alsoseen-avs { display: flex; flex-wrap: wrap; row-gap: 6px; }
     .feed-mini-av { width: 24px; height: 24px; margin-left: -6px; border-radius: 50%; background: var(--accent); color: #1a1206; font-weight: 700; font-size: 11px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--surface); cursor: pointer; }
     .feed-mini-av:first-child { margin-left: 0; }
     .feed-mini-av.self { background: var(--surface-2); color: var(--text-dim); cursor: default; }
@@ -2426,8 +2431,15 @@
         <div id="social-feed-pane" class="social-pane">
           <div id="social-feed-list"></div>
         </div>
-        <!-- Freunde pane (friend list only — search/management is in Profil) -->
+        <!-- Freunde pane (R27-#6: find & add friends without leaving Social) -->
         <div id="social-friends-pane" class="social-pane" hidden>
+          <div class="social-friend-search">
+            <div class="search-bar" style="margin-bottom:8px">
+              <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+              <input id="social-friend-search" type="search" inputmode="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Freunde finden — Benutzername oder E-Mail …" />
+            </div>
+            <div id="social-search-results" style="margin-bottom:6px"></div>
+          </div>
           <div id="social-requests-section" hidden>
             <p class="social-section-title">Anfragen</p>
             <div id="social-requests-list"></div>
@@ -7689,10 +7701,15 @@
       host.innerHTML =
         '<div class="detail-section"><h3>Fortschritt</h3>' +
         '<div class="prog-summary" id="prog-summary"></div>' +
+        '<button class="ep-season-toggle whole-series-toggle" id="prog-whole-series" type="button"></button>' +
         '<div class="season-chips" id="prog-seasons"></div>' +
         '<div id="prog-eps" class="ep-list"></div></div>';
 
       updateProgSummary(data, tvId);
+
+      // R27-#4: "whole series watched" toggle (marks/unmarks every real season at once)
+      const wholeBtn = document.getElementById("prog-whole-series");
+      if (wholeBtn) wholeBtn.addEventListener("click", () => setWholeSeriesWatched(data, tvId));
 
       const chipWrap = document.getElementById("prog-seasons");
       seasons.forEach(s => {
@@ -7711,6 +7728,56 @@
     function updateProgSummary(data, tvId) {
       const el = document.getElementById("prog-summary");
       if (el) el.textContent = progressSummaryText(data, tvId);
+      updateWholeSeriesBtn(data, tvId);
+    }
+
+    // R27-#4: whole-series watched helpers.
+    function seriesFullyWatched(data, tvId) {
+      const total = totalEpisodes(data);
+      return total > 0 && watchedCount(tvId) >= total;
+    }
+    function updateWholeSeriesBtn(data, tvId) {
+      const btn = document.getElementById("prog-whole-series");
+      if (!btn || btn.disabled) return;
+      btn.textContent = seriesFullyWatched(data, tvId) ? "Ganze Serie abwählen" : "Ganze Serie als gesehen";
+    }
+    async function fetchSeasonEps(dataId, season) {
+      const cacheKey = dataId + ":" + season;
+      if (seasonCache[cacheKey]) return seasonCache[cacheKey];
+      try {
+        const res = await fetch("https://api.themoviedb.org/3/tv/" + dataId + "/season/" + season
+          + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
+        if (!res.ok) throw new Error();
+        const d = await res.json();
+        const eps = (d.episodes || []).map(e => ({ n: e.episode_number, name: e.name }));
+        seasonCache[cacheKey] = eps;
+        return eps;
+      } catch (e) { return []; }
+    }
+    async function setWholeSeriesWatched(data, tvId) {
+      const btn = document.getElementById("prog-whole-series");
+      const target = !seriesFullyWatched(data, tvId);   // toggle whole series on/off
+      if (btn) { btn.disabled = true; btn.textContent = target ? "Wird markiert …" : "Wird entfernt …"; }
+      const seasons = realSeasons(data);
+      const p = ensureProgress(tvId);
+      for (const s of seasons) {
+        const eps = await fetchSeasonEps(data.id, s.season_number);
+        eps.forEach(e => {
+          const k = epKey(s.season_number, e.n);
+          if (target) p.eps[k] = true; else delete p.eps[k];
+        });
+      }
+      saveDB();                                    // one write for the whole batch
+      if (target) ensureSeriesWatched(data);       // enters ranking as Ungerankt (P6)
+      if (btn) btn.disabled = false;
+      updateProgSummary(data, tvId);
+      loadSeason(data, tvId, tvSeason);            // refresh the visible season + its toggle
+      // A single feed post for the whole series (episode toggles never post on their own).
+      if (target && typeof addFeedPost === "function") {
+        addFeedPost({ type: "series_watched", itemId: data.id, mediaType: "tv",
+          title: data.name || data.title || "", posterPath: data.poster_path || null });
+      }
+      showToast(target ? "Ganze Serie als gesehen markiert" : "Serie zurückgesetzt");
     }
 
     async function loadSeason(data, tvId, season) {
@@ -11367,12 +11434,14 @@
       // R23-#17: comments only attach to persistent posts (pseudo-posts have no doc id)
       const canComment = !!(p.id && !p._pseudo);
       const cmtCount   = canComment ? (_commentCounts[p.id] || 0) : 0;
-      // R21-#2: exclude the poster AND the current user from "Auch gesehen von"
-      const seen = (watchers[key] || []).filter(w => w.uid !== ownerUid && !w.self);
+      // R21-#2 / R27-#3: exclude the poster AND the current user (by real uid, never
+      // just the self flag) from "Auch gesehen von", and list ALL matching friends.
+      const _selfUid = (window.__vaultUser && window.__vaultUser.uid) || null;
+      const seen = (watchers[key] || []).filter(w => w.uid !== ownerUid && w.uid !== _selfUid && !w.self);
       const seenHtml = seen.length
         ? `<div class="feed-alsoseen"><span class="feed-alsoseen-ic">${FEED_PEOPLE}</span>` +
           `<span class="feed-alsoseen-lbl">Auch gesehen von</span><div class="feed-alsoseen-avs">` +
-          seen.slice(0, 8).map(w =>
+          seen.map(w =>
             `<div class="feed-mini-av" data-uid="${socialEsc(w.uid)}" title="${socialEsc(w.username)}">${avatarInitial(w.username)}</div>`).join("") +
           `</div></div>`
         : "";
@@ -11393,6 +11462,27 @@
         </div>`;
     }
 
+    // R27-#8: auto-load the next feed page when the sentinel nears the viewport.
+    let _feedIO = null;
+    function setupFeedInfiniteScroll(host, accepted) {
+      if (_feedIO) { _feedIO.disconnect(); _feedIO = null; }
+      const sentinel = document.getElementById("feed-sentinel");
+      if (!sentinel) return;
+      const loadNext = async () => {
+        if (_feedLoading || _feedDone) return;
+        await loadMoreFeedPosts(accepted, false);
+        paintFeed(host, accepted);   // repaint rebuilds the sentinel + re-arms the observer
+      };
+      if ("IntersectionObserver" in window) {
+        _feedIO = new IntersectionObserver(entries => {
+          if (entries.some(e => e.isIntersecting)) loadNext();
+        }, { root: null, rootMargin: "400px 0px" });
+        _feedIO.observe(sentinel);
+      }
+      // tap-to-load fallback (older engines / if the observer never fires)
+      sentinel.addEventListener("click", loadNext);
+    }
+
     function paintFeed(host, accepted) {
       _lastFeedHost = host; _lastFeedAccepted = accepted;
       // "Auch gesehen von" index from friends' recentlyWatched + own library.
@@ -11406,6 +11496,15 @@
         if (!profile || profile.privacy?.shareWatched === false) return;
         (profile.recentlyWatched || []).forEach(it =>
           addWatcher((it.mediaType || "movie") + ":" + it.id, f.uid, f.username || f.uid));
+      });
+      // R27-#3: also index every loaded friend post as a "watcher" of its item, so
+      // friends who watched it beyond their 20-item recent snapshot still show up.
+      const _nameByUid = {};
+      accepted.forEach(f => { _nameByUid[f.uid] = f.username || f.uid; });
+      _feedPosts.forEach(p => {
+        if (!p || !p.userId || !p.itemId) return;
+        if (!/^(watched|rated|ranked|episode_watched|episode_rated|series_watched)$/.test(p.type || "")) return;
+        addWatcher((p.mediaType || "movie") + ":" + p.itemId, p.userId, _nameByUid[p.userId] || p.username || p.userId);
       });
       const myUid  = window.__vaultUser && window.__vaultUser.uid;
       const myName = (_myProfile && _myProfile.username) || "Du";
@@ -11451,8 +11550,9 @@
       }
 
       const cards   = merged.map(p => renderFeedCard(p, watchers)).join("");
-      const moreBtn = _feedDone ? "" : '<button class="feed-more-btn" id="feed-more-btn" type="button">Mehr laden</button>';
-      host.innerHTML = cards + moreBtn;
+      // R27-#8: infinite scroll — a sentinel auto-loads the next page as it nears the viewport.
+      const tail = _feedDone ? "" : '<div id="feed-sentinel" class="feed-sentinel">Weitere Aktivität wird geladen …</div>';
+      host.innerHTML = cards + tail;
 
       // R21-#5: actor cards open the person page
       host.querySelectorAll(".feed-poster-wrap[data-person]").forEach(el => {
@@ -11461,13 +11561,8 @@
         el.style.cursor = "pointer";
         el.addEventListener("click", () => { if (typeof openPerson === "function") openPerson(pid); });
       });
-      // R21-#8: load older posts
-      const moreEl = document.getElementById("feed-more-btn");
-      if (moreEl) moreEl.addEventListener("click", async () => {
-        moreEl.textContent = "Lädt …"; moreEl.disabled = true;
-        await loadMoreFeedPosts(accepted, false);
-        paintFeed(host, accepted);
-      });
+      // R27-#8: infinite scroll observer (+ tap-to-load fallback on the sentinel)
+      setupFeedInfiniteScroll(host, accepted);
 
       // wiring
       host.querySelectorAll(".feed-av[data-uid], .feed-author[data-uid]").forEach(el =>
@@ -11774,7 +11869,6 @@
           <div class="friend-avatar">${avatarInitial(f.username || f.uid)}</div>
           <div class="friend-info">
             <div class="friend-name">${socialEsc(f.username || f.uid)}</div>
-            <div class="friend-sub">Freund</div>
           </div>
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--text-mute)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </div>`).join("");
@@ -12449,11 +12543,11 @@
       });
     }
 
-    async function runProfUserSearch(term) {
+    async function runProfUserSearch(term, boxId) {
       if (!window.__vaultUser || !window.__vaultSocial) return;
       const results = await window.__vaultSocial.searchUsers(term);
       const myUid   = window.__vaultUser.uid;
-      const box     = document.getElementById("prof-search-results");
+      const box     = document.getElementById(boxId || "prof-search-results");
       if (!box) return;
       const filtered = results.filter(u => u.uid !== myUid);
       if (!filtered.length) {
@@ -12496,6 +12590,20 @@
         });
       });
     }
+
+    // R27-#6: friend search directly in the Social → Freunde pane (reuses the Profil search).
+    (function wireSocialFriendSearch() {
+      const si = document.getElementById("social-friend-search");
+      if (!si) return;
+      let timer = null;
+      si.addEventListener("input", e => {
+        clearTimeout(timer);
+        const term = e.target.value.trim();
+        const box  = document.getElementById("social-search-results");
+        if (!term) { if (box) box.innerHTML = ""; return; }
+        timer = setTimeout(() => runProfUserSearch(term, "social-search-results"), 400);
+      });
+    })();
 
     // Extend renderSettings to include notification settings
     const _origRenderSettings = typeof renderSettings === "function" ? renderSettings : null;
