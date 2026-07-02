@@ -1039,7 +1039,11 @@
     .detail-hero { position: relative; }
     .detail-backdrop { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: var(--surface-2); cursor: zoom-in; }
     /* N4: cap the backdrop height on wider/desktop screens so the info isn't pushed far down (mobile unaffected) */
-    @media (min-width: 600px) { .detail-backdrop { max-height: 360px; } }
+    /* R25-#30: constrain the whole detail column on desktop so the 16:9 hero (640×360) is no longer forced ultra-wide + cropped by object-fit:cover; also keeps all detail content in one readable column */
+    @media (min-width: 600px) {
+      .detail-body { max-width: 640px; margin-left: auto; margin-right: auto; }
+      .detail-backdrop { max-height: 360px; }
+    }
 
     /* R10-P5: fullscreen image lightbox */
     .lightbox {
@@ -1064,6 +1068,16 @@
       text-align: center; color: rgba(255,255,255,.8); font-size: 13px; font-weight: 600;
       font-variant-numeric: tabular-nums; pointer-events: none;
     }
+    /* R25-#13: embedded trailer player */
+    .trailer-modal {
+      position: fixed; inset: 0; z-index: 205;
+      background: rgba(0,0,0,.95);
+      display: flex; align-items: center; justify-content: center; padding: 16px;
+    }
+    .trailer-frame-wrap { width: 100%; max-width: 900px; }
+    .trailer-frame { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 10px; overflow: hidden; }
+    .trailer-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
     .detail-hero.no-backdrop { padding-top: calc(var(--safe-top) + 60px); }
     .detail-hero-grad {
       position: absolute; left: 0; right: 0; bottom: 0; height: 70%;
@@ -1653,7 +1667,7 @@
 
     /* ---------- Person page ---------- */
     .person-page { padding-top: calc(var(--safe-top) + 56px); }
-    .person-hero { display: flex; gap: 16px; align-items: center; padding: 0 16px 4px; }
+    .person-hero { display: flex; gap: 16px; align-items: flex-start; padding: 12px 16px 4px; }
     .person-photo {
       width: 92px; height: 92px; border-radius: 50%; object-fit: cover;
       background: var(--surface-2); flex: 0 0 auto;
@@ -1661,6 +1675,9 @@
     .person-hero-meta { min-width: 0; }
     .person-hero-meta .detail-title { font-size: 22px; }
     .person-stat { font-size: 13px; color: var(--text-dim); margin-top: 8px; }
+    /* R25-#3: birthday / age / place-of-birth facts on the person page */
+    .person-facts { margin-top: 8px; font-size: 13px; color: var(--text-dim); line-height: 1.5; }
+    .person-facts div { overflow: hidden; text-overflow: ellipsis; }
 
     .grid-badge {
       position: absolute; left: 5px; bottom: 5px; right: 5px;
@@ -1719,8 +1736,11 @@
        overlap, and let "Würfeln" use the full width (no right-edge clipping). */
     body.has-bell .disc-top-row { margin-top: 40px; }
 
+    /* R25-#22.1: was z-index 150 — BELOW the nav bar (160) and true modals (sheets 170+),
+       so notifications opened over a menu/overlay were clipped/covered. Lift it above
+       them (still below the list picker's over-reco 210) so it's always fully visible. */
     #notif-center {
-      position: fixed; inset: 0; z-index: 150; background: var(--bg);
+      position: fixed; inset: 0; z-index: 180; background: var(--bg);
       display: flex; flex-direction: column; overflow: hidden;
       padding-top: calc(var(--safe-top) + 12px); animation: fade-in .22s ease;
     }
@@ -1747,6 +1767,12 @@
     .notif-time { font-size: 12px; color: var(--text-mute); margin-top: 3px; }
     .notif-unread-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: 0 0 auto; margin-top: 6px; }
     .notif-empty { text-align: center; color: var(--text-mute); padding: 60px 24px; font-size: 14px; }
+    /* R25-#22.2: inline actions on recommendation notifications */
+    .notif-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .notif-act { padding: 7px 12px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .notif-act.primary { background: var(--accent); color: #1a1206; border-color: var(--accent); }
+    .notif-act:disabled { opacity: .55; cursor: default; }
+    .notif-act:active { filter: brightness(.94); }
 
     .social-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--text-mute); margin: 0 0 10px; }
     .social-no-username { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 12px 14px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); color: var(--text); font-size: 13px; line-height: 1.4; margin-bottom: 16px; cursor: pointer; }
@@ -1861,6 +1887,8 @@
     .share-friend-check { display: flex; align-items: center; gap: 12px; padding: 9px; border-radius: 10px; cursor: pointer; }
     .share-friend-check:active { background: var(--surface); }
     .share-friend-check input[type=checkbox] { accent-color: var(--accent); width: 17px; height: 17px; flex: 0 0 auto; cursor: pointer; }
+    /* R25-#22.3: send-time "already seen" warning next to a friend who has watched it */
+    .share-seen-tag { margin-left: auto; flex: 0 0 auto; font-size: 11px; font-weight: 700; color: #e0a325; background: rgba(224,163,37,.14); border: 1px solid rgba(224,163,37,.35); padding: 2px 7px; border-radius: 99px; white-space: nowrap; }
     .share-note-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: inherit; font-size: 14px; padding: 10px 12px; resize: none; outline: none; margin-bottom: 10px; }
     .share-note-input:focus { border-color: var(--accent); }
     .share-stars { display: flex; gap: 6px; margin-bottom: 12px; }
@@ -1874,7 +1902,11 @@
     .reco-card { background: var(--surface); border-radius: 20px; overflow: hidden; width: 100%; max-width: 340px; box-shadow: 0 24px 60px rgba(0,0,0,.6); }
     /* R21-#10: the shared .reco-card class (home rail) sets aspect-ratio + flex-basis +
        overflow:hidden, which clipped the popup card's buttons. Reset them here. */
-    #reco-popup .reco-card { margin: auto 0; flex: 0 0 auto; aspect-ratio: auto; height: auto; }
+    /* R25-#22.1: `margin: auto 0` vertically centred the card via flex auto-margins, which
+       clips the top/bottom (and prevents scrolling to them) when the card is taller than the
+       viewport — e.g. with the reply box or an incoming message. Use fixed vertical margins so
+       the card always flows from the top and the overflow is fully scrollable. */
+    #reco-popup .reco-card { margin: 8px auto 24px; flex: 0 0 auto; aspect-ratio: auto; height: auto; }
     .reco-poster-wrap { position: relative; }
     .reco-poster { width: 100%; height: 200px; object-fit: cover; display: block; }
     .reco-poster-ph { width: 100%; height: 200px; background: var(--surface-2); }
@@ -1954,6 +1986,12 @@
     /* R18-A: Instagram-style activity feed */
     /* R21-FIX: cap the single-column feed width so posters aren't huge on desktop */
     #social-feed-list { max-width: 480px; margin: 0 auto; }
+    /* R25-#34: on desktop the 2:3 posters were still oversized (~480×720). Narrow the column
+       further and cap poster height so a single feed item no longer dominates the viewport. */
+    @media (min-width: 600px) {
+      #social-feed-list { max-width: 360px; }
+      .feed-poster { max-height: 62vh; width: auto; max-width: 100%; margin: 0 auto; }
+    }
     .feed-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; margin-bottom: 16px; overflow: hidden; }
     .feed-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
     .feed-av { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: #1a1206; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
@@ -2986,6 +3024,14 @@
     </button>
     <img id="lightbox-img" class="lightbox-img" src="" alt="">
     <div id="lightbox-count" class="lightbox-count" hidden></div>
+  </div>
+
+  <!-- ============ TRAILER PLAYER (R25-#13) ============ -->
+  <div id="trailer-modal" class="trailer-modal" hidden>
+    <button id="trailer-close" class="lightbox-close" type="button" aria-label="Schließen">
+      <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+    </button>
+    <div class="trailer-frame-wrap"><div id="trailer-frame" class="trailer-frame"></div></div>
   </div>
 
   <!-- ============ TOAST ============ -->
@@ -5041,6 +5087,8 @@
       if (typeof checkMatchAndShow === "function") {
         checkMatchAndShow({ id: rec.id, mediaType: rec.mediaType, title: rec.title || "", posterPath: rec.poster || null });
       }
+      // R25-#22.4: first watch of a recommended title → notify the recommender(s).
+      if (!_prev) notifyRecoSendersWatched(r.media_type, r.id);
       // R21-#6/#11: if this rating originated from a friend's feed post, notify the
       // owner and repaint the feed so the eye reflects the new "watched" state.
       if (typeof _feedRateCtx !== "undefined" && _feedRateCtx && _feedRateCtx.key === key) {
@@ -5083,6 +5131,31 @@
       addFeedPost({ type: "watched", itemId: rec.id, mediaType: rec.mediaType,
         title: rec.title || "", posterPath: rec.poster || null });
       autoTagItem(r.media_type, r.id);   // R23-#23b: silent content auto-tagging
+      notifyRecoSendersWatched(r.media_type, r.id);   // R25-#22.4: tell recommenders "hat geschaut"
+    }
+
+    // R25-#22 (parts 4 & 5): whenever the user acts on a title that was recommended to them
+    // (watches it, or adds it to a list), notify each friend who recommended it. Driven from
+    // the central logWatched/logItem/addToList functions so EVERY path is covered — the reco
+    // popup, the notification-center inline actions, the detail page and the card buttons alike.
+    function _recoSendersFor(mediaType, id) {
+      if (!Array.isArray(_notifCache)) return [];
+      const seen = new Set(), out = [];
+      for (const n of _notifCache) {
+        if (n && n.type === "item_shared" && n.fromUid
+            && String(n.tmdbId) === String(id) && (n.itemType || "movie") === mediaType
+            && !seen.has(n.fromUid)) { seen.add(n.fromUid); out.push(n); }
+      }
+      return out;
+    }
+    function notifyRecoSendersWatched(mediaType, id) {
+      _recoSendersFor(mediaType, id).forEach(n => _notifyRecoSender(n, { type: "reco_watched" }));
+    }
+    function notifyRecoSendersListed(mediaType, id, list) {
+      // private list → the sender only learns "in eine Liste gelegt" (no list name)
+      const isPrivate = !(list && (list.shared || list.public));
+      _recoSendersFor(mediaType, id).forEach(n =>
+        _notifyRecoSender(n, { type: "reco_added_list", listName: isPrivate ? null : (list && list.name) || null }));
     }
 
     // ---------- Quick-rate popup (points 5 + 8) ----------
@@ -6087,6 +6160,29 @@
       });
       lightbox.addEventListener("pointercancel", () => { down = false; });
     })();
+    // ---------- R25-#13: embedded trailer player ----------
+    const trailerModal = document.getElementById("trailer-modal");
+    const trailerFrame = document.getElementById("trailer-frame");
+    function openTrailer(key, title) {
+      if (!key) return;
+      // build the iframe fresh each time so autoplay fires
+      trailerFrame.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/'
+        + encodeURIComponent(key) + '?autoplay=1&rel=0&modestbranding=1"'
+        + ' title="' + esc(title || "Trailer") + '"'
+        + ' allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"'
+        + ' allowfullscreen></iframe>';
+      trailerModal.hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+    function closeTrailer() {
+      trailerModal.hidden = true;
+      trailerFrame.innerHTML = "";   // stop playback
+      document.body.style.overflow = detailEl.hidden ? "" : "hidden";
+    }
+    document.getElementById("trailer-close").addEventListener("click", e => { e.stopPropagation(); closeTrailer(); });
+    trailerModal.addEventListener("click", e => { if (e.target === trailerModal) closeTrailer(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && !trailerModal.hidden) closeTrailer(); });
+
     // delegation: scene stills (gallery) and the backdrop open fullscreen
     detailBody.addEventListener("click", e => {
       const stillImg = e.target.closest(".still img");
@@ -6102,6 +6198,24 @@
     const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+    // R25-#3: person date helpers
+    function fmtDateDe(s) {
+      if (!s) return "";
+      const d = new Date(s);
+      if (isNaN(d)) return esc(s);
+      return d.toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" });
+    }
+    function personAge(birthday, deathday) {
+      if (!birthday) return null;
+      const b = new Date(birthday);
+      if (isNaN(b)) return null;
+      const end = deathday ? new Date(deathday) : new Date();
+      if (isNaN(end)) return null;
+      let age = end.getFullYear() - b.getFullYear();
+      const m = end.getMonth() - b.getMonth();
+      if (m < 0 || (m === 0 && end.getDate() < b.getDate())) age--;
+      return age >= 0 && age < 130 ? age : null;
+    }
     function fmtRating(v) { return (typeof v === "number" && v > 0) ? v.toFixed(1).replace(".", ",") : null; }
     function fmtRuntime(min) { if (!min) return null; const h = Math.floor(min / 60), m = min % 60; return h ? (h + " Std. " + m + " Min.") : (m + " Min."); }
     function fmtMoney(n) {
@@ -6267,7 +6381,7 @@
         ytAny.find(v => v.type === "Trailer") || ytAny[0];
       html += '<div class="detail-actions">';
       html += '<button class="detail-log-btn" id="detail-log" type="button">Watch</button>';
-      if (trailer) html += '<a class="detail-trailer-btn" target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=' + esc(trailer.key) + '"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Trailer</a>';
+      if (trailer) html += '<button class="detail-trailer-btn" id="detail-trailer" type="button" data-yt="' + esc(trailer.key) + '" data-title="' + esc(title || "") + '"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Trailer</button>';
       html += "</div>";
       // secondary actions: Watchlist (toggle) + Listen (custom lists) + Tracken (TV only)
       html += '<div class="detail-actions detail-actions-2">';
@@ -6328,7 +6442,19 @@
       html += "</div>";
 
       // ---- scene stills gallery (point 7) ----
-      const stills = ((data.images && data.images.backdrops) || []).filter(b => b.file_path).slice(0, 8);
+      // R25-#4: TMDB backdrops often repeat the same key art with different language
+      // text overlays (null / en / de), which look like duplicates. Drop exact repeats
+      // (same file_path) and prefer text-free backdrops (iso_639_1 === null) — those are
+      // the genuine scene shots; the text variants are the near-duplicates. Fall back to
+      // the full deduped list only if too few text-free ones exist.
+      const stills = (function () {
+        const raw = ((data.images && data.images.backdrops) || []).filter(b => b.file_path);
+        const seen = new Set();
+        const uniq = [];
+        for (const b of raw) { if (!seen.has(b.file_path)) { seen.add(b.file_path); uniq.push(b); } }
+        const textFree = uniq.filter(b => !b.iso_639_1);
+        return (textFree.length >= 4 ? textFree : uniq).slice(0, 8);
+      })();
       if (stills.length) {
         html += '<div class="detail-section"><h3>Szenenbilder</h3><div class="hscroll still-scroll">';
         html += stills.map(b => '<div class="still"><img loading="lazy" src="' + IMG_BASE + "w500" + b.file_path + '" alt=""></div>').join("");
@@ -6402,6 +6528,9 @@
           openQuickRate(r);             // points 5 + 8: show the 5-bucket popup right away
         }
       });
+      // R25-#13: play the trailer in an embedded player instead of leaving the app
+      const trailerBtn = document.getElementById("detail-trailer");
+      if (trailerBtn) trailerBtn.addEventListener("click", () => openTrailer(trailerBtn.dataset.yt, trailerBtn.dataset.title));
       // Tap the status line of an unranked title to rate it later (P3 optional rating)
       const statusEl = document.getElementById("detail-status");
       if (statusEl) statusEl.addEventListener("click", () => {
@@ -6643,6 +6772,13 @@
         if (!res.ok) throw new Error("HTTP " + res.status);
         data = await res.json();
         if (reqId !== detailReqId) return;
+        // R25-#3: German bio is often empty → fall back to the English biography
+        if (!data.biography) {
+          try {
+            const r2 = await fetch("https://api.themoviedb.org/3/person/" + personId + "?api_key=" + TMDB_KEY + "&language=en-US");
+            if (r2.ok) { const d2 = await r2.json(); if (reqId !== detailReqId) return; data.biography = d2.biography || ""; }
+          } catch (e) { /* keep empty */ }
+        }
       } catch (e) {
         if (reqId !== detailReqId) return;
         console.error("VAULT: Personenseite – TMDB-Fetch fehlgeschlagen:", e);
@@ -6694,6 +6830,19 @@
         : '<div class="person-photo"></div>';
       html += '<div class="person-hero-meta"><h2 class="detail-title">' + esc(data.name || "") + "</h2>";
       if (knownFor) html += '<div class="detail-genres">' + esc(knownFor) + "</div>";
+      // R25-#3: birthday / age / place of birth from the person endpoint
+      const pFacts = [];
+      const age = personAge(data.birthday, data.deathday);
+      if (data.birthday) {
+        if (data.deathday) {
+          pFacts.push("Geboren: " + fmtDateDe(data.birthday));
+          pFacts.push("Gestorben: " + fmtDateDe(data.deathday) + (age != null ? " (mit " + age + " Jahren)" : ""));
+        } else {
+          pFacts.push("Geboren: " + fmtDateDe(data.birthday) + (age != null ? " (" + age + " Jahre)" : ""));
+        }
+      }
+      if (data.place_of_birth) pFacts.push("Geburtsort: " + esc(data.place_of_birth));
+      if (pFacts.length) html += '<div class="person-facts">' + pFacts.map(f => "<div>" + f + "</div>").join("") + "</div>";
       html += '<div class="person-stat">' + credits.length + " Titel · " + watchedCount + " gesehen</div>";
       html += '<div class="person-rank-row">';
       html += '<button class="rank-in-btn' + (isRanked ? " active" : "") + '" id="person-rank-btn" type="button">';
@@ -6703,7 +6852,7 @@
       html += "</div></div></div>";
 
       if (data.biography) {
-        html += '<div class="detail-section"><p class="detail-overview">' + esc(data.biography.slice(0, 400)) + (data.biography.length > 400 ? " …" : "") + "</p></div>";
+        html += '<div class="detail-section"><h3>Biografie</h3><p class="detail-overview">' + esc(data.biography.slice(0, 600)) + (data.biography.length > 600 ? " …" : "") + "</p></div>";
       }
 
       html += '<div class="detail-section"><h3>Filmografie</h3>';
@@ -7379,6 +7528,7 @@
         window.__vaultSocial.addToSharedList(list.sharedId, key, rec, window.__vaultUser.uid).catch(() => {});
         notifyShared(list, "list_item_added", rec);
       }
+      notifyRecoSendersListed(r.media_type, r.id, list);   // R25-#22.5: tell recommender it landed in a list
       return true;
     }
     function removeFromList(listId, key) {
@@ -10196,11 +10346,21 @@
           ? `<img class="notif-icon-img" src="https://image.tmdb.org/t/p/w92${n.itemPoster}" alt="" loading="lazy" />`
           : `<div class="notif-icon">${notifTypeIcon(n.type)}</div>`;
         const text = notifText(n);
+        // R25-#22.2: inline actions on recommendation notifications — act without navigating away
+        let actions = "";
+        if (n.type === "item_shared" && n.tmdbId && n.itemType) {
+          const watched = !!db.items[(n.itemType) + ":" + n.tmdbId];
+          actions = `<div class="notif-actions">
+            <button class="notif-act primary notif-act-seen" type="button" data-nid="${socialEsc(n.id)}"${watched ? " disabled" : ""}>${watched ? "Gesehen ✓" : "Als gesehen"}</button>
+            <button class="notif-act notif-act-list" type="button" data-nid="${socialEsc(n.id)}">Zu Liste</button>
+          </div>`;
+        }
         return `<div class="notif-item${n.read ? "" : " unread"}" data-id="${socialEsc(n.id)}" data-type="${socialEsc(n.type)}" data-from="${socialEsc(n.fromUid||"")}">
           ${icon}
           <div class="notif-body">
             <div class="notif-text">${text}</div>
             <div class="notif-time">${relativeTime(n.createdAt)}</div>
+            ${actions}
           </div>
           ${n.read ? "" : '<div class="notif-unread-dot"></div>'}
         </div>`;
@@ -10257,6 +10417,31 @@
           }
         });
       });
+
+      // R25-#22.2: inline recommendation actions (mark watched / add to list) — no navigation
+      const _notifItemR = n => ({ id: n.tmdbId, media_type: n.itemType, title: n.itemTitle, poster_path: n.itemPoster || null });
+      list.querySelectorAll(".notif-act-seen").forEach(btn => {
+        btn.addEventListener("click", e => {
+          e.stopPropagation();
+          const n = _notifCache.find(x => x.id === btn.dataset.nid);
+          if (!n || !n.tmdbId || !n.itemType) return;
+          const key = n.itemType + ":" + n.tmdbId;
+          if (!db.items[key]) logWatched(_notifItemR(n));   // notifies the recommender via the logWatched hook
+          btn.disabled = true; btn.textContent = "Gesehen ✓";
+          const uid = window.__vaultUser?.uid;
+          if (uid && window.__vaultSocial) window.__vaultSocial.markNotificationRead(uid, n.id);
+          n.read = true; updateNotifBadge(_notifCache);
+        });
+      });
+      list.querySelectorAll(".notif-act-list").forEach(btn => {
+        btn.addEventListener("click", e => {
+          e.stopPropagation();
+          const n = _notifCache.find(x => x.id === btn.dataset.nid);
+          if (!n || !n.tmdbId || !n.itemType) return;
+          pickerBackdrop.classList.add("over-reco");   // over-reco (z210) sits above the notif center (z180)
+          openListPicker(_notifItemR(n), false, (lst) => showToast("Hinzugefügt zu " + (lst ? lst.name : "Liste")));
+        });
+      });
     }
 
     function notifTypeIcon(type) {
@@ -10270,6 +10455,7 @@
       if (type === "feed_rerated")   return "⭐";
       if (type === "reco_reply")     return "💬";
       if (type === "post_comment")   return "💬";
+      if (type === "reco_watched")   return "👁️";
       if (type === "reco_seen")      return "👁️";
       if (type === "reco_added_list")return "📋";
       return "🔔";
@@ -10299,6 +10485,7 @@
       if (n.type === "feed_rerated")     return `${from} hat ${item} nochmal bewertet, nachdem du es geschaut hast`;
       if (n.type === "reco_reply")       return `${from} hat auf deine Empfehlung geantwortet: „${socialEsc(n.replyText || "")}“`;
       if (n.type === "post_comment")     return `${from} hat deinen Post${n.itemTitle ? " zu " + item : ""} kommentiert${n.commentText ? `: „${socialEsc(n.commentText)}“` : ""}`;
+      if (n.type === "reco_watched")     return `${from} hat ${item} geschaut`;
       if (n.type === "reco_seen")        return `${from} hat ${item} bereits gesehen`;
       if (n.type === "reco_added_list")  return n.listName
                                            ? `Den Film den du empfohlen hast hat ${from} jetzt in „${socialEsc(n.listName)}“ gepackt`
@@ -10432,8 +10619,7 @@
       if (!n || !n.tmdbId || !n.itemType) { advanceReco(); return; }
       const r = _recoItemR(n);
       const key = n.itemType + ":" + n.tmdbId;
-      if (!db.items[key]) logWatched(r);
-      _notifyRecoSender(n, { type: "reco_seen" });
+      if (!db.items[key]) logWatched(r);   // R25-#22.4: logWatched now notifies the recommender ("hat geschaut")
       showToast("Als gesehen markiert");
       advanceReco();
       // R21-#3: a recommended title is a prime match candidate
@@ -10447,10 +10633,8 @@
       if (!n || !n.tmdbId || !n.itemType) return;
       const r = _recoItemR(n);
       pickerBackdrop.classList.add("over-reco");   // raise above the reco popup
+      // R25-#22.5: addToList now notifies the recommender (with private/public list handling).
       openListPicker(r, false, (list) => {
-        // private list → the sender only learns "in eine Liste gelegt"
-        const isPrivate = !(list && (list.shared || list.public));
-        _notifyRecoSender(n, { type: "reco_added_list", listName: isPrivate ? null : list.name });
         showToast("Hinzugefügt zu " + (list ? list.name : "Liste"));
       });
     });
@@ -11499,6 +11683,34 @@
     let _shareItem = null;
     let _shareRating = null;
     let _shareEpisode = null;   // R23-#6: set when the share sheet is in episode mode
+    let _shareSeenToken = 0;    // R25-#22.3: guards the async "already seen" check against a re-opened sheet
+
+    // R25-#22.3: mark friends who have already watched the item (from their recentlyWatched
+    // snapshot, respecting shareWatched privacy) with a "schon gesehen" tag next to their name.
+    async function _markShareFriendsSeen(itemRecord) {
+      if (!itemRecord || !itemRecord.id || !window.__vaultSocial || !window.__vaultSocial.getProfile) return;
+      const token = ++_shareSeenToken;
+      const mediaType = itemRecord.mediaType || "movie";
+      const listEl = document.getElementById("share-friends-list");
+      const labels = [...listEl.querySelectorAll(".share-friend-check")];
+      await Promise.all(labels.map(async label => {
+        const uid = label.dataset.uid;
+        if (!uid) return;
+        try {
+          const p = await window.__vaultSocial.getProfile(uid);
+          if (token !== _shareSeenToken) return;   // sheet was re-opened / closed meanwhile
+          if (!p || (p.privacy && p.privacy.shareWatched === false)) return;
+          const watched = p.recentlyWatched || [];
+          const seen = watched.some(it => String(it.id) === String(itemRecord.id) && (it.mediaType || "movie") === mediaType);
+          if (seen && !label.querySelector(".share-seen-tag")) {
+            const tag = document.createElement("span");
+            tag.className = "share-seen-tag";
+            tag.textContent = "schon gesehen";
+            label.appendChild(tag);
+          }
+        } catch (e) { /* best-effort warning */ }
+      }));
+    }
 
     document.getElementById("share-cancel").addEventListener("click", closeShareSheet);
     shareBackdrop.addEventListener("click", e => { if (e.target === shareBackdrop) closeShareSheet(); });
@@ -11536,11 +11748,13 @@
       document.getElementById("share-note").value = "";
       // Friends checkboxes
       document.getElementById("share-friends-list").innerHTML = friends.map(f =>
-        `<label class="share-friend-check">
+        `<label class="share-friend-check" data-uid="${socialEsc(f.uid)}">
           <input type="checkbox" value="${socialEsc(f.uid)}" />
           <div class="friend-avatar" style="width:32px;height:32px;font-size:12px">${avatarInitial(f.username || f.uid)}</div>
           <span>${socialEsc(f.username || f.uid)}</span>
         </label>`).join("");
+      // R25-#22.3: warn at send-time about friends who have ALREADY seen this title (episodes excluded)
+      if (!_shareEpisode) _markShareFriendsSeen(itemRecord);
       // Stars (mapped from buckets)
       const BUCKET_IDS = ["bad","meh","watchable","good","great"];
       const stars = document.getElementById("share-stars");
