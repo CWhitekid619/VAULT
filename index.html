@@ -2573,7 +2573,7 @@
         </button>
       </div>
       <!-- R23: version stamp so you can tell which build is live -->
-      <div id="profile-version" class="profile-version">VAULT · R27</div>
+      <div id="profile-version" class="profile-version">VAULT · R28</div>
     </section>
 
   </div>
@@ -2651,12 +2651,13 @@
         <div class="sheet-section-label">Wie war's?</div>
         <div id="sheet-buckets" class="bucket-list"></div>
         <div class="qr-share-row" id="sheet-share-row" hidden>
-          <span class="qr-share-label">Mit Freunden teilen</span>
+          <span class="qr-share-label">Im Feed posten</span>
           <label class="qr-toggle">
             <input type="checkbox" id="sheet-share-toggle">
             <span class="qr-toggle-track"><span class="qr-toggle-thumb"></span></span>
           </label>
         </div>
+        <textarea id="sheet-note" class="qr-note-input" placeholder="Optional: deine Notiz zum Film …" rows="2" hidden></textarea>
         <button id="sheet-cancel2" class="sheet-btn-cancel" type="button">Abbrechen</button>
       </div>
     </div>
@@ -2671,7 +2672,7 @@
         <div class="sheet-section-label">Wie war's?</div>
         <div id="qr-buckets" class="bucket-list"></div>
         <div class="qr-share-row" id="qr-share-row" hidden>
-          <span class="qr-share-label">Mit Freunden teilen</span>
+          <span class="qr-share-label">Im Feed posten</span>
           <label class="qr-toggle">
             <input type="checkbox" id="qr-share-toggle">
             <span class="qr-toggle-track"><span class="qr-toggle-thumb"></span></span>
@@ -2679,11 +2680,11 @@
         </div>
         <button id="qr-skip" class="sheet-btn-cancel" type="button">Überspringen</button>
       </div>
-      <!-- Step 2: Notiz (shown only when share toggle is ON) -->
+      <!-- Step 2: Notiz (shown only when the "post to feed" toggle is ON) -->
       <div id="qr-step2" hidden>
-        <div class="sheet-section-label">Notiz hinzufügen</div>
-        <textarea id="qr-note" class="qr-note-input" placeholder="Optional: kurze Nachricht …" rows="3"></textarea>
-        <button id="qr-share-confirm" class="sheet-btn-primary" type="button">Weiter →</button>
+        <div class="sheet-section-label">Notiz für deinen Post</div>
+        <textarea id="qr-note" class="qr-note-input" placeholder="Optional: deine Notiz zum Film …" rows="3"></textarea>
+        <button id="qr-share-confirm" class="sheet-btn-primary" type="button">Posten</button>
         <button id="qr-share-back" class="sheet-btn-cancel" type="button">Zurück</button>
       </div>
     </div>
@@ -4050,8 +4051,8 @@
         db.people[personId] = { id: personId, name: name || "", photo: photo || "", known_for: knownFor || "", score: 1400, unranked: true, addedAt: Date.now() };
         saveDB();
         showToast("Ins Ranking hinzugefügt");
-        // R21-#5: post the actor-ranking to the activity feed.
-        if (typeof addFeedPost === "function") addFeedPost({ type: "actor_ranked", actorId: personId, actorName: name || "", actorPhoto: photo || null });
+        // R28: keine automatischen Feed-Posts mehr — Feed-Posts nur noch bewusst
+        // über den „Im Feed posten"-Schalter beim Bewerten.
       }
       if (rankMedia === "person") renderRanking();
     }
@@ -5290,19 +5291,33 @@
         el.type = "button";
         el.innerHTML = '<span class="bucket-rank">' + (i + 1) + '</span><span>' + b.label + '</span>';
         el.addEventListener("click", () => {
-          // R23.2: if the share toggle is on, rate then open the share sheet.
+          // R28: bei aktivem „Im Feed posten"-Schalter → bewerten + Feed-Post mit Notiz.
           const sharing = document.getElementById("sheet-share-toggle")?.checked;
+          const note = sharing ? (document.getElementById("sheet-note")?.value || "").trim() : "";
           logItem(r, b.id);   // logItem closes the sheet
           if (sharing) {
             const rec = db.items[keyOf(r.media_type, r.id)];
-            if (rec) openShareSheet(rec);
+            postWatchToFeed(rec, b.id, note);
           }
         });
         bucketListEl.appendChild(el);
       });
-      // R23.2: share toggle, consistent with the quick-rate + episode flows.
+      // R28: „Im Feed posten"-Schalter; Notizfeld erscheint erst bei aktivem Schalter.
       const shareToggle = document.getElementById("sheet-share-toggle");
+      const noteField   = document.getElementById("sheet-note");
       if (shareToggle) shareToggle.checked = false;
+      if (noteField) { noteField.value = ""; noteField.hidden = true; }
+      if (shareToggle && noteField) {
+        shareToggle.onchange = () => {
+          noteField.hidden = !shareToggle.checked;
+          if (shareToggle.checked) {
+            // R28: bereits vorhandene persönliche Notiz als Vorschlag übernehmen.
+            const m = getMeta(keyOf(r.media_type, r.id));
+            if (!noteField.value) noteField.value = (m && m.note) || "";
+            setTimeout(() => noteField.focus(), 50);
+          }
+        };
+      }
       const shareRow = document.getElementById("sheet-share-row");
       if (shareRow) shareRow.hidden = false;   // R23.3: always visible — no login/friend gating
       document.getElementById("sheet-step1").hidden = true;
@@ -5339,11 +5354,8 @@
       refreshResults();
       refreshDetailStatus();
       if (document.body.dataset.tab === "ranking") renderRanking();   // point 9b: reflect re-rate live
-      // R21-#5: post the rating to the activity feed (only on a genuine change).
-      if (_prevBucket !== bucket) {
-        addFeedPost({ type: "rated", itemId: rec.id, mediaType: rec.mediaType,
-          title: rec.title || "", posterPath: rec.poster || null, bucket });
-      }
+      // R28: KEIN automatischer Feed-Post mehr. Ein Post entsteht nur noch, wenn der
+      // Nutzer beim Bewerten den „Im Feed posten"-Schalter aktiviert (postWatchToFeed).
       // R21-#3: surface a "Match!" if friends have also seen this title.
       if (typeof checkMatchAndShow === "function") {
         checkMatchAndShow({ id: rec.id, mediaType: rec.mediaType, title: rec.title || "", posterPath: rec.poster || null });
@@ -5388,11 +5400,24 @@
       showToast("Als gesehen markiert · Ungerankt");
       refreshResults();
       refreshDetailStatus();
-      // R21-#5: post the watch to the activity feed.
-      addFeedPost({ type: "watched", itemId: rec.id, mediaType: rec.mediaType,
-        title: rec.title || "", posterPath: rec.poster || null });
+      // R28: KEIN automatischer Feed-Post mehr (siehe logItem / postWatchToFeed).
       autoTagItem(r.media_type, r.id);   // R23-#23b: silent content auto-tagging
       notifyRecoSendersWatched(r.media_type, r.id);   // R25-#22.4: tell recommenders "hat geschaut"
+    }
+
+    // R28: bewusster Feed-Post nach dem Bewerten. Wird NUR aufgerufen, wenn der Nutzer
+    // den „Im Feed posten"-Schalter aktiviert hat. Die Notiz erscheint als Bildunterschrift
+    // (Instagram-Stil) unter dem Post im Social-Feed.
+    function postWatchToFeed(rec, bucket, note) {
+      if (!rec) return;
+      if (typeof addFeedPost !== "function") return;
+      addFeedPost({
+        type: bucket ? "rated" : "watched",
+        itemId: rec.id, mediaType: rec.mediaType,
+        title: rec.title || "", posterPath: rec.poster || null,
+        bucket: bucket || null, note: (note || "").trim()
+      });
+      showToast("Im Feed gepostet");
     }
 
     // R25-#22 (parts 4 & 5): whenever the user acts on a title that was recommended to them
@@ -5450,7 +5475,12 @@
             document.getElementById("qr-step1").hidden = true;
             document.getElementById("qr-step2").hidden = false;
             const noteEl = document.getElementById("qr-note");
-            if (noteEl) { noteEl.value = ""; setTimeout(() => noteEl.focus(), 50); }
+            // R28: bereits vorhandene persönliche Notiz als Vorschlag übernehmen.
+            if (noteEl) {
+              const m = getMeta(keyOf(r.media_type, r.id));
+              noteEl.value = (m && m.note) || "";
+              setTimeout(() => noteEl.focus(), 50);
+            }
           } else {
             logItem(r, b.id);
             closeQuickRate();
@@ -5481,20 +5511,16 @@
     // Tap outside the sheet → close
     qrBackdrop.addEventListener("click", e => { if (e.target === qrBackdrop) closeQuickRate(); });
     document.getElementById("qr-skip").addEventListener("click", closeQuickRate);
-    // Step 2: confirm → logItem + open share sheet with pre-filled note
+    // R28: Step 2: confirm → Titel bewerten + bewussten Feed-Post mit Notiz erstellen.
     document.getElementById("qr-share-confirm").addEventListener("click", () => {
       if (!qrItem || !_qrPendingBucket) { closeQuickRate(); return; }
-      const note = (document.getElementById("qr-note")?.value || "").trim();
-      logItem(qrItem, _qrPendingBucket);
-      const rec = db.items[keyOf(qrItem.media_type, qrItem.id)];
+      const note   = (document.getElementById("qr-note")?.value || "").trim();
+      const bucket = _qrPendingBucket;
+      const item   = qrItem;
+      logItem(item, bucket);
+      const rec = db.items[keyOf(item.media_type, item.id)];
       closeQuickRate();
-      if (rec) {
-        openShareSheet(rec);
-        setTimeout(() => {
-          const noteField = document.getElementById("share-note");
-          if (noteField && note) noteField.value = note;
-        }, 50);
-      }
+      postWatchToFeed(rec, bucket, note);
     });
     // Step 2: back → return to step 1
     document.getElementById("qr-share-back").addEventListener("click", () => {
@@ -6328,6 +6354,9 @@
     // notable ranking tier (#1 or Top 10). De-duped per item so ordinary duel churn
     // — items bobbing in and out of the tier — never floods the feed.
     function postRankMilestone(media, item, rankAfter, total, rankBefore) {
+      // R28: Ranking-Meilensteine werden NICHT mehr automatisch in den Feed gepostet.
+      // Feed-Posts entstehen nur noch bewusst über den „Im Feed posten"-Schalter.
+      return;
       if (!item || !rankAfter || !total || typeof addFeedPost !== "function") return;
       let tier = 0;                                   // milestone tier: 1 = #1, 10 = Top 10
       if (rankAfter === 1) tier = 1;
@@ -7939,11 +7968,7 @@
       if (btn) btn.disabled = false;
       updateProgSummary(data, tvId);
       loadSeason(data, tvId, tvSeason);            // refresh the visible season + its toggle
-      // A single feed post for the whole series (episode toggles never post on their own).
-      if (target && typeof addFeedPost === "function") {
-        addFeedPost({ type: "series_watched", itemId: data.id, mediaType: "tv",
-          title: data.name || data.title || "", posterPath: data.poster_path || null });
-      }
+      // R28: kein automatischer Feed-Post für die ganze Serie mehr.
       showToast(target ? "Ganze Serie als gesehen markiert" : "Serie zurückgesetzt");
     }
 
@@ -8853,13 +8878,7 @@
           refreshEpGridCell(tvId, s, e, b.id);  // sync grid colors when rated from the list
           refreshEpDots(tvId, s, e, b.id);
           if (epRateCtx && epRateCtx.onChange) epRateCtx.onChange();
-          // R21-#5: post the watched+rated episode to the activity feed.
-          if (typeof addFeedPost === "function" && data) {
-            const star = (typeof FEED_STAR !== "undefined" && FEED_STAR[b.id]) || null;
-            addFeedPost({ type: "episode_watched", itemId: data.id, mediaType: "tv",
-              title: data.name || data.title || "", posterPath: data.poster_path || null,
-              season: s, episode: e, epRating: star });
-          }
+          // R28: kein automatischer Feed-Post für bewertete Folgen mehr.
           // R23-#6: if the share toggle is on, open the share sheet (episode mode).
           const sharing = document.getElementById("ep-rate-share-toggle")?.checked;
           if (sharing) {
@@ -8960,12 +8979,7 @@
           refreshEpGridCell(ctx.tvId, ctx.s, ctx.e, b.id);
           refreshEpDots(ctx.tvId, ctx.s, ctx.e, b.id);
           if (ctx.onChange) ctx.onChange();
-          if (typeof addFeedPost === "function" && ctx.data) {
-            const star = (typeof FEED_STAR !== "undefined" && FEED_STAR[b.id]) || null;
-            addFeedPost({ type: "episode_watched", itemId: ctx.data.id, mediaType: "tv",
-              title: ctx.data.name || ctx.data.title || "", posterPath: ctx.data.poster_path || null,
-              season: ctx.s, episode: ctx.e, epRating: star });
-          }
+          // R28: kein automatischer Feed-Post für bewertete Folgen mehr.
           renderEpDetailRating(ctx, host);   // reflect the new selection in place
           showToast("Bewertet: " + b.label);
         });
@@ -11447,17 +11461,16 @@
         if (!window.__vaultUser || !window.__vaultSocial || !window.__vaultSocial.createPost || !post || !post.type) return;
         const username = (typeof _myProfile !== "undefined" && _myProfile && _myProfile.username) || "";
         if (!username) return;
-        const priv = (typeof ensurePrivacy === "function") ? ensurePrivacy() : null;
-        if (priv && priv.shareWatched === false) return;
+        // R28: kein shareWatched-Gate mehr — jeder Feed-Post ist jetzt eine bewusste
+        // Nutzeraktion (Toggle „Im Feed posten", Liste teilen, Kommentar, Folge teilen).
         window.__vaultSocial.createPost(window.__vaultUser.uid, username, post);
       } catch (e) { /* a feed post must never break the underlying action */ }
     }
 
     // R27-#9: emit a "watchlist_added" activity (best-effort; guarded by addFeedPost).
     function postWatchlistAdd(mediaType, id, title, posterPath) {
-      if (!id) return;
-      addFeedPost({ type: "watchlist_added", itemId: id, mediaType: mediaType || "movie",
-        title: title || "", posterPath: posterPath || null });
+      // R28: Watchlist-Einträge werden NICHT mehr automatisch in den Feed gepostet.
+      return;
     }
 
     // R21-#3: after a watch, show a Tinder-style "Match!" popup if friends saw it too.
@@ -11486,12 +11499,7 @@
         if (!names.length) return;
         db.matchSeen[key] = Date.now(); saveDB();
         showMatchPopup(item, names);
-        // R27-#9: surface the match in the feed too (once per item, matchSeen-guarded)
-        if (typeof addFeedPost === "function") {
-          addFeedPost({ type: "match", itemId: item.id, mediaType: item.mediaType || "movie",
-            title: item.title || "", posterPath: item.posterPath || item.poster || null,
-            matchName: names.join(", ") });
-        }
+        // R28: Match wird nur noch als Popup gezeigt, NICHT mehr automatisch in den Feed gepostet.
       } catch (e) { /* match popup is a nicety; never break the watch flow */ }
     }
     function showMatchPopup(item, names) {
@@ -11795,36 +11803,18 @@
       const myName = (_myProfile && _myProfile.username) || "Du";
       if (myUid) Object.values(db.items).forEach(it => addWatcher(it.mediaType + ":" + it.id, myUid, myName, true));
 
-      // R21-FIX: HYBRID feed. Friends' recentlyWatched highlights (which every friend's
-      // profile carries, even on the OLD app version) are the reliable base; persistent
-      // posts (richer #5 types + #8 persistence, from updated users) are merged on top.
+      // R28: Der Feed zeigt NUR noch bewusst erstellte Posts (posts-Collection).
+      // Die früheren Pseudo-Posts aus den „recentlyWatched"-Highlights der Freunde
+      // (die den Feed automatisch vollgemacht haben) sind entfernt. Freunde erscheinen
+      // im Feed nur noch, wenn sie beim Bewerten aktiv „Im Feed posten" wählen.
+      // (recentlyWatched bleibt weiterhin die Quelle für „Auch gesehen von".)
       const tsOf = p => {
         const t = p.timestamp;
         if (t && typeof t.toMillis === "function") return t.toMillis();
         if (typeof t === "number") return t;
         return p._ts || 0;
       };
-      const idKey = p => (p.userId || "") + "|" + (p.mediaType || "movie") + ":" + p.itemId;
-      // pseudo-posts from friends' recentlyWatched highlights (matches the old feed)
-      const pseudo = [];
-      accepted.forEach(f => {
-        const profile = _feedProfiles[f.uid];
-        if (!profile || profile.privacy?.shareWatched === false) return;
-        (profile.recentlyWatched || []).forEach(it => {
-          if (!feedIsHighlight(it.bucket)) return;   // keep the feed to highlights, as before
-          pseudo.push({
-            type: it.bucket ? "rated" : "watched",
-            userId: f.uid, username: f.username || f.uid,
-            itemId: it.id, mediaType: it.mediaType || "movie",
-            title: it.title || "", posterPath: it.posterPath || null,
-            bucket: it.bucket || null, note: it.note || "",
-            timestamp: it.watchedAt || 0, _ts: it.watchedAt || 0, _pseudo: true
-          });
-        });
-      });
-      // real posts win over a pseudo-post for the same (user, item)
-      const realKeys = new Set(_feedPosts.map(idKey));
-      const merged = _feedPosts.concat(pseudo.filter(p => !realKeys.has(idKey(p))));
+      const merged = _feedPosts.slice();
       merged.sort((a, b) => tsOf(b) - tsOf(a));
 
       if (!merged.length) {
@@ -12420,8 +12410,17 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R27";
+    const APP_VERSION = "R28";
     const PATCH_NOTES = {
+      "R28": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Ruhiger Feed:</strong> Es wird nichts mehr automatisch im Social-Feed gepostet. Der Feed zeigt nur noch, was du (und deine Freunde) bewusst teilt.",
+          "<strong>„Im Feed posten\"-Schalter:</strong> Beim Bewerten eines Films/einer Serie entscheidest du per Schalter selbst, ob der Titel im Feed erscheint.",
+          "<strong>Notiz als Bildunterschrift:</strong> Aktivierst du den Schalter, kannst du eine Notiz schreiben — sie erscheint wie eine Instagram-Beschreibung unter deinem Post.",
+          "<strong>Ranking-Suche:</strong> Im Ranking gibt es jetzt eine immer sichtbare Suchleiste — tippe einen Titel und springe direkt zu seinem Platz."
+        ]
+      },
       "R27": {
         title: "Was ist neu",
         notes: [
