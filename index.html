@@ -2458,9 +2458,6 @@
       <div class="view-head">
         <h1>Ranking</h1>
         <p>Deine persönliche Bestenliste.</p>
-        <button id="rank-search-toggle" class="rank-search-toggle" type="button" aria-label="Im Ranking suchen">
-          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        </button>
       </div>
 
       <div class="segmented" id="rank-toggle">
@@ -2469,9 +2466,11 @@
         <button class="seg" type="button" data-media="person">Schauspieler</button>
       </div>
 
-      <div class="rank-search hidden" id="rank-search">
+      <!-- R28-#19: search is ALWAYS visible now (was hidden behind a magnifier icon that
+           users kept missing). Typing jumps the list to the title and reports its rank. -->
+      <div class="rank-search" id="rank-search">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input id="rank-search-input" type="text" placeholder="In dieser Liste suchen …" autocomplete="off" />
+        <input id="rank-search-input" type="text" placeholder="Titel suchen → springt zum Platz …" autocomplete="off" />
         <button id="rank-search-clear" class="rank-search-clear" type="button" aria-label="Leeren">&times;</button>
       </div>
 
@@ -5975,14 +5974,31 @@
       const rows = rankListEl.querySelectorAll(".rank-row[data-id]");
       for (const r of rows) { if (r.dataset.id === String(id)) { scrollRankToRow(r); return; } }
     }
+    // Fold case + strip diacritics so "amelie" finds "Amélie" and "Uber" finds "Über".
+    function rankNorm(s) {
+      return (s || "").toString().toLowerCase()
+        .normalize("NFD").replace(/[̀-ͯ]/g, "");
+    }
     // Typing a title jumps the list to that item's position (does NOT filter — the rank
-    // number must stay meaningful). Matches the first row whose title contains the query.
-    function scrollRankToQuery(q) {
+    // number must stay meaningful). Prefers a title that STARTS with the query, otherwise
+    // the first that contains it. Reports the found rank so the jump is never silent.
+    function scrollRankToQuery(q, announce) {
       if (!q) return;
-      const ql = q.toLowerCase();
+      const ql   = rankNorm(q);
       const rows = rankListEl.querySelectorAll(".rank-row[data-id]");
+      let starts = null, contains = null;
       for (const r of rows) {
-        if ((r.dataset.title || "").toLowerCase().includes(ql)) { scrollRankToRow(r); return; }
+        const t = rankNorm(r.dataset.title);
+        if (!t) continue;
+        if (t.startsWith(ql)) { starts = r; break; }
+        if (!contains && t.includes(ql)) contains = r;
+      }
+      const hit = starts || contains;
+      if (!hit) { if (announce) showToast("Kein Treffer in dieser Liste"); return; }
+      scrollRankToRow(hit);
+      if (announce) {
+        const rankNum = (hit.querySelector(".rank-num")?.textContent || "").trim();
+        if (rankNum) showToast('„' + (hit.dataset.title || "") + '" steht auf Platz #' + rankNum);
       }
     }
     // Inline editor: replace the rank number with a numeric input.
@@ -6055,18 +6071,17 @@
     rankGenreSel.addEventListener("change", renderRanking);
     rankTagSel.addEventListener("change", renderRanking);
 
-    // R26-#19: in-list search bar wiring (magnifier toggle → text → auto-scroll).
-    const rankSearchToggle = document.getElementById("rank-search-toggle");
-    const rankSearchBar    = document.getElementById("rank-search");
+    // R28-#19: always-visible in-list search wiring. Typing jumps live to the best match
+    // (highlight = feedback); Enter announces the exact rank via toast.
     const rankSearchInput  = document.getElementById("rank-search-input");
     const rankSearchClear  = document.getElementById("rank-search-clear");
-    if (rankSearchToggle && rankSearchBar) {
-      rankSearchToggle.addEventListener("click", () => {
-        const hidden = rankSearchBar.classList.toggle("hidden");
-        if (hidden) { rankSearchInput.value = ""; }
-        else { rankSearchInput.focus(); }
+    if (rankSearchInput) {
+      rankSearchInput.addEventListener("input", () => scrollRankToQuery(rankSearchInput.value.trim(), false));
+      rankSearchInput.addEventListener("keydown", e => {
+        if (e.key === "Enter") { e.preventDefault(); scrollRankToQuery(rankSearchInput.value.trim(), true); }
       });
-      rankSearchInput.addEventListener("input", () => scrollRankToQuery(rankSearchInput.value.trim()));
+    }
+    if (rankSearchClear) {
       rankSearchClear.addEventListener("click", () => { rankSearchInput.value = ""; rankSearchInput.focus(); });
     }
 
