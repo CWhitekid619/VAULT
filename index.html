@@ -3883,16 +3883,22 @@
       async createPost(userId, username, post) {
         if (!userId || !post || !post.type) return false;
         const id = post.type + "_" + userId + "_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
+        // R34.2: undefined-Felder entfernen. Firestore setDoc wirft bei einem
+        // undefined-Wert ("Unsupported field value: undefined") und verwirft den
+        // GANZEN Post — das erklärt „mal wird die Serie gepostet, mal nicht": je
+        // nach Herkunft des Objekts fehlt z. B. mediaType/posterPath/bucket. Statt
+        // zu werfen, lassen wir das Feld einfach weg.
+        const clean = {};
+        Object.keys(post).forEach(k => { if (post[k] !== undefined) clean[k] = post[k]; });
         try {
           await setDoc(doc(firestore, "posts", id), {
-            userId, username: username || "", timestamp: serverTimestamp(), ...post
+            userId, username: username || "", timestamp: serverTimestamp(), ...clean
           });
           return true;
         } catch (e) {
           // R34.1: Fehler NICHT mehr still verschlucken — der Aufrufer (addFeedPost)
           // meldet den Fehlschlag, damit ein bewusster Post nicht spurlos verschwindet.
-          // (Häufigste Ursache: fehlende/zu strenge Firestore-Rules für die posts-Collection.)
-          console.warn("[VAULT] Feed-Post fehlgeschlagen:", (e && e.message) || e);
+          console.warn("[VAULT] Feed-Post fehlgeschlagen:", (e && e.code) || "", (e && e.message) || e, "| post:", JSON.stringify(post));
           return false;
         }
       },
