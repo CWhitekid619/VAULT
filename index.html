@@ -3680,7 +3680,27 @@
             done: snap.docs.length < size
           };
         } catch (e) {
-          return { posts: [], cursor: null, done: true, error: (e && e.message) || "query failed" };
+          // R28-Fix: Die geordnete Abfrage braucht einen zusammengesetzten Firestore-Index
+          // (userId + timestamp). Fehlt der, schlägt sie fehl und der Feed blieb IMMER leer.
+          // Fallback OHNE orderBy (benötigt keinen Composite-Index) + clientseitige Sortierung.
+          console.warn("[VAULT] Feed-Abfrage (indexiert) fehlgeschlagen, nutze Fallback:", (e && e.message) || e);
+          try {
+            const snap = await getDocs(query(
+              collection(firestore, "posts"),
+              where("userId", "in", ids),
+              limit(120)
+            ));
+            const ms = t => (t && typeof t.toMillis === "function") ? t.toMillis()
+                          : (typeof t === "number" ? t : Date.now());
+            const posts = snap.docs
+              .map(d => ({ id: d.id, ...d.data() }))
+              .sort((a, b) => ms(b.timestamp) - ms(a.timestamp));
+            // Kein Cursor im Fallback — der ganze (kleine, persönliche) Feed kommt auf einmal.
+            return { posts, cursor: null, done: true, fallback: true };
+          } catch (e2) {
+            console.warn("[VAULT] Feed-Fallback ebenfalls fehlgeschlagen:", (e2 && e2.message) || e2);
+            return { posts: [], cursor: null, done: true, error: (e2 && e2.message) || "query failed" };
+          }
         }
       },
       async deletePost(postId) {
@@ -6388,9 +6408,9 @@
     // notable ranking tier (#1 or Top 10). De-duped per item so ordinary duel churn
     // — items bobbing in and out of the tier — never floods the feed.
     function postRankMilestone(media, item, rankAfter, total, rankBefore) {
-      // R28: Ranking-Meilensteine werden NICHT mehr automatisch in den Feed gepostet.
-      // Feed-Posts entstehen nur noch bewusst über den „Im Feed posten"-Schalter.
-      return;
+      // R28-Fix: Rang-1 / Top-10-Meilensteine werden wieder automatisch in den Feed
+      // gepostet (auf Nutzerwunsch reaktiviert). De-dupe über db.milestonePosted, damit
+      // pro Titel/Tier nur EIN Post entsteht (kein Duell-für-Duell-Spam).
       if (!item || !rankAfter || !total || typeof addFeedPost !== "function") return;
       let tier = 0;                                   // milestone tier: 1 = #1, 10 = Top 10
       if (rankAfter === 1) tier = 1;
@@ -11603,6 +11623,8 @@
       const myUid = window.__vaultUser && window.__vaultUser.uid;
       if (myUid && !uids.includes(myUid)) uids.push(myUid);
       const res = await window.__vaultSocial.getFeedPosts(uids, 20, reset ? null : _feedCursor);
+      console.log("[VAULT] Feed geladen:", (res.posts || []).length, "Posts",
+        res.fallback ? "(Fallback ohne Index)" : "", res.error ? ("FEHLER: " + res.error) : "");
       _feedPosts = reset ? (res.posts || []) : _feedPosts.concat(res.posts || []);
       _feedCursor = res.cursor;
       _feedDone = !!res.done;
@@ -11837,18 +11859,38 @@
       const myName = (_myProfile && _myProfile.username) || "Du";
       if (myUid) Object.values(db.items).forEach(it => addWatcher(it.mediaType + ":" + it.id, myUid, myName, true));
 
-      // R28: Der Feed zeigt NUR noch bewusst erstellte Posts (posts-Collection).
-      // Die früheren Pseudo-Posts aus den „recentlyWatched"-Highlights der Freunde
-      // (die den Feed automatisch vollgemacht haben) sind entfernt. Freunde erscheinen
-      // im Feed nur noch, wenn sie beim Bewerten aktiv „Im Feed posten" wählen.
-      // (recentlyWatched bleibt weiterhin die Quelle für „Auch gesehen von".)
+      // R28-Fix: HYBRID-Feed wiederhergestellt. R28 hatte den Feed auf reine
+      // posts-Collection umgestellt und die „recentlyWatched"-Pseudo-Posts entfernt —
+      // dadurch war der Feed leer (es gibt kaum bewusst erstellte Posts). Wie vor R28
+      // sind die Highlight-Aktivitäten der Freunde (recentlyWatched) die verlässliche
+      // Basis; bewusste Posts (reichere #5-Typen + Persistenz) werden darüber gemischt.
       const tsOf = p => {
         const t = p.timestamp;
         if (t && typeof t.toMillis === "function") return t.toMillis();
         if (typeof t === "number") return t;
         return p._ts || 0;
       };
-      const merged = _feedPosts.slice();
+      const idKey = p => (p.userId || "") + "|" + (p.mediaType || "movie") + ":" + p.itemId;
+      // Pseudo-Posts aus den recentlyWatched-Highlights der Freunde (= alter Feed).
+      const pseudo = [];
+      accepted.forEach(f => {
+        const profile = _feedProfiles[f.uid];
+        if (!profile || profile.privacy?.shareWatched === false) return;
+        (profile.recentlyWatched || []).forEach(it => {
+          if (!feedIsHighlight(it.bucket)) return;   // Feed bleibt auf Highlights beschränkt
+          pseudo.push({
+            type: it.bucket ? "rated" : "watched",
+            userId: f.uid, username: f.username || f.uid,
+            itemId: it.id, mediaType: it.mediaType || "movie",
+            title: it.title || "", posterPath: it.posterPath || null,
+            bucket: it.bucket || null, note: it.note || "",
+            timestamp: it.watchedAt || 0, _ts: it.watchedAt || 0, _pseudo: true
+          });
+        });
+      });
+      // Echte Posts gewinnen gegen einen Pseudo-Post für dasselbe (Nutzer, Titel).
+      const realKeys = new Set(_feedPosts.map(idKey));
+      const merged = _feedPosts.concat(pseudo.filter(p => !realKeys.has(idKey(p))));
       merged.sort((a, b) => tsOf(b) - tsOf(a));
 
       if (!merged.length) {
