@@ -2153,6 +2153,11 @@
     .feed-bm.on svg { fill: var(--accent); }
     .feed-eye.on { color: var(--accent); }                 /* R21-#1/#11: eye reflects "already watched" */
     .feed-eye.on svg { fill: rgba(212,160,40,.22); stroke: var(--accent); }
+    /* R30: „Ins Ranking"-Icon auf Schauspieler-Karten — grau = noch nicht im Ranking,
+       gold = schon aufgenommen. */
+    .feed-rank-actor { color: var(--text-mute); }
+    .feed-rank-actor.on { color: var(--accent); }
+    .feed-rank-actor.on svg { fill: rgba(232,179,57,.18); stroke: var(--accent); }
     .feed-actionline { padding: 0 14px 10px; font-size: 14px; color: var(--text-dim); line-height: 1.35; }   /* R21-#5: "X hat … gerankt/geschaut" */
     .feed-more-btn { display: block; width: 100%; margin: 6px 0 24px; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--accent); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
     .feed-more-btn:active { background: var(--surface-2); }
@@ -2184,7 +2189,8 @@
     .feed-binge-dots { display: flex; justify-content: center; gap: 6px; padding: 10px 0 12px; }
     .feed-binge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: background .15s; }
     .feed-binge-dot.on { background: var(--accent); }
-    .feed-note { padding: 2px 14px 4px; font-size: 14px; color: var(--text-dim); font-style: italic; line-height: 1.45; }
+    /* R30: Notiz/Kommentar zum Post — deutlicher sichtbar (heller + Akzent-Rand). */
+    .feed-note { margin: 2px 14px 6px; padding: 6px 0 6px 10px; border-left: 2px solid var(--accent); font-size: 14px; color: var(--text); font-style: italic; line-height: 1.45; }
     .feed-titleline { padding: 2px 14px 12px; font-size: 13px; color: var(--text-mute); }
     .profile-version { text-align: center; font-size: 12px; color: var(--text-mute); letter-spacing: .08em; padding: 18px 0 calc(var(--nav-h) + var(--safe-bottom) + 20px); opacity: .7; }
     /* R23-#17: inline comments */
@@ -4192,8 +4198,12 @@
         db.people[personId] = { id: personId, name: name || "", photo: photo || "", known_for: knownFor || "", score: 1400, unranked: true, addedAt: Date.now() };
         saveDB();
         showToast("Ins Ranking hinzugefügt");
-        // R28: keine automatischen Feed-Posts mehr — Feed-Posts nur noch bewusst
-        // über den „Im Feed posten"-Schalter beim Bewerten.
+        // R30: Schauspieler ins Ranking aufnehmen postet wieder in den Feed (Opt-out-
+        // Philosophie). So erscheinen Schauspieler-Karten im Social-Feed (swipebar +
+        // Direkt-ins-Ranking-Icon). photo ist ein TMDB-profile_path.
+        if (typeof addFeedPost === "function") {
+          addFeedPost({ type: "actor_ranked", actorId: personId, actorName: name || "", actorPhoto: photo || "" });
+        }
       }
       if (rankMedia === "person") renderRanking();
     }
@@ -5446,8 +5456,14 @@
       // R28: „Im Feed posten"-Schalter; Notizfeld erscheint erst bei aktivem Schalter.
       const shareToggle = document.getElementById("sheet-share-toggle");
       const noteField   = document.getElementById("sheet-note");
-      if (shareToggle) shareToggle.checked = false;
-      if (noteField) { noteField.value = ""; noteField.hidden = true; }
+      // R30: „Im Feed posten" standardmäßig AN (Opt-out) — Notizfeld gleich sichtbar,
+      // mit bereits vorhandener persönlicher Notiz vorbelegt.
+      if (shareToggle) shareToggle.checked = true;
+      if (noteField) {
+        const m0 = getMeta(keyOf(r.media_type, r.id));
+        noteField.value = (m0 && m0.note) || "";
+        noteField.hidden = false;
+      }
       if (shareToggle && noteField) {
         shareToggle.onchange = () => {
           noteField.hidden = !shareToggle.checked;
@@ -5601,8 +5617,10 @@
       // Reset to step 1
       document.getElementById("qr-step1").hidden = false;
       document.getElementById("qr-step2").hidden = true;
+      // R30: „Im Feed posten" ist jetzt standardmäßig AN (Opt-out) — alles wird
+      // gepostet, außer der Nutzer wählt den Schalter vor der Bewertung ab.
       const toggleEl = document.getElementById("qr-share-toggle");
-      if (toggleEl) toggleEl.checked = false;
+      if (toggleEl) toggleEl.checked = true;
       qrBuckets.innerHTML = "";
       BUCKETS.forEach((b, i) => {
         const el = document.createElement("button");
@@ -7019,6 +7037,10 @@
         '<span id="detail-wl-label">Watchlist</span></button>';
       html += '<button class="detail-sec-btn" id="detail-lists" type="button">' +
         '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Listen</button>';
+      // R30: „Mit Freunden teilen" (Empfehlung an einzelne Freunde) — getrennt vom
+      // „Im Feed posten". Diese Funktion war zuvor nur im Log-Sheet erreichbar.
+      html += '<button class="detail-sec-btn" id="detail-share" type="button">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>Teilen</button>';
       if (isTv) html += '<button class="detail-sec-btn" id="detail-track" type="button">' +
         '<svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>' +
         '<line x1="4" y1="22" x2="4" y2="15"/></svg>' +
@@ -7179,6 +7201,13 @@
         refreshResults();
       });
       document.getElementById("detail-lists").addEventListener("click", () => openListPicker(r, true));
+      // R30: Teilen-Button → Empfehlungs-Sheet an einzelne Freunde (mit Sterne/Notiz).
+      const shareBtnD = document.getElementById("detail-share");
+      if (shareBtnD) shareBtnD.addEventListener("click", () => {
+        const existing = db.items[keyOf(mediaType, data.id)];
+        const rec = existing || recordFrom(r, null);
+        openShareSheet(rec);
+      });
       const trackBtn = document.getElementById("detail-track");
       if (trackBtn) {
         trackBtn.addEventListener("click", () => {
@@ -11611,6 +11640,8 @@
     const FEED_EYE      = '<svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>';
     const FEED_PEOPLE   = '<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
     const FEED_COMMENT  = '<svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg>';
+    // R30: Pokal-Icon für „Schauspieler ins Ranking aufnehmen" auf Feed-Karten.
+    const FEED_RANK     = '<svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3"/></svg>';
 
     // R21-#5/#8: write an activity post to the persistent feed. Respects the
     // "share watched" privacy toggle and requires a username (so the author shows).
@@ -11824,8 +11855,19 @@
         const img = p.actorPhoto
           ? `<img class="feed-poster" src="${IMG_BASE}w500${p.actorPhoto}" alt="" loading="lazy">`
           : `<div class="feed-poster feed-poster-ph"><span>${socialEsc(p.actorName || "")}</span></div>`;
+        // R30: Direkt-ins-Ranking-Icon — gold wenn der Schauspieler schon im eigenen
+        // Ranking ist, sonst ausgegraut.
+        const aRanked = !!(db.people && p.actorId && db.people[p.actorId]);
+        const rankBtn = p.actorId
+          ? `<button class="feed-icon-btn feed-rank-actor${aRanked ? " on" : ""}" data-person="${p.actorId}" data-name="${socialEsc(p.actorName || "")}" data-photo="${socialEsc(p.actorPhoto || "")}" data-dept="${socialEsc(p.actorDept || "")}" aria-label="Ins Ranking aufnehmen">${FEED_RANK}</button>`
+          : "";
         return `<div class="${cls}">${head}${action}
           <div class="feed-poster-wrap" data-person="${p.actorId || ""}">${img}</div>
+          <div class="feed-engage">
+            <div class="feed-stars"></div>
+            <div class="feed-icons">${rankBtn}</div>
+          </div>
+          <div class="feed-titleline">${socialEsc(p.actorName || "")}</div>
         </div>`;
       }
 
@@ -11872,42 +11914,74 @@
         </div>`;
     }
 
-    // R27-#7: one swipeable carousel card for a binge session (several watches in a row).
+    // R27-#7 / R30: one swipeable carousel card for a session of back-to-back activity —
+    // either several film/series watches OR several actor rankings in a row.
     function renderBingeCard(items) {
       const p0       = items[0];
       const author   = p0.username || "?";
       const ownerUid = p0.userId || "";
+      const isActorGroup = items.every(p => p.type === "actor_ranked" || p.type === "actor_number_one");
       const head = `<div class="feed-head">
             <div class="feed-av" data-uid="${socialEsc(ownerUid)}">${avatarInitial(author)}</div>
             <div class="feed-author" data-uid="${socialEsc(ownerUid)}">${socialEsc(author)}</div>
             <div class="feed-time">${relativeTime(p0.timestamp)}</div>
           </div>`;
-      const action = `<div class="feed-actionline">hat ${items.length} Titel geschaut</div>`;
-      const slides = items.map(p => {
-        const type = p.mediaType || "movie";
-        const id   = p.itemId;
-        const posterInner = p.posterPath
-          ? `<img class="feed-poster" src="${IMG_BASE}w500${p.posterPath}" alt="" loading="lazy">`
-          : `<div class="feed-poster feed-poster-ph"><span>${socialEsc(p.title || "")}</span></div>`;
-        const stars      = p.bucket ? bucketToStars(p.bucket) : (p.epRating ? "★".repeat(Math.max(0, Math.min(5, p.epRating))) : "");
-        const mediaLabel = type === "tv" ? "Serie" : "Film";
-        const titleLine  = [socialEsc(p.title || ""), mediaLabel].filter(Boolean).join(" · ");
-        const inWl       = !!db.watchlist[keyOf(type, id)];
-        const iWatched   = !!db.items[keyOf(type, id)];
-        const dataAttrs  = `data-id="${id}" data-type="${type}" data-title="${socialEsc(p.title || "")}" data-poster="${socialEsc(p.posterPath || "")}" data-owner="${socialEsc(ownerUid)}" data-ownername="${socialEsc(author)}"`;
-        return `<div class="feed-binge-slide">
-            <div class="feed-poster-wrap" data-id="${id}" data-type="${type}">${posterInner}</div>
-            <div class="feed-engage">
-              <div class="feed-stars">${stars || ""}</div>
-              <div class="feed-icons">
-                <button class="feed-icon-btn feed-bm${inWl ? " on" : ""}" ${dataAttrs} aria-label="Watchlist">${FEED_BOOKMARK}</button>
-                <button class="feed-icon-btn feed-eye${iWatched ? " on" : ""}" ${dataAttrs} aria-label="Ich hab den auch gesehen">${FEED_EYE}</button>
+      const action = `<div class="feed-actionline">${
+        isActorGroup
+          ? `hat ${items.length} Schauspieler ins Ranking geschickt`
+          : `hat ${items.length} Titel geschaut`
+      }</div>`;
+
+      let slides;
+      if (isActorGroup) {
+        // R30: Schauspieler-Slides — Foto + Direkt-ins-Ranking-Icon (gold/ausgegraut).
+        slides = items.map(p => {
+          const pid = p.actorId || "";
+          const img = p.actorPhoto
+            ? `<img class="feed-poster" src="${IMG_BASE}w500${p.actorPhoto}" alt="" loading="lazy">`
+            : `<div class="feed-poster feed-poster-ph"><span>${socialEsc(p.actorName || "")}</span></div>`;
+          const aRanked = !!(db.people && pid && db.people[pid]);
+          const rankBtn = pid
+            ? `<button class="feed-icon-btn feed-rank-actor${aRanked ? " on" : ""}" data-person="${pid}" data-name="${socialEsc(p.actorName || "")}" data-photo="${socialEsc(p.actorPhoto || "")}" data-dept="${socialEsc(p.actorDept || "")}" aria-label="Ins Ranking aufnehmen">${FEED_RANK}</button>`
+            : "";
+          return `<div class="feed-binge-slide">
+              <div class="feed-poster-wrap" data-person="${pid}">${img}</div>
+              <div class="feed-engage">
+                <div class="feed-stars"></div>
+                <div class="feed-icons">${rankBtn}</div>
               </div>
-            </div>
-            <div class="feed-binge-caption">${feedActionLabel(p)}</div>
-            <div class="feed-titleline">${titleLine}</div>
-          </div>`;
-      }).join("");
+              <div class="feed-binge-caption">${feedActionLabel(p)}</div>
+              <div class="feed-titleline">${socialEsc(p.actorName || "")}</div>
+            </div>`;
+        }).join("");
+      } else {
+        slides = items.map(p => {
+          const type = p.mediaType || "movie";
+          const id   = p.itemId;
+          const posterInner = p.posterPath
+            ? `<img class="feed-poster" src="${IMG_BASE}w500${p.posterPath}" alt="" loading="lazy">`
+            : `<div class="feed-poster feed-poster-ph"><span>${socialEsc(p.title || "")}</span></div>`;
+          const stars      = p.bucket ? bucketToStars(p.bucket) : (p.epRating ? "★".repeat(Math.max(0, Math.min(5, p.epRating))) : "");
+          const mediaLabel = type === "tv" ? "Serie" : "Film";
+          const titleLine  = [socialEsc(p.title || ""), mediaLabel].filter(Boolean).join(" · ");
+          const inWl       = !!db.watchlist[keyOf(type, id)];
+          const iWatched   = !!db.items[keyOf(type, id)];
+          const dataAttrs  = `data-id="${id}" data-type="${type}" data-title="${socialEsc(p.title || "")}" data-poster="${socialEsc(p.posterPath || "")}" data-owner="${socialEsc(ownerUid)}" data-ownername="${socialEsc(author)}"`;
+          return `<div class="feed-binge-slide">
+              <div class="feed-poster-wrap" data-id="${id}" data-type="${type}">${posterInner}</div>
+              <div class="feed-engage">
+                <div class="feed-stars">${stars || ""}</div>
+                <div class="feed-icons">
+                  <button class="feed-icon-btn feed-bm${inWl ? " on" : ""}" ${dataAttrs} aria-label="Watchlist">${FEED_BOOKMARK}</button>
+                  <button class="feed-icon-btn feed-eye${iWatched ? " on" : ""}" ${dataAttrs} aria-label="Ich hab den auch gesehen">${FEED_EYE}</button>
+                </div>
+              </div>
+              <div class="feed-binge-caption">${feedActionLabel(p)}</div>
+              ${p.note ? `<div class="feed-note">„${socialEsc(p.note)}"</div>` : ""}
+              <div class="feed-titleline">${titleLine}</div>
+            </div>`;
+        }).join("");
+      }
       const dots = items.map((_, i) => `<span class="feed-binge-dot${i === 0 ? " on" : ""}"></span>`).join("");
       return `<div class="feed-card feed-cat-watched feed-binge">${head}${action}
           <div class="feed-binge-track">${slides}</div>
@@ -12007,16 +12081,20 @@
       // R27-#7: group a friend's back-to-back watches (a binge session) into one
       // horizontally swipeable card, instead of many separate feed entries.
       const BINGE_WINDOW = 6 * 3600 * 1000;   // 6 hours between adjacent items
-      const BINGE_TYPES  = /^(watched|rated|series_watched|episode_watched|episode_rated)$/;
+      // R30: Schauspieler-Rankings (actor_ranked) sind jetzt ebenfalls gruppierbar →
+      // swipebares Carousel. Getrennt nach „kind" (media vs. actor), damit Filme und
+      // Schauspieler NICHT in dieselbe Carousel-Karte gemischt werden.
+      const BINGE_TYPES  = /^(watched|rated|series_watched|episode_watched|episode_rated|actor_ranked)$/;
+      const kindOf = p => (p.type === "actor_ranked" || p.type === "actor_number_one") ? "actor" : "media";
       const groups = [];
       for (const p of merged) {
         const canGroup = BINGE_TYPES.test(p.type || "");
         const last = groups[groups.length - 1];
-        if (canGroup && last && last.groupable && last.userId === p.userId &&
+        if (canGroup && last && last.groupable && last.userId === p.userId && last.kind === kindOf(p) &&
             Math.abs(tsOf(last.items[last.items.length - 1]) - tsOf(p)) <= BINGE_WINDOW) {
           last.items.push(p);
         } else {
-          groups.push({ groupable: canGroup, userId: p.userId, items: [p] });
+          groups.push({ groupable: canGroup, userId: p.userId, kind: kindOf(p), items: [p] });
         }
       }
       const cards = groups.map(g => (g.groupable && g.items.length >= 2)
@@ -12033,6 +12111,16 @@
         el.style.cursor = "pointer";
         el.addEventListener("click", () => { if (typeof openPerson === "function") openPerson(pid); });
       });
+      // R30: „Ins Ranking"-Icon auf Schauspieler-Karten — Toggle + Gold-/Grau-Zustand.
+      host.querySelectorAll(".feed-rank-actor").forEach(btn => btn.addEventListener("click", e => {
+        e.stopPropagation();
+        const pid = parseInt(btn.dataset.person, 10);
+        if (!pid) return;
+        togglePersonRanking(pid, btn.dataset.name || "", btn.dataset.photo || "", btn.dataset.dept || "");
+        const nowRanked = !!(db.people && db.people[pid]);
+        btn.classList.toggle("on", nowRanked);
+        showToast(nowRanked ? "Ins Ranking aufgenommen" : "Aus Ranking entfernt");
+      }));
       // R27-#7: keep the binge carousel's dots in sync with the swipe position
       host.querySelectorAll(".feed-binge-track").forEach(track => {
         const dots = track.parentElement.querySelectorAll(".feed-binge-dot");
