@@ -11307,6 +11307,9 @@
         // Show recommendation popup if needed
         const unreadRecos = notifs.filter(n => n.type === "item_shared" && !n.read);
         if (unreadRecos.length && !_recoPopupShown) { _recoPopupShown = true; showRecoPopup(unreadRecos); }
+        // R33: eingehende Matches → dasselbe zentrierte Match-Popup auf diesem Gerät zeigen.
+        const unreadMatches = notifs.filter(n => n.type === "match" && !n.read);
+        if (unreadMatches.length && !_matchPopupShown) { _matchPopupShown = true; showIncomingMatches(unreadMatches); }
       });
     }
 
@@ -11495,6 +11498,7 @@
       if (type === "reco_watched")   return "👁️";
       if (type === "reco_seen")      return "👁️";
       if (type === "reco_added_list")return "📋";
+      if (type === "match")          return "🍿";
       return "🔔";
     }
     function notifText(n) {
@@ -11524,6 +11528,7 @@
       if (n.type === "post_comment")     return `${from} hat deinen Post${n.itemTitle ? " zu " + item : ""} kommentiert${n.commentText ? `: „${socialEsc(n.commentText)}“` : ""}`;
       if (n.type === "reco_watched")     return `${from} hat ${item} geschaut`;
       if (n.type === "reco_seen")        return `${from} hat ${item} bereits gesehen`;
+      if (n.type === "match")            return `Match mit ${from}! Ihr habt beide ${item} gesehen 🎬`;
       if (n.type === "reco_added_list")  return n.listName
                                            ? `Den Film den du empfohlen hast hat ${from} jetzt in „${socialEsc(n.listName)}“ gepackt`
                                            : `Den Film den du empfohlen hast hat ${from} jetzt in eine Liste gelegt`;
@@ -11535,7 +11540,7 @@
     let _recoItems = [];
     let _recoCurrent = 0;
 
-    window.addEventListener("vault-auth-changed", () => { _recoPopupShown = false; });
+    window.addEventListener("vault-auth-changed", () => { _recoPopupShown = false; _matchPopupShown = false; });
 
     function showRecoPopup(recos) {
       const notifSettings = (db.settings && db.settings.notificationSettings) || {};
@@ -11819,16 +11824,40 @@
           return { f, p };
         }));
         const names = [];
+        const matchedFriends = [];   // R33: UIDs, um die Gegenseite ebenfalls zu benachrichtigen
         const hit = (arr) => (arr || []).some(it => String(it.id) === String(item.id) && (it.mediaType || "movie") === mediaType);
         profs.forEach(({ f, p }) => {
           if (!p || (p.privacy && p.privacy.shareWatched === false)) return;
-          if (hit(p.recentlyWatched) || hit(p.topRanked)) names.push(f.username || f.uid);
+          if (hit(p.recentlyWatched) || hit(p.topRanked)) { names.push(f.username || f.uid); matchedFriends.push(f); }
         });
         if (!names.length) return;
         db.matchSeen[key] = Date.now(); saveDB();
         showMatchPopup(item, names);
         // R28: Match wird nur noch als Popup gezeigt, NICHT mehr automatisch in den Feed gepostet.
+        // R33: Ein Match ist beidseitig — der/die gematchte(n) Freund(e) bekommen ebenfalls
+        // eine "match"-Benachrichtigung, damit auf DEREN Gerät dasselbe zentrierte Popup
+        // erscheint (vorher sahen sie gar nichts / nur eine stumme Notiz).
+        notifyMatchedFriends(matchedFriends, item);
       } catch (e) { /* match popup is a nicety; never break the watch flow */ }
+    }
+    // R33: schickt den gematchten Freund(en) eine "match"-Notification, damit sie beim
+    // nächsten Öffnen dasselbe Match-Popup mittig sehen. Best-effort, bricht nie den Flow.
+    async function notifyMatchedFriends(friends, item) {
+      try {
+        if (!friends || !friends.length) return;
+        if (!window.__vaultUser || !window.__vaultSocial || !window.__vaultSocial.pushNotification) return;
+        const myName = (_myProfile && _myProfile.username) || (window.__vaultUser.email || "");
+        const mediaType = item.mediaType || "movie";
+        await Promise.all(friends.map(f => window.__vaultSocial.pushNotification(f.uid, {
+          type: "match",
+          fromUid: window.__vaultUser.uid,
+          fromUsername: myName,
+          itemTitle: item.title || "",
+          itemPoster: item.posterPath || item.poster || "",
+          itemType: mediaType,
+          tmdbId: item.id || null
+        }).catch(() => {})));
+      } catch (e) { /* notifying the other side is a nicety; never break the watch flow */ }
     }
     function showMatchPopup(item, names) {
       const pop = document.getElementById("match-popup");
@@ -11845,7 +11874,31 @@
       pop.hidden = false;
       document.body.style.overflow = "hidden";
     }
+    // R33: Queue eingehender "match"-Benachrichtigungen (Gegenseite eines Matches).
+    let _matchPopupShown = false;
+    let _incomingMatchQueue = [];
+    function showIncomingMatches(notifs) {
+      _incomingMatchQueue = (notifs || []).slice();
+      showNextIncomingMatch();
+    }
+    function showNextIncomingMatch() {
+      const n = _incomingMatchQueue[0];
+      if (!n) return;
+      showMatchPopup(
+        { id: n.tmdbId, mediaType: n.itemType || "movie", title: n.itemTitle || "", posterPath: n.itemPoster || null },
+        [n.fromUsername || "Ein Freund"]
+      );
+    }
     function closeMatchPopup() {
+      // R33: War dieses Popup eine eingehende Match-Notiz, als gelesen markieren und
+      // die nächste zeigen (Popup bleibt dabei sichtbar — kein Flackern).
+      if (_incomingMatchQueue.length) {
+        const done = _incomingMatchQueue.shift();
+        if (done && done.id && window.__vaultUser && window.__vaultSocial) {
+          window.__vaultSocial.markNotificationRead(window.__vaultUser.uid, done.id);
+        }
+        if (_incomingMatchQueue.length) { showNextIncomingMatch(); return; }
+      }
       const pop = document.getElementById("match-popup");
       if (pop) pop.hidden = true;
       document.body.style.overflow = "";
@@ -12832,8 +12885,14 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R32";
+    const APP_VERSION = "R33";
     const PATCH_NOTES = {
+      "R33": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Match jetzt für beide:</strong> Wenn du etwas schaust, das ein Freund auch schon gesehen hat, springt das „Match!\"-Popup jetzt bei euch <em>beiden</em> mitten ins Bild — nicht mehr nur bei dir."
+        ]
+      },
       "R32": {
         title: "Was ist neu",
         notes: [
