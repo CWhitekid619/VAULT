@@ -12,8 +12,12 @@
   <meta name="apple-mobile-web-app-title" content="VAULT" />
   <meta name="mobile-web-app-capable" content="yes" />
 
-  <!-- Manifest embedded as data URI so everything stays in one file -->
-  <link rel="manifest" href='data:application/manifest+json,{"name":"VAULT","short_name":"VAULT","start_url":".","display":"standalone","background_color":"%230c0c0e","theme_color":"%230c0c0e","orientation":"portrait"}' />
+  <!-- App-Icon: Filmklappe (Clapperboard) in Gold auf dunklem Grund, als SVG direkt eingebettet.
+       Zum Ändern: eigenes Bild base64-kodieren und die beiden data:-URIs (apple-touch-icon + Manifest) ersetzen. -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExMiIgZmlsbD0iIzBjMGMwZSIvPjxyZWN0IHg9Ijk2IiB5PSIyMjAiIHdpZHRoPSIzMjAiIGhlaWdodD0iMTg4IiByeD0iMjIiIGZpbGw9IiNlOGIzMzkiLz48Y2xpcFBhdGggaWQ9ImJhciI+PHJlY3QgeD0iOTYiIHk9IjE1MCIgd2lkdGg9IjMyMCIgaGVpZ2h0PSI2MCIgcng9IjEyIi8+PC9jbGlwUGF0aD48ZyBjbGlwLXBhdGg9InVybCgjYmFyKSI+PHJlY3QgeD0iOTAiIHk9IjE1MCIgd2lkdGg9IjMzMiIgaGVpZ2h0PSI2MCIgZmlsbD0iI2U4YjMzOSIvPjxnIGZpbGw9IiMwYzBjMGUiPjxwb2x5Z29uIHBvaW50cz0iMTE4LDE1MCAxNTgsMTUwIDExOCwyMTAgNzgsMjEwIi8+PHBvbHlnb24gcG9pbnRzPSIxOTgsMTUwIDIzOCwxNTAgMTk4LDIxMCAxNTgsMjEwIi8+PHBvbHlnb24gcG9pbnRzPSIyNzgsMTUwIDMxOCwxNTAgMjc4LDIxMCAyMzgsMjEwIi8+PHBvbHlnb24gcG9pbnRzPSIzNTgsMTUwIDM5OCwxNTAgMzU4LDIxMCAzMTgsMjEwIi8+PHBvbHlnb24gcG9pbnRzPSI0MzgsMTUwIDQ3OCwxNTAgNDM4LDIxMCAzOTgsMjEwIi8+PC9nPjwvZz48Y2lyY2xlIGN4PSIyNTYiIGN5PSIzMTQiIHI9IjM0IiBmaWxsPSJub25lIiBzdHJva2U9IiMwYzBjMGUiIHN0cm9rZS13aWR0aD0iMTQiLz48cG9seWdvbiBwb2ludHM9IjI0NiwyOTggMjQ2LDMzMCAyNzQsMzE0IiBmaWxsPSIjMGMwYzBlIi8+PC9zdmc+Cg==" />
+
+  <!-- Manifest embedded as data URI so everything stays in one file (base64, damit das Icon sauber mitkodiert ist) -->
+  <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiVkFVTFQiLCJzaG9ydF9uYW1lIjoiVkFVTFQiLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzBjMGMwZSIsInRoZW1lX2NvbG9yIjoiIzBjMGMwZSIsIm9yaWVudGF0aW9uIjoicG9ydHJhaXQiLCJpY29ucyI6W3sic3JjIjoiZGF0YTppbWFnZS9zdmcreG1sO2Jhc2U2NCxQSE4yWnlCNGJXeHVjejBpYUhSMGNEb3ZMM2QzZHk1M015NXZjbWN2TWpBd01DOXpkbWNpSUhacFpYZENiM2c5SWpBZ01DQTFNVElnTlRFeUlqNDhjbVZqZENCM2FXUjBhRDBpTlRFeUlpQm9aV2xuYUhROUlqVXhNaUlnY25nOUlqRXhNaUlnWm1sc2JEMGlJekJqTUdNd1pTSXZQanh5WldOMElIZzlJamsySWlCNVBTSXlNakFpSUhkcFpIUm9QU0l6TWpBaUlHaGxhV2RvZEQwaU1UZzRJaUJ5ZUQwaU1qSWlJR1pwYkd3OUlpTmxPR0l6TXpraUx6NDhZMnhwY0ZCaGRHZ2dhV1E5SW1KaGNpSStQSEpsWTNRZ2VEMGlPVFlpSUhrOUlqRTFNQ0lnZDJsa2RHZzlJak15TUNJZ2FHVnBaMmgwUFNJMk1DSWdjbmc5SWpFeUlpOCtQQzlqYkdsd1VHRjBhRDQ4WnlCamJHbHdMWEJoZEdnOUluVnliQ2dqWW1GeUtTSStQSEpsWTNRZ2VEMGlPVEFpSUhrOUlqRTFNQ0lnZDJsa2RHZzlJak16TWlJZ2FHVnBaMmgwUFNJMk1DSWdabWxzYkQwaUkyVTRZak16T1NJdlBqeG5JR1pwYkd3OUlpTXdZekJqTUdVaVBqeHdiMng1WjI5dUlIQnZhVzUwY3owaU1URTRMREUxTUNBeE5UZ3NNVFV3SURFeE9Dd3lNVEFnTnpnc01qRXdJaTgrUEhCdmJIbG5iMjRnY0c5cGJuUnpQU0l4T1Rnc01UVXdJREl6T0N3eE5UQWdNVGs0TERJeE1DQXhOVGdzTWpFd0lpOCtQSEJ2YkhsbmIyNGdjRzlwYm5SelBTSXlOemdzTVRVd0lETXhPQ3d4TlRBZ01qYzRMREl4TUNBeU16Z3NNakV3SWk4K1BIQnZiSGxuYjI0Z2NHOXBiblJ6UFNJek5UZ3NNVFV3SURNNU9Dd3hOVEFnTXpVNExESXhNQ0F6TVRnc01qRXdJaTgrUEhCdmJIbG5iMjRnY0c5cGJuUnpQU0kwTXpnc01UVXdJRFEzT0N3eE5UQWdORE00TERJeE1DQXpPVGdzTWpFd0lpOCtQQzluUGp3dlp6NDhZMmx5WTJ4bElHTjRQU0l5TlRZaUlHTjVQU0l6TVRRaUlISTlJak0wSWlCbWFXeHNQU0p1YjI1bElpQnpkSEp2YTJVOUlpTXdZekJqTUdVaUlITjBjbTlyWlMxM2FXUjBhRDBpTVRRaUx6NDhjRzlzZVdkdmJpQndiMmx1ZEhNOUlqSTBOaXd5T1RnZ01qUTJMRE16TUNBeU56UXNNekUwSWlCbWFXeHNQU0lqTUdNd1l6QmxJaTgrUEM5emRtYytDZz09Iiwic2l6ZXMiOiI1MTJ4NTEyIiwidHlwZSI6ImltYWdlL3N2Zyt4bWwiLCJwdXJwb3NlIjoiYW55IG1hc2thYmxlIn1dfQ==" />
 
   <style>
     :root {
@@ -785,13 +789,20 @@
     .rank-num-edit::-webkit-outer-spin-button,
     .rank-num-edit::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .rank-row.rank-hit { background: rgba(217,180,91,.18); border-radius: 8px; }
-    /* R26-#19: in-list search bar + top-right toggle */
-    #view-ranking .view-head { position: relative; }
-    .rank-search-toggle {
-      position: absolute; top: 0; right: 0;
-      background: none; border: none; padding: 6px; cursor: pointer;
-      color: var(--text-dim); display: inline-flex; align-items: center;
+    /* R29: segmented control + magnifier toggle sit in one row */
+    .rank-toggle-row {
+      display: flex; align-items: stretch; gap: 8px; margin-bottom: 20px;
     }
+    .rank-toggle-row .segmented { margin-bottom: 0; flex: 1; min-width: 0; }
+    .rank-search-toggle {
+      flex: 0 0 auto;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 0 14px; cursor: pointer;
+      color: var(--text-dim); display: inline-flex; align-items: center; justify-content: center;
+      transition: color .18s ease, border-color .18s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .rank-search-toggle.active { color: var(--accent); border-color: var(--accent); }
     .rank-search-toggle svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
     .rank-search {
       display: flex; align-items: center; gap: 8px;
@@ -2460,15 +2471,21 @@
         <p>Deine persönliche Bestenliste.</p>
       </div>
 
-      <div class="segmented" id="rank-toggle">
-        <button class="seg active" type="button" data-media="movie">Filme</button>
-        <button class="seg" type="button" data-media="tv">Serien</button>
-        <button class="seg" type="button" data-media="person">Schauspieler</button>
+      <!-- R29-#: segmented control + magnifier toggle side by side -->
+      <div class="rank-toggle-row">
+        <div class="segmented" id="rank-toggle">
+          <button class="seg active" type="button" data-media="movie">Filme</button>
+          <button class="seg" type="button" data-media="tv">Serien</button>
+          <button class="seg" type="button" data-media="person">Schauspieler</button>
+        </div>
+        <button class="rank-search-toggle" id="rank-search-toggle" type="button" aria-label="Titel suchen" aria-expanded="false">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </button>
       </div>
 
-      <!-- R28-#19: search is ALWAYS visible now (was hidden behind a magnifier icon that
-           users kept missing). Typing jumps the list to the title and reports its rank. -->
-      <div class="rank-search" id="rank-search">
+      <!-- R29-#: search collapsed behind the magnifier again — hidden until the user taps the
+           lupe next to the segmented control. Typing jumps the list to the title and reports its rank. -->
+      <div class="rank-search hidden" id="rank-search">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input id="rank-search-input" type="text" placeholder="Titel suchen → springt zum Platz …" autocomplete="off" />
         <button id="rank-search-clear" class="rank-search-clear" type="button" aria-label="Leeren">&times;</button>
@@ -6101,6 +6118,23 @@
     // (highlight = feedback); Enter announces the exact rank via toast.
     const rankSearchInput  = document.getElementById("rank-search-input");
     const rankSearchClear  = document.getElementById("rank-search-clear");
+    // R29: search is collapsed behind the magnifier next to the segmented control.
+    const rankSearchToggle = document.getElementById("rank-search-toggle");
+    const rankSearchBox    = document.getElementById("rank-search");
+    if (rankSearchToggle && rankSearchBox && rankSearchInput) {
+      rankSearchToggle.addEventListener("click", () => {
+        const show = rankSearchBox.classList.contains("hidden");
+        rankSearchBox.classList.toggle("hidden", !show);
+        rankSearchToggle.classList.toggle("active", show);
+        rankSearchToggle.setAttribute("aria-expanded", show ? "true" : "false");
+        if (show) {
+          rankSearchInput.focus();
+        } else {
+          rankSearchInput.value = "";
+          scrollRankToQuery("", false); // clear any highlight when collapsing
+        }
+      });
+    }
     if (rankSearchInput) {
       rankSearchInput.addEventListener("input", () => scrollRankToQuery(rankSearchInput.value.trim(), false));
       rankSearchInput.addEventListener("keydown", e => {
