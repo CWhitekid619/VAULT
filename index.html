@@ -2243,7 +2243,109 @@
 
     .lh-home-head { display: flex; align-items: center; gap: 8px; }
     .lh-home-head h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+
+    /* ===================================================================== */
+    /* R29 — DESIGN / THEME SYSTEM                                           */
+    /* The whole app is variable-driven, so a theme is mostly a re-map of    */
+    /* the core custom properties + a few glass/glow accents.                */
+    /* ===================================================================== */
+
+    /* ---------- Theme picker UI (works in every theme) ---------- */
+    .theme-opts { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+    .theme-opt {
+      display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
+      padding: 12px; border-radius: 14px; background: var(--surface-2);
+      border: 1px solid var(--border); cursor: pointer; color: var(--text);
+      font-family: inherit; transition: border-color .2s, box-shadow .2s, transform .1s;
+    }
+    .theme-opt:active { transform: scale(.99); }
+    .theme-opt.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset, 0 6px 24px -12px var(--accent); }
+    .theme-swatch { flex: 0 0 auto; width: 48px; height: 48px; border-radius: 12px; border: 1px solid rgba(255,255,255,.14); box-shadow: inset 0 1px 0 rgba(255,255,255,.12); }
+    .theme-swatch.default {
+      background: radial-gradient(circle at 30% 22%, rgba(232,179,57,.75), transparent 62%), #0c0c0e;
+    }
+    .theme-swatch.nebula {
+      background:
+        radial-gradient(circle at 18% 8%,  #8b5cf6, transparent 55%),
+        radial-gradient(circle at 88% 28%, #ec4899, transparent 55%),
+        radial-gradient(circle at 50% 105%, #38bdf8, transparent 62%),
+        #0a0714;
+    }
+    .theme-opt-body { flex: 1; min-width: 0; }
+    .theme-opt-name { font-size: 14px; font-weight: 700; }
+    .theme-opt-desc { font-size: 12px; color: var(--text-mute); margin-top: 2px; line-height: 1.4; }
+    .theme-opt-check { flex: 0 0 auto; width: 22px; height: 22px; stroke: var(--accent); fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transition: opacity .18s; }
+    .theme-opt.active .theme-opt-check { opacity: 1; }
+
+    /* ---------- THEME: Nebula (neon glass) ---------- */
+    html[data-theme="nebula"] {
+      --bg:        #0a0714;
+      --surface:   rgba(38, 25, 64, .74);
+      --surface-2: rgba(56, 38, 92, .62);
+      --border:    rgba(176, 140, 255, .24);
+      --text:      #f6f2ff;
+      --text-dim:  #c4b4ea;
+      --text-mute: #8f7fb8;
+      --accent:    #ff57b0;   /* neon magenta-pink */
+    }
+
+    /* Rich animated nebula backdrop instead of the flat --bg */
+    html[data-theme="nebula"] body {
+      background:
+        radial-gradient(circle at 12% -5%, rgba(139,92,246,.55), transparent 42%),
+        radial-gradient(circle at 92% 8%,  rgba(236,72,153,.42), transparent 44%),
+        radial-gradient(circle at 78% 108%, rgba(56,189,248,.30), transparent 50%),
+        radial-gradient(circle at 8% 95%,  rgba(168,85,247,.30), transparent 48%),
+        #0a0714;
+      background-attachment: fixed;
+    }
+    /* Stronger, coloured spotlight; grain stays but softer */
+    html[data-theme="nebula"] body[data-tab="log"]      { --mood: rgba(236,72,153,.20); }
+    html[data-theme="nebula"] body[data-tab="lists"]    { --mood: rgba(168,120,255,.22); }
+    html[data-theme="nebula"] body[data-tab="discover"] { --mood: rgba(56,189,248,.20); }
+    html[data-theme="nebula"] body[data-tab="ranking"]  { --mood: rgba(244,63,94,.20); }
+    html[data-theme="nebula"] body[data-tab="social"]   { --mood: rgba(56,189,248,.22); }
+    html[data-theme="nebula"] body[data-tab="profile"]  { --mood: rgba(139,92,246,.22); }
+    html[data-theme="nebula"] body::before { height: 420px; opacity: 1; }
+    html[data-theme="nebula"] body::after  { opacity: .025; }
+
+    /* Frosted glass on the app's main surfaces */
+    html[data-theme="nebula"] .search-bar,
+    html[data-theme="nebula"] .result,
+    html[data-theme="nebula"] .account-card,
+    html[data-theme="nebula"] .account-collapsible,
+    html[data-theme="nebula"] .stat-card,
+    html[data-theme="nebula"] .blocked-toggle,
+    html[data-theme="nebula"] .theme-opt,
+    html[data-theme="nebula"] .sheet,
+    html[data-theme="nebula"] .duel-start,
+    html[data-theme="nebula"] .rank-compare,
+    html[data-theme="nebula"] .prof-friends-invite,
+    html[data-theme="nebula"] .lists-card,
+    html[data-theme="nebula"] .feed-card,
+    html[data-theme="nebula"] .reco-card {
+      backdrop-filter: blur(16px) saturate(150%);
+      -webkit-backdrop-filter: blur(16px) saturate(150%);
+    }
+
+    /* Neon accent glow */
+    html[data-theme="nebula"] .brand-name {
+      background: linear-gradient(90deg, #ff57b0, #a78bfa 55%, #38bdf8);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    html[data-theme="nebula"] .brand-mark svg { filter: drop-shadow(0 0 6px rgba(255,87,176,.6)); }
+    html[data-theme="nebula"] .stat-card { box-shadow: 0 10px 30px -18px rgba(139,92,246,.8); }
+    html[data-theme="nebula"] .nav { background: color-mix(in srgb, var(--surface) 88%, transparent); border-top-color: rgba(176,140,255,.28); }
   </style>
+  <script>
+    /* R29: apply the saved design theme before first paint (no flash). */
+    (function () {
+      try {
+        var t = localStorage.getItem("vault-theme");
+        if (t && t !== "default") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body data-tab="log">
   <div class="app">
@@ -2572,6 +2674,8 @@
       <div id="profile-username"></div>
       <!-- 3. Account block (E-Mail, Sync, Passwort, Logout) -->
       <div id="profile-account"></div>
+      <!-- 3b. Design / Theme picker (R29) -->
+      <div id="profile-theme"></div>
       <!-- 4+5. Empfehlungen + Benachrichtigungen (both rendered into profile-settings) -->
       <div id="profile-settings"></div>
       <!-- 6. Datenschutz -->
@@ -13246,7 +13350,73 @@
       renderNotifSettings();
       renderUsernameField();
       renderFriendsManagement();
+      renderThemePicker();     // R29: Design picker
     };
+
+    /* ===================================================================== */
+    /* R29 — DESIGN / THEME PICKER                                            */
+    /* ===================================================================== */
+    const VAULT_THEMES = [
+      { id: "default", swatch: "default", name: "Standard",
+        desc: "Dunkel & Gold — der klassische VAULT-Look." },
+      { id: "nebula",  swatch: "nebula",  name: "Nebula",
+        desc: "Neon-Glas: violette Nebel, Magenta-Glow und transparente Karten." }
+    ];
+    function getVaultTheme() {
+      try { return localStorage.getItem("vault-theme") || "default"; }
+      catch (e) { return "default"; }
+    }
+    function applyVaultTheme(id) {
+      if (id && id !== "default") document.documentElement.setAttribute("data-theme", id);
+      else document.documentElement.removeAttribute("data-theme");
+    }
+    function setVaultTheme(id) {
+      try { localStorage.setItem("vault-theme", id); } catch (e) {}
+      applyVaultTheme(id);
+    }
+    let themeSettingsRevealed = false;   // session-only collapse state, like the other blocks
+    function renderThemePicker() {
+      const host = document.getElementById("profile-theme");
+      if (!host) return;
+      const active = getVaultTheme();
+      const opts = VAULT_THEMES.map(t =>
+        '<button type="button" class="theme-opt' + (t.id === active ? " active" : "") + '" data-theme-id="' + t.id + '">' +
+          '<span class="theme-swatch ' + t.swatch + '"></span>' +
+          '<span class="theme-opt-body">' +
+            '<span class="theme-opt-name">' + socialEsc(t.name) + '</span>' +
+            '<span class="theme-opt-desc">' + socialEsc(t.desc) + '</span>' +
+          '</span>' +
+          '<svg class="theme-opt-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' +
+        '</button>'
+      ).join("");
+      host.innerHTML =
+        '<div class="detail-section" style="margin-top:16px">' +
+          '<button class="blocked-toggle' + (themeSettingsRevealed ? " open" : "") + '" type="button" id="theme-settings-toggle">' +
+            '<span class="blocked-toggle-label">Design</span>' +
+            '<span class="blocked-count">' + socialEsc(VAULT_THEMES.find(t => t.id === active).name) + '</span>' +
+            '<svg class="blocked-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>' +
+          '</button>' +
+          '<div id="theme-settings-body"' + (themeSettingsRevealed ? "" : " hidden") + '>' +
+            '<div class="theme-opts">' + opts + '</div>' +
+          '</div>' +
+        '</div>';
+      const toggle = document.getElementById("theme-settings-toggle");
+      const body   = document.getElementById("theme-settings-body");
+      toggle.addEventListener("click", () => {
+        themeSettingsRevealed = !themeSettingsRevealed;
+        body.hidden = !themeSettingsRevealed;
+        toggle.classList.toggle("open", themeSettingsRevealed);
+      });
+      host.querySelectorAll(".theme-opt").forEach(btn => {
+        btn.addEventListener("click", () => {
+          setVaultTheme(btn.dataset.themeId);
+          renderThemePicker();          // refresh active state + badge
+          themeSettingsRevealed = true; // keep it open after choosing
+          document.getElementById("theme-settings-body").hidden = false;
+          document.getElementById("theme-settings-toggle").classList.add("open");
+        });
+      });
+    }
   </script>
 </body>
 </html>
