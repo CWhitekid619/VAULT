@@ -690,6 +690,11 @@
     /* R16-#7: quick-rate share toggle + note step */
     .qr-share-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0 4px; }
     .qr-share-label { font-size: 14px; color: var(--text-dim); }
+    /* R31: Teilen-Icon + Toggle rechts in derselben Zeile */
+    .qr-share-actions { display: flex; align-items: center; gap: 16px; flex: 0 0 auto; }
+    .qr-share-icon-btn { background: none; border: none; padding: 2px; cursor: pointer; color: var(--text-dim); display: flex; -webkit-tap-highlight-color: transparent; }
+    .qr-share-icon-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .qr-share-icon-btn:active { color: var(--accent); }
     .qr-toggle { position: relative; display: inline-block; width: 44px; height: 26px; cursor: pointer; flex: 0 0 auto; }
     .qr-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
     .qr-toggle-track { position: absolute; inset: 0; background: var(--surface-2); border-radius: 13px; border: 1px solid var(--border); transition: background .2s, border-color .2s; }
@@ -2077,8 +2082,18 @@
     .match-close-btn { width: 100%; padding: 12px; border-radius: 12px; border: none; background: var(--accent); color: #1a1206; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
 
     /* Patch notes — one-time "what's new" modal per version */
-    #patch-notes { position: fixed; inset: 0; z-index: 210; background: rgba(0,0,0,.88); display: flex; align-items: center; justify-content: center; padding: 24px; animation: fade-in .3s ease; }
-    .patch-card { background: var(--surface); border-radius: 22px; width: 100%; max-width: 360px; max-height: 82vh; display: flex; flex-direction: column; box-shadow: 0 24px 70px rgba(0,0,0,.65); border: 1px solid var(--accent); animation: match-pop .42s cubic-bezier(.2,1.2,.3,1); overflow: hidden; }
+    /* R31: Safe-Area-Padding + dvh, damit das Popup auch am Handy (Adressleiste)
+       vollständig sichtbar ist und nicht hinter der UI verschwindet. */
+    #patch-notes { position: fixed; inset: 0; z-index: 210; background: rgba(0,0,0,.88); display: flex; align-items: center; justify-content: center; padding: calc(24px + var(--safe-top)) 20px calc(24px + var(--safe-bottom)); animation: fade-in .3s ease; }
+    .patch-card { background: var(--surface); border-radius: 22px; width: 100%; max-width: 360px; max-height: 82vh; max-height: 82dvh; display: flex; flex-direction: column; box-shadow: 0 24px 70px rgba(0,0,0,.65); border: 1px solid var(--accent); animation: match-pop .42s cubic-bezier(.2,1.2,.3,1); overflow: hidden; }
+    /* R31: Neuigkeiten-Historie unter Profil */
+    .patchhist-list { display: flex; flex-direction: column; margin-top: 10px; }
+    .patchhist-row { display: flex; align-items: center; gap: 10px; width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; cursor: pointer; font-family: inherit; color: var(--text); text-align: left; }
+    .patchhist-row:active { opacity: .75; }
+    .patchhist-ver { font-size: 14px; font-weight: 700; flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
+    .patchhist-badge { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: #1a1206; background: var(--accent); padding: 2px 7px; border-radius: 999px; }
+    .patchhist-sub { flex: 1; min-width: 0; font-size: 12px; color: var(--text-mute); }
+    .patchhist-chev { width: 16px; height: 16px; flex: 0 0 auto; stroke: var(--text-mute); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .patch-head { padding: 22px 22px 8px; }
     .patch-badge { display: inline-block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: #1a1206; background: var(--accent); padding: 3px 10px; border-radius: 999px; }
     .patch-title { font-size: 20px; font-weight: 800; margin-top: 12px; }
@@ -2135,15 +2150,16 @@
       #social-feed-list { max-width: 360px; }
       .feed-poster { max-height: 62vh; width: auto; max-width: 100%; margin: 0 auto; }
     }
-    .feed-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; margin-bottom: 16px; overflow: hidden; }
-    .feed-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
-    .feed-av { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: #1a1206; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .feed-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; margin-bottom: 14px; overflow: hidden; }
+    .feed-head { display: flex; align-items: center; gap: 10px; padding: 9px 12px; }
+    .feed-av { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #1a1206; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
     .feed-author { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
     .feed-time { flex: 0 0 auto; font-size: 12px; color: var(--text-mute); }
-    .feed-poster-wrap { width: 100%; cursor: pointer; background: var(--surface-2); -webkit-tap-highlight-color: transparent; }
-    .feed-poster { display: block; width: 100%; height: auto; }
-    .feed-poster-ph { aspect-ratio: 2 / 3; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; color: var(--text-dim); font-weight: 700; font-size: 18px; line-height: 1.3; }
-    .feed-engage { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 4px; }
+    /* R31: Social-Feed-Bilder im 1:1-Quadrat (zugeschnitten), Karten kompakter. */
+    .feed-poster-wrap { position: relative; width: 100%; aspect-ratio: 1 / 1; overflow: hidden; cursor: pointer; background: var(--surface-2); -webkit-tap-highlight-color: transparent; }
+    .feed-poster { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .feed-poster-ph { width: 100%; height: 100%; aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px; color: var(--text-dim); font-weight: 700; font-size: 18px; line-height: 1.3; }
+    .feed-engage { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px 2px; }
     .feed-stars { font-size: 17px; color: var(--accent); letter-spacing: .06em; }
     .feed-icons { display: flex; gap: 4px; }
     .feed-icon-btn { background: none; border: none; padding: 6px; cursor: pointer; color: var(--text-dim); display: flex; align-items: center; border-radius: 8px; -webkit-tap-highlight-color: transparent; }
@@ -2153,12 +2169,15 @@
     .feed-bm.on svg { fill: var(--accent); }
     .feed-eye.on { color: var(--accent); }                 /* R21-#1/#11: eye reflects "already watched" */
     .feed-eye.on svg { fill: rgba(212,160,40,.22); stroke: var(--accent); }
-    /* R30: „Ins Ranking"-Icon auf Schauspieler-Karten — grau = noch nicht im Ranking,
-       gold = schon aufgenommen. */
-    .feed-rank-actor { color: var(--text-mute); }
-    .feed-rank-actor.on { color: var(--accent); }
-    .feed-rank-actor.on svg { fill: rgba(232,179,57,.18); stroke: var(--accent); }
-    .feed-actionline { padding: 0 14px 10px; font-size: 14px; color: var(--text-dim); line-height: 1.35; }   /* R21-#5: "X hat … gerankt/geschaut" */
+    /* R31: „Ins Ranking"-Stern direkt auf dem Schauspielerfoto — dezenter Umriss = noch
+       nicht im Ranking, gold gefüllt = schon aufgenommen. */
+    .feed-rank-badge { position: absolute; top: 8px; right: 8px; width: 40px; height: 40px; padding: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.5); border: 1.5px solid rgba(255,255,255,.4); cursor: pointer; -webkit-tap-highlight-color: transparent; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); transition: transform .12s ease; }
+    .feed-rank-badge svg { width: 20px; height: 20px; fill: none; stroke: #fff; stroke-width: 1.5; stroke-linejoin: round; }
+    .feed-rank-badge.on { background: var(--accent); border-color: var(--accent); }
+    .feed-rank-badge.on svg { fill: #1a1206; stroke: #1a1206; }
+    .feed-rank-badge:active { transform: scale(.9); }
+    .feed-actor-slide .feed-binge-caption { font-weight: 600; color: var(--text); }
+    .feed-actionline { padding: 0 12px 8px; font-size: 13px; color: var(--text-dim); line-height: 1.3; }   /* R21-#5: "X hat … gerankt/geschaut" */
     .feed-more-btn { display: block; width: 100%; margin: 6px 0 24px; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--accent); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
     .feed-more-btn:active { background: var(--surface-2); }
     .feed-more-btn:disabled { opacity: .6; }
@@ -2277,6 +2296,11 @@
         radial-gradient(circle at 50% 105%, #38bdf8, transparent 62%),
         #0a0714;
     }
+    .theme-swatch.midnight { background: radial-gradient(circle at 30% 22%, rgba(56,160,255,.85), transparent 60%), #0a1226; }
+    .theme-swatch.crimson  { background: radial-gradient(circle at 30% 22%, rgba(239,68,68,.9), transparent 60%), #140708; }
+    .theme-swatch.forest   { background: radial-gradient(circle at 30% 22%, rgba(52,211,153,.85), transparent 60%), #0a1710; }
+    .theme-swatch.light     { background: radial-gradient(circle at 30% 22%, rgba(217,146,32,.75), transparent 62%), #f3f1ec; }
+    .theme-swatch.mono     { background: radial-gradient(circle at 30% 22%, rgba(255,255,255,.7), transparent 60%), #101012; }
     .theme-opt-body { flex: 1; min-width: 0; }
     .theme-opt-name { font-size: 14px; font-weight: 700; }
     .theme-opt-desc { font-size: 12px; color: var(--text-mute); margin-top: 2px; line-height: 1.4; }
@@ -2342,6 +2366,73 @@
     html[data-theme="nebula"] .brand-mark svg { filter: drop-shadow(0 0 6px rgba(255,87,176,.6)); }
     html[data-theme="nebula"] .stat-card { box-shadow: 0 10px 30px -18px rgba(139,92,246,.8); }
     html[data-theme="nebula"] .nav { background: color-mix(in srgb, var(--surface) 88%, transparent); border-top-color: rgba(176,140,255,.28); }
+
+    /* ---------- THEME: Midnight (deep blue) ---------- */
+    html[data-theme="midnight"] {
+      --bg:        #0a1226;
+      --surface:   #121c38;
+      --surface-2: #1b2848;
+      --border:    #2b3b60;
+      --text:      #eef3ff;
+      --text-dim:  #9fb2d6;
+      --text-mute: #6a7ba3;
+      --accent:    #3aa0ff;
+      --mood:      rgba(58,160,255,.16);
+    }
+    /* ---------- THEME: Crimson (cinema red) ---------- */
+    html[data-theme="crimson"] {
+      --bg:        #140708;
+      --surface:   #211012;
+      --surface-2: #2e181a;
+      --border:    #43272a;
+      --text:      #fdeef0;
+      --text-dim:  #d3a6ab;
+      --text-mute: #9a6b70;
+      --accent:    #ef4444;
+      --mood:      rgba(239,68,68,.16);
+    }
+    /* ---------- THEME: Forest (dark green) ---------- */
+    html[data-theme="forest"] {
+      --bg:        #0a1710;
+      --surface:   #12241a;
+      --surface-2: #1a3325;
+      --border:    #274a35;
+      --text:      #eafaf0;
+      --text-dim:  #a3ccb4;
+      --text-mute: #6d9280;
+      --accent:    #34d399;
+      --mood:      rgba(52,211,153,.15);
+    }
+    /* ---------- THEME: Light (day mode) ---------- */
+    html[data-theme="light"] {
+      --bg:        #f3f1ec;
+      --surface:   #ffffff;
+      --surface-2: #ece8e0;
+      --border:    #d9d3c8;
+      --text:      #1c1a17;
+      --text-dim:  #5f5a51;
+      --text-mute: #928c81;
+      --accent:    #c8901f;
+      --mood:      rgba(200,144,31,.14);
+    }
+    /* Light mode needs a few tweaks where dark-on-accent / overlays were assumed */
+    html[data-theme="light"] body::after { opacity: .02; }
+    html[data-theme="light"] .nav { background: color-mix(in srgb, var(--surface) 92%, transparent); }
+    html[data-theme="light"] .brand-name { color: var(--accent); }
+    /* ---------- THEME: Mono (grayscale) ---------- */
+    html[data-theme="mono"] {
+      --bg:        #101012;
+      --surface:   #1a1a1d;
+      --surface-2: #242428;
+      --border:    #33333a;
+      --text:      #f4f4f6;
+      --text-dim:  #b0b0b8;
+      --text-mute: #74747e;
+      --accent:    #e6e6ea;
+      --mood:      rgba(230,230,234,.10);
+    }
+    /* Mono: accent is near-white → keep dark text on accent chips readable */
+    html[data-theme="mono"] .brand-name { color: var(--accent); }
   </style>
   <script>
     /* R29: apply the saved design theme before first paint (no flash). */
@@ -2692,6 +2783,8 @@
       <div id="profile-blocked"></div>
       <!-- 9. Listen-Freigaben (extracted from Datenschutz in R17) -->
       <div id="profile-list-shares"></div>
+      <!-- R31: Neuigkeiten / Update-Historie (alte Patch-Notes erneut ansehen) -->
+      <div id="profile-patchnotes"></div>
       <!-- 10. Daten exportieren — absolute last item -->
       <div class="export-section">
         <button class="export-btn" onclick="exportDB()">
@@ -2719,9 +2812,10 @@
       <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
       <span class="nav-label">Home</span>
     </button>
-    <button class="nav-btn" data-target="lists" aria-label="Listen">
-      <svg viewBox="0 0 24 24"><line x1="8" y1="7" x2="20" y2="7"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="8" y1="17" x2="20" y2="17"/><circle cx="4" cy="7" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="17" r="1"/></svg>
-      <span class="nav-label">Listen</span>
+    <!-- R31: Social auf Position 2, Listen vor Profil (rechts) getauscht -->
+    <button class="nav-btn" data-target="social" aria-label="Social">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span class="nav-label">Social</span>
     </button>
     <button class="nav-btn" data-target="discover" aria-label="Entdecken">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polygon points="15.5 8.5 10.5 10.5 8.5 15.5 13.5 13.5"/></svg>
@@ -2731,9 +2825,9 @@
       <svg viewBox="0 0 24 24"><line x1="5" y1="20" x2="5" y2="11"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="19" y1="20" x2="19" y2="14"/></svg>
       <span class="nav-label">Ranking</span>
     </button>
-    <button class="nav-btn" data-target="social" aria-label="Social">
-      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      <span class="nav-label">Social</span>
+    <button class="nav-btn" data-target="lists" aria-label="Listen">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="7" x2="20" y2="7"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="8" y1="17" x2="20" y2="17"/><circle cx="4" cy="7" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="17" r="1"/></svg>
+      <span class="nav-label">Listen</span>
     </button>
     <button class="nav-btn" data-target="profile" aria-label="Profil">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21c0-3.5 3-6 7-6s7 2.5 7 6"/></svg>
@@ -2800,10 +2894,16 @@
         <div id="qr-buckets" class="bucket-list"></div>
         <div class="qr-share-row" id="qr-share-row" hidden>
           <span class="qr-share-label">Im Feed posten</span>
-          <label class="qr-toggle">
-            <input type="checkbox" id="qr-share-toggle">
-            <span class="qr-toggle-track"><span class="qr-toggle-thumb"></span></span>
-          </label>
+          <div class="qr-share-actions">
+            <!-- R31: Standard-Teilen-Icon → Empfehlung an einzelne Freunde -->
+            <button id="qr-share-friends" class="qr-share-icon-btn" type="button" aria-label="Mit Freunden teilen">
+              <svg viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            </button>
+            <label class="qr-toggle">
+              <input type="checkbox" id="qr-share-toggle">
+              <span class="qr-toggle-track"><span class="qr-toggle-thumb"></span></span>
+            </label>
+          </div>
         </div>
         <button id="qr-skip" class="sheet-btn-cancel" type="button">Überspringen</button>
       </div>
@@ -5670,6 +5770,13 @@
     // Tap outside the sheet → close
     qrBackdrop.addEventListener("click", e => { if (e.target === qrBackdrop) closeQuickRate(); });
     document.getElementById("qr-skip").addEventListener("click", closeQuickRate);
+    // R31: Teilen-Icon in der Bewerten-Zeile → Empfehlungs-Sheet an einzelne Freunde.
+    document.getElementById("qr-share-friends").addEventListener("click", () => {
+      if (!qrItem) return;
+      const rec = db.items[keyOf(qrItem.media_type, qrItem.id)] || recordFrom(qrItem, null);
+      closeQuickRate();
+      openShareSheet(rec);
+    });
     // R28: Step 2: confirm → Titel bewerten + bewussten Feed-Post mit Notiz erstellen.
     document.getElementById("qr-share-confirm").addEventListener("click", () => {
       if (!qrItem || !_qrPendingBucket) { closeQuickRate(); return; }
@@ -11640,8 +11747,8 @@
     const FEED_EYE      = '<svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>';
     const FEED_PEOPLE   = '<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
     const FEED_COMMENT  = '<svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg>';
-    // R30: Pokal-Icon für „Schauspieler ins Ranking aufnehmen" auf Feed-Karten.
-    const FEED_RANK     = '<svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3"/></svg>';
+    // R31: Stern-Icon für „Schauspieler ins Ranking aufnehmen" (gefüllt = schon im Ranking).
+    const FEED_RANK     = '<svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
 
     // R21-#5/#8: write an activity post to the persistent feed. Respects the
     // "share watched" privacy toggle and requires a username (so the author shows).
@@ -11820,6 +11927,20 @@
       return s === 5 ? 5 : (s === 1 ? 1 : 0);
     }
 
+    // R31: shared actor-photo block (1:1 image + ranking star badge overlaid on it).
+    // Used by the single actor card and the actor swipe carousel slides.
+    function actorPhotoBlock(p) {
+      const pid = p.actorId || "";
+      const img = p.actorPhoto
+        ? `<img class="feed-poster" src="${IMG_BASE}w500${p.actorPhoto}" alt="" loading="lazy">`
+        : `<div class="feed-poster feed-poster-ph"><span>${socialEsc(p.actorName || "")}</span></div>`;
+      const aRanked = !!(db.people && pid && db.people[pid]);
+      const badge = pid
+        ? `<button class="feed-rank-actor feed-rank-badge${aRanked ? " on" : ""}" data-person="${pid}" data-name="${socialEsc(p.actorName || "")}" data-photo="${socialEsc(p.actorPhoto || "")}" data-dept="${socialEsc(p.actorDept || "")}" aria-label="Ins Ranking aufnehmen">${FEED_RANK}</button>`
+        : "";
+      return `<div class="feed-poster-wrap feed-actor-photo" data-person="${pid}">${img}${badge}</div>`;
+    }
+
     // R21-#5/#8: render one feed card for a post.
     function renderFeedCard(p, watchers) {
       const type      = p.mediaType || "movie";
@@ -11852,22 +11973,10 @@
       }
 
       if (isActor) {
-        const img = p.actorPhoto
-          ? `<img class="feed-poster" src="${IMG_BASE}w500${p.actorPhoto}" alt="" loading="lazy">`
-          : `<div class="feed-poster feed-poster-ph"><span>${socialEsc(p.actorName || "")}</span></div>`;
-        // R30: Direkt-ins-Ranking-Icon — gold wenn der Schauspieler schon im eigenen
-        // Ranking ist, sonst ausgegraut.
-        const aRanked = !!(db.people && p.actorId && db.people[p.actorId]);
-        const rankBtn = p.actorId
-          ? `<button class="feed-icon-btn feed-rank-actor${aRanked ? " on" : ""}" data-person="${p.actorId}" data-name="${socialEsc(p.actorName || "")}" data-photo="${socialEsc(p.actorPhoto || "")}" data-dept="${socialEsc(p.actorDept || "")}" aria-label="Ins Ranking aufnehmen">${FEED_RANK}</button>`
-          : "";
-        return `<div class="${cls}">${head}${action}
-          <div class="feed-poster-wrap" data-person="${p.actorId || ""}">${img}</div>
-          <div class="feed-engage">
-            <div class="feed-stars"></div>
-            <div class="feed-icons">${rankBtn}</div>
-          </div>
-          <div class="feed-titleline">${socialEsc(p.actorName || "")}</div>
+        // R31: Schauspieler-Karte — Bild 1:1, Ranking-Stern direkt aufs Bild gelegt
+        // (gold/gefüllt = schon im Ranking, sonst dezent), KEIN unterer Rand/Zeile.
+        return `<div class="${cls} feed-actor-card">${head}${action}
+          ${actorPhotoBlock(p)}
         </div>`;
       }
 
@@ -11934,26 +12043,13 @@
 
       let slides;
       if (isActorGroup) {
-        // R30: Schauspieler-Slides — Foto + Direkt-ins-Ranking-Icon (gold/ausgegraut).
-        slides = items.map(p => {
-          const pid = p.actorId || "";
-          const img = p.actorPhoto
-            ? `<img class="feed-poster" src="${IMG_BASE}w500${p.actorPhoto}" alt="" loading="lazy">`
-            : `<div class="feed-poster feed-poster-ph"><span>${socialEsc(p.actorName || "")}</span></div>`;
-          const aRanked = !!(db.people && pid && db.people[pid]);
-          const rankBtn = pid
-            ? `<button class="feed-icon-btn feed-rank-actor${aRanked ? " on" : ""}" data-person="${pid}" data-name="${socialEsc(p.actorName || "")}" data-photo="${socialEsc(p.actorPhoto || "")}" data-dept="${socialEsc(p.actorDept || "")}" aria-label="Ins Ranking aufnehmen">${FEED_RANK}</button>`
-            : "";
-          return `<div class="feed-binge-slide">
-              <div class="feed-poster-wrap" data-person="${pid}">${img}</div>
-              <div class="feed-engage">
-                <div class="feed-stars"></div>
-                <div class="feed-icons">${rankBtn}</div>
-              </div>
-              <div class="feed-binge-caption">${feedActionLabel(p)}</div>
-              <div class="feed-titleline">${socialEsc(p.actorName || "")}</div>
-            </div>`;
-        }).join("");
+        // R31: Schauspieler-Slides — Foto 1:1 + Ranking-Stern aufs Bild, ohne unteren Rand.
+        slides = items.map(p =>
+          `<div class="feed-binge-slide feed-actor-slide">
+              ${actorPhotoBlock(p)}
+              <div class="feed-binge-caption">${socialEsc(p.actorName || "")}</div>
+            </div>`
+        ).join("");
       } else {
         slides = items.map(p => {
           const type = p.mediaType || "movie";
@@ -12678,8 +12774,19 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R30";
+    const APP_VERSION = "R31";
     const PATCH_NOTES = {
+      "R31": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Neue Designs:</strong> Unter <em>Profil → Design</em> gibt es jetzt mehr Themes — Mitternacht, Kino-Rot, Wald, Hell und Monochrom.",
+          "<strong>Neuigkeiten-Verlauf:</strong> Unter <em>Profil → Neuigkeiten &amp; Updates</em> kannst du frühere „Was ist neu\"-Hinweise jederzeit erneut ansehen.",
+          "<strong>Tabs neu sortiert:</strong> Social liegt jetzt an zweiter Stelle, Listen direkt vor dem Profil.",
+          "<strong>Feed kompakter:</strong> Beiträge im Social-Feed sind jetzt im quadratischen 1:1-Format — mehr passt auf den Bildschirm.",
+          "<strong>Teilen beim Bewerten:</strong> Im Bewerten-Fenster gibt es jetzt neben „Im Feed posten\" ein Teilen-Symbol, um gezielt an Freunde zu empfehlen.",
+          "<strong>Schauspieler im Feed:</strong> Ein Stern direkt auf dem Foto zeigt, ob der Schauspieler schon in deinem Ranking ist — mehrere hintereinander lassen sich swipen."
+        ]
+      },
       "R30": {
         title: "Was ist neu",
         notes: [
@@ -12714,7 +12821,9 @@
     };
 
     let _patchShownVersion = null;
-    function showPatchNotes(version) {
+    // R31: `browse` = der Nutzer öffnet alte Notes selbst über Profil → NICHT als
+    // „gesehen" markieren (sonst würde das Auto-Popup fälschlich unterdrückt).
+    function showPatchNotes(version, browse) {
       const data = PATCH_NOTES[version];
       const el = document.getElementById("patch-notes");
       if (!data || !el) return;
@@ -12722,7 +12831,7 @@
       document.getElementById("patch-version").textContent = "Version " + version;
       document.getElementById("patch-body").innerHTML = (data.notes || []).map(n =>
         `<div class="patch-item"><span class="patch-item-dot"></span><span class="patch-item-txt">${n}</span></div>`).join("");
-      _patchShownVersion = version;
+      _patchShownVersion = browse ? null : version;
       el.hidden = false;
       document.body.style.overflow = "hidden";
     }
@@ -13449,16 +13558,66 @@
       renderUsernameField();
       renderFriendsManagement();
       renderThemePicker();     // R29: Design picker
+      renderPatchHistory();    // R31: Neuigkeiten / Update-Historie
     };
+
+    // R31: „Neuigkeiten"-Block unter Profil — listet alle Versionen mit Notes; ein Tap
+    // öffnet sie erneut (Browse-Modus, ohne den „gesehen"-Status zu verändern). Damit
+    // sind die Patch-Notes auch dann erreichbar, wenn das Auto-Popup (z. B. am Handy)
+    // nicht erschienen ist.
+    let patchHistRevealed = false;
+    function renderPatchHistory() {
+      const host = document.getElementById("profile-patchnotes");
+      if (!host) return;
+      const versions = Object.keys(PATCH_NOTES);   // neueste zuerst (Einfügereihenfolge)
+      if (!versions.length) { host.innerHTML = ""; return; }
+      const rows = versions.map(v =>
+        `<button type="button" class="patchhist-row" data-version="${socialEsc(v)}">` +
+          `<span class="patchhist-ver">${socialEsc(v)}${v === APP_VERSION ? '<span class="patchhist-badge">Aktuell</span>' : ''}</span>` +
+          `<span class="patchhist-sub">${(PATCH_NOTES[v].notes || []).length} Neuerungen</span>` +
+          `<svg class="patchhist-chev" viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg>` +
+        `</button>`
+      ).join("");
+      host.innerHTML =
+        '<div class="detail-section" style="margin-top:16px">' +
+          '<button class="blocked-toggle' + (patchHistRevealed ? " open" : "") + '" type="button" id="patchhist-toggle">' +
+            '<span class="blocked-toggle-label">Neuigkeiten & Updates</span>' +
+            '<span class="blocked-count">' + socialEsc(APP_VERSION) + '</span>' +
+            '<svg class="blocked-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>' +
+          '</button>' +
+          '<div id="patchhist-body"' + (patchHistRevealed ? "" : " hidden") + '>' +
+            '<div class="patchhist-list">' + rows + '</div>' +
+          '</div>' +
+        '</div>';
+      const toggle = document.getElementById("patchhist-toggle");
+      const body   = document.getElementById("patchhist-body");
+      toggle.addEventListener("click", () => {
+        patchHistRevealed = !patchHistRevealed;
+        body.hidden = !patchHistRevealed;
+        toggle.classList.toggle("open", patchHistRevealed);
+      });
+      host.querySelectorAll(".patchhist-row").forEach(row =>
+        row.addEventListener("click", () => showPatchNotes(row.dataset.version, true)));
+    }
 
     /* ===================================================================== */
     /* R29 — DESIGN / THEME PICKER                                            */
     /* ===================================================================== */
     const VAULT_THEMES = [
-      { id: "default", swatch: "default", name: "Standard",
+      { id: "default",  swatch: "default",  name: "Standard",
         desc: "Dunkel & Gold — der klassische VAULT-Look." },
-      { id: "nebula",  swatch: "nebula",  name: "Nebula",
-        desc: "Neon-Glas: violette Nebel, Magenta-Glow und transparente Karten." }
+      { id: "nebula",   swatch: "nebula",   name: "Nebula",
+        desc: "Neon-Glas: violette Nebel, Magenta-Glow und transparente Karten." },
+      { id: "midnight", swatch: "midnight", name: "Mitternacht",
+        desc: "Tiefes Marineblau mit kühlem Azur-Akzent." },
+      { id: "crimson",  swatch: "crimson",  name: "Kino-Rot",
+        desc: "Dunkle Kinoatmosphäre mit sattem Rot." },
+      { id: "forest",   swatch: "forest",   name: "Wald",
+        desc: "Warmes Dunkelgrün mit smaragdgrünem Akzent." },
+      { id: "light",    swatch: "light",    name: "Hell",
+        desc: "Heller Tag-Modus mit dezentem Bernstein-Akzent." },
+      { id: "mono",     swatch: "mono",     name: "Monochrom",
+        desc: "Reduziert in Graustufen — pures Schwarz-Weiß." }
     ];
     function getVaultTheme() {
       try { return localStorage.getItem("vault-theme") || "default"; }
