@@ -11573,13 +11573,10 @@
       const host = document.getElementById("social-feed-list");
       if (!host) return;
       const accepted = _socialFriends.filter(f => f.status === "accepted");
-      if (!accepted.length) {
-        stopFeedSubs();
-        host.innerHTML = '<div class="feed-empty">' +
-          '<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' +
-          'Noch keine Aktivität von deinen Freunden.</div>';
-        return;
-      }
+      // R28-Fix: Der Feed zeigt jetzt AUCH die eigenen Posts (nicht nur die der
+      // Freunde). Vorher wurde nur nach Freunde-UIDs abgefragt, deshalb sind
+      // eigene „Im Feed posten"/Top-10/Nr.-1-Posts nie im eigenen Feed erschienen.
+      // Ohne Freunde wird daher NICHT mehr abgebrochen — eigene Aktivität bleibt sichtbar.
 
       host.innerHTML = '<div style="color:var(--text-mute);font-size:13px;padding:12px 0">Lade Feed …</div>';
 
@@ -11602,6 +11599,9 @@
       if (_feedDone && !reset) return;
       _feedLoading = true;
       const uids = accepted.map(f => f.uid);
+      // R28-Fix: eigene UID mit abfragen, damit eigene Posts im Feed erscheinen.
+      const myUid = window.__vaultUser && window.__vaultUser.uid;
+      if (myUid && !uids.includes(myUid)) uids.push(myUid);
       const res = await window.__vaultSocial.getFeedPosts(uids, 20, reset ? null : _feedCursor);
       _feedPosts = reset ? (res.posts || []) : _feedPosts.concat(res.posts || []);
       _feedCursor = res.cursor;
