@@ -3624,6 +3624,24 @@
       async saveProfile(uid, data) {
         await setDoc(doc(firestore, "users", uid), data, { merge: true });
       },
+      // R32: Der Benutzername ist an mehreren Stellen denormalisiert (in jeden eigenen
+      // Feed-Post und in die Freundes-Rückkanten kopiert). saveProfile aktualisiert nur
+      // das Profil-Dokument, deshalb blieb nach einer Namensänderung überall der alte Name
+      // stehen. renameUser zieht die Kopien best-effort nach. friendUids = alle bekannten
+      // Freund-UIDs (auch offene Anfragen — die Rückkante existiert auch dort).
+      async renameUser(uid, newUsername, friendUids) {
+        const name = newUsername || "";
+        // 1) Eigene Feed-Posts (userId == uid) → username-Feld aktualisieren.
+        try {
+          const snap = await getDocs(query(collection(firestore, "posts"), where("userId", "==", uid)));
+          await Promise.all(snap.docs.map(d => updateDoc(d.ref, { username: name }).catch(() => {})));
+        } catch (e) { /* best-effort: darf die Namensänderung nie blockieren */ }
+        // 2) Rückkanten in den Freundeslisten (dort steht mein denormalisierter Name).
+        try {
+          await Promise.all((friendUids || []).map(fuid =>
+            updateDoc(doc(firestore, "users", fuid, "friends", uid), { username: name }).catch(() => {})));
+        } catch (e) { /* best-effort */ }
+      },
       // R18-A: live profile updates for the activity feed.
       subscribeProfile(uid, cb) {
         return onSnapshot(doc(firestore, "users", uid), s => cb(s.exists() ? s.data() : null));
@@ -5667,12 +5685,26 @@
     // (Instagram-Stil) unter dem Post im Social-Feed.
     function postWatchToFeed(rec, bucket, note) {
       if (!rec) return;
+      const noteTrim = (note || "").trim();
+      // R32-Fix (Bug: Freund sieht Post ohne Beschriftung): Der Feed eines Freundes rendert
+      // meine Aktivität überwiegend als „Pseudo-Post" aus meinem recentlyWatched-Snapshot
+      // (nicht als echten posts-Eintrag). Dessen Beschriftung kommt aus meta.note
+      // (buildProfileSnapshot), NICHT aus dem getippten Feed-Text — deshalb blieb die Karte
+      // beim Freund ohne Text. Die App füllt die Beschriftung ohnehin aus meta.note vor, die
+      // beiden sind also dieselbe Notiz; daher hier zurückschreiben, damit sie über den
+      // Profil-Snapshot beim Freund ankommt. Nur bei echtem Text — leere Eingabe darf keine
+      // bestehende Notiz löschen.
+      if (noteTrim) {
+        const key = keyOf(rec.mediaType, rec.id);
+        const m = getMeta(key);
+        if (m.note !== noteTrim) { m.note = noteTrim; saveMeta(key, m); }
+      }
       if (typeof addFeedPost !== "function") return;
       addFeedPost({
         type: bucket ? "rated" : "watched",
         itemId: rec.id, mediaType: rec.mediaType,
         title: rec.title || "", posterPath: rec.poster || null,
-        bucket: bucket || null, note: (note || "").trim()
+        bucket: bucket || null, note: noteTrim
       });
       showToast("Im Feed gepostet");
     }
@@ -11941,12 +11973,24 @@
       return `<div class="feed-poster-wrap feed-actor-photo" data-person="${pid}">${img}${badge}</div>`;
     }
 
+    // R32: frischester bekannter Anzeigename für eine UID. Feed-Posts und
+    // Freundes-Rückkanten speichern nur einen denormalisierten Namens-Schnappschuss,
+    // der nach einer Umbenennung veraltet. Für den eigenen Namen zählt _myProfile,
+    // für Freunde das frisch geladene _feedProfiles — sonst der gespeicherte Fallback.
+    function feedDisplayName(uid, fallback) {
+      const myUid = window.__vaultUser && window.__vaultUser.uid;
+      if (uid && myUid && uid === myUid && _myProfile && _myProfile.username) return _myProfile.username;
+      const fp = uid && _feedProfiles[uid];
+      if (fp && fp.username) return fp.username;
+      return fallback || "?";
+    }
+
     // R21-#5/#8: render one feed card for a post.
     function renderFeedCard(p, watchers) {
       const type      = p.mediaType || "movie";
       const id        = p.itemId;
-      const author    = p.username || "?";
       const ownerUid  = p.userId || "";
+      const author    = feedDisplayName(ownerUid, p.username || "?");
       // R27-#9: person cards = actor rankings AND actor ranking-milestones.
       const isActor   = p.type === "actor_ranked" || p.type === "actor_number_one"
                         || (p.type === "ranking_milestone" && (p.mediaType === "person" || p.actorId));
@@ -12027,8 +12071,8 @@
     // either several film/series watches OR several actor rankings in a row.
     function renderBingeCard(items) {
       const p0       = items[0];
-      const author   = p0.username || "?";
       const ownerUid = p0.userId || "";
+      const author   = feedDisplayName(ownerUid, p0.username || "?");
       const isActorGroup = items.every(p => p.type === "actor_ranked" || p.type === "actor_number_one");
       const head = `<div class="feed-head">
             <div class="feed-av" data-uid="${socialEsc(ownerUid)}">${avatarInitial(author)}</div>
@@ -12454,6 +12498,20 @@
         _myProfile = await window.__vaultSocial.getProfile(uid);
         showToast("Benutzername gespeichert");
         renderUsernameField();
+        // R32: den neuen Namen in die denormalisierten Kopien nachziehen (eigene
+        // Feed-Posts + Freundes-Rückkanten), sonst zeigen Feed & Freundeslisten weiter
+        // den alten Namen. Best-effort im Hintergrund — blockiert die UI nicht.
+        if (window.__vaultSocial.renameUser) {
+          const friendUids = (typeof _socialFriends !== "undefined" ? _socialFriends : []).map(f => f.uid);
+          window.__vaultSocial.renameUser(uid, uname, friendUids)
+            .then(() => {
+              // Feed-Profil-Cache invalidieren + neu laden, damit der Feed sofort stimmt.
+              if (window.__vaultUser) delete _feedProfiles[window.__vaultUser.uid];
+              if (document.body.dataset.tab === "social" && _socialActivePane === "feed"
+                  && typeof renderFeed === "function") renderFeed();
+            })
+            .catch(() => {});
+        }
         if (document.body.dataset.tab === "social") initSocialTab();
       } catch (e) {
         if (hintEl) hintEl.textContent = "Speichern fehlgeschlagen.";
@@ -12774,8 +12832,15 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R31";
+    const APP_VERSION = "R32";
     const PATCH_NOTES = {
+      "R32": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Benutzername wird überall aktualisiert:</strong> Änderst du deinen Namen, erscheint er jetzt sofort im Feed und bei deinen Freunden — nicht mehr der alte Name.",
+          "<strong>Kommentare im Feed sichtbar:</strong> Wenn du beim Posten eine Beschriftung schreibst, sehen deine Freunde sie jetzt zuverlässig unter deinem Beitrag."
+        ]
+      },
       "R31": {
         title: "Was ist neu",
         notes: [
