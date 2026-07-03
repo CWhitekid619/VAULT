@@ -3931,6 +3931,40 @@
           }
         }
       },
+      // R34: Live-Feed. Wie getFeedPosts, aber als onSnapshot-Listener — so erscheint
+      // ein neuer Post/Kommentar eines Freundes sofort, ohne die Ansicht neu zu öffnen.
+      // Gibt eine Unsubscribe-Funktion zurück. Bei fehlendem Composite-Index (userId +
+      // timestamp) wird auf einen ungeordneten Listener + clientseitige Sortierung
+      // zurückgefallen (gleiches Muster wie getFeedPosts).
+      subscribeFeedPosts(uids, cb) {
+        const ids = (uids || []).slice(0, 30);
+        if (!ids.length) return () => {};
+        const col = collection(firestore, "posts");
+        const ms  = t => (t && typeof t.toMillis === "function") ? t.toMillis()
+                        : (typeof t === "number" ? t : 0);
+        const emit = snap => cb(snap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => ms(b.timestamp) - ms(a.timestamp)));
+        let unsub = () => {};
+        try {
+          unsub = onSnapshot(
+            query(col, where("userId", "in", ids), orderBy("timestamp", "desc"), limit(60)),
+            emit,
+            err => {
+              console.warn("[VAULT] Live-Feed (indexiert) fehlgeschlagen, nutze Fallback:", (err && err.message) || err);
+              try { unsub(); } catch (e) {}
+              unsub = onSnapshot(
+                query(col, where("userId", "in", ids), limit(120)),
+                emit,
+                err2 => console.warn("[VAULT] Live-Feed-Fallback fehlgeschlagen:", (err2 && err2.message) || err2)
+              );
+            }
+          );
+        } catch (e) {
+          console.warn("[VAULT] Live-Feed konnte nicht gestartet werden:", (e && e.message) || e);
+        }
+        return () => { try { unsub(); } catch (e) {} };
+      },
       async deletePost(postId) {
         try { await deleteDoc(doc(firestore, "posts", postId)); } catch (e) {}
       },
@@ -11937,6 +11971,33 @@
       _feedPosts = []; _feedCursor = null; _feedDone = false;
       await loadMoreFeedPosts(accepted, true);
       paintFeed(host, accepted);
+
+      // R34: danach einen Live-Listener anhängen, damit neue Posts/Kommentare von
+      // Freunden sofort erscheinen (ohne die Feed-Ansicht neu zu öffnen). Der Listener
+      // deckt das neueste Fenster (~60) ab; ältere, per Pagination geladene Posts
+      // bleiben erhalten (Merge nach ID). Wird über stopFeedSubs()/_feedUnsubs beendet.
+      stopFeedSubs();
+      if (window.__vaultSocial && window.__vaultSocial.subscribeFeedPosts) {
+        const uids = accepted.map(f => f.uid);
+        const myUid = window.__vaultUser && window.__vaultUser.uid;
+        if (myUid && !uids.includes(myUid)) uids.push(myUid);
+        const ms = t => (t && typeof t.toMillis === "function") ? t.toMillis() : (typeof t === "number" ? t : 0);
+        const unsub = window.__vaultSocial.subscribeFeedPosts(uids, livePosts => {
+          // Neuestes Fenster mit evtl. paginierten älteren Posts mergen. Ältere Posts
+          // NUR behalten, wenn sie älter als das Live-Fenster sind — so werden
+          // gelöschte Posts im Fenster respektiert und tauchen nicht wieder auf.
+          const oldestLiveTs = livePosts.length ? ms(livePosts[livePosts.length - 1].timestamp) : Infinity;
+          const byId = new Map();
+          livePosts.forEach(p => byId.set(p.id, p));
+          _feedPosts.forEach(p => {
+            if (!p || !p.id || byId.has(p.id)) return;
+            if (ms(p.timestamp) < oldestLiveTs) byId.set(p.id, p);
+          });
+          _feedPosts = Array.from(byId.values()).sort((a, b) => ms(b.timestamp) - ms(a.timestamp));
+          repaintFeedIfOpen();
+        });
+        _feedUnsubs.push(unsub);
+      }
     }
 
     // R21-#8: cursor pagination over the posts collection.
@@ -12885,8 +12946,14 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R33";
+    const APP_VERSION = "R34";
     const PATCH_NOTES = {
+      "R34": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Feed aktualisiert sich live:</strong> Postet oder kommentiert ein Freund, erscheint der Beitrag jetzt sofort in deinem Feed — du musst die Ansicht nicht mehr neu öffnen."
+        ]
+      },
       "R33": {
         title: "Was ist neu",
         notes: [
