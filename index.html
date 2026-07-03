@@ -3881,13 +3881,20 @@
       // R21-#8/#5: persistent activity-feed posts (top-level "posts" collection).
       // A post is owned by its author (userId) and never auto-deleted.
       async createPost(userId, username, post) {
-        if (!userId || !post || !post.type) return;
+        if (!userId || !post || !post.type) return false;
         const id = post.type + "_" + userId + "_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6);
         try {
           await setDoc(doc(firestore, "posts", id), {
             userId, username: username || "", timestamp: serverTimestamp(), ...post
           });
-        } catch (e) { /* best-effort: a feed post must never break the underlying action */ }
+          return true;
+        } catch (e) {
+          // R34.1: Fehler NICHT mehr still verschlucken — der Aufrufer (addFeedPost)
+          // meldet den Fehlschlag, damit ein bewusster Post nicht spurlos verschwindet.
+          // (Häufigste Ursache: fehlende/zu strenge Firestore-Rules für die posts-Collection.)
+          console.warn("[VAULT] Feed-Post fehlgeschlagen:", (e && e.message) || e);
+          return false;
+        }
       },
       // R21-#8: cursor-based pagination. uids = friend UIDs (+ self). Firestore "in"
       // supports up to 30 values — fine for a personal app. Returns { posts, cursor, done }.
@@ -5734,13 +5741,16 @@
         if (m.note !== noteTrim) { m.note = noteTrim; saveMeta(key, m); }
       }
       if (typeof addFeedPost !== "function") return;
+      // R34.1: auf das Schreibergebnis warten und ehrlich melden — ein bewusster Post
+      // darf nicht spurlos verschwinden (früher: sofort „gepostet", auch bei Fehler).
       addFeedPost({
         type: bucket ? "rated" : "watched",
         itemId: rec.id, mediaType: rec.mediaType,
         title: rec.title || "", posterPath: rec.poster || null,
         bucket: bucket || null, note: noteTrim
-      });
-      showToast("Im Feed gepostet");
+      }).then(ok => showToast(ok === false
+        ? "Feed-Post fehlgeschlagen – bitte erneut versuchen"
+        : "Im Feed gepostet"));
     }
 
     // R25-#22 (parts 4 & 5): whenever the user acts on a title that was recommended to them
@@ -11823,14 +11833,16 @@
 
     // R21-#5/#8: write an activity post to the persistent feed. Respects the
     // "share watched" privacy toggle and requires a username (so the author shows).
-    function addFeedPost(post) {
+    async function addFeedPost(post) {
       try {
         if (!window.__vaultUser || !window.__vaultSocial || !window.__vaultSocial.createPost || !post || !post.type) return;
         const username = (typeof _myProfile !== "undefined" && _myProfile && _myProfile.username) || "";
         if (!username) return;
         // R28: kein shareWatched-Gate mehr — jeder Feed-Post ist jetzt eine bewusste
         // Nutzeraktion (Toggle „Im Feed posten", Liste teilen, Kommentar, Folge teilen).
-        window.__vaultSocial.createPost(window.__vaultUser.uid, username, post);
+        // R34.1: Ergebnis zurückgeben, damit der Aufrufer einen Fehlschlag melden kann
+        // (z. B. Firestore-Rules) — nicht mehr still verschlucken.
+        return await window.__vaultSocial.createPost(window.__vaultUser.uid, username, post);
       } catch (e) { /* a feed post must never break the underlying action */ }
     }
 
@@ -12342,7 +12354,12 @@
       const kindOf = p => (p.type === "actor_ranked" || p.type === "actor_number_one") ? "actor" : "media";
       const groups = [];
       for (const p of merged) {
-        const canGroup = BINGE_TYPES.test(p.type || "");
+        // R34.1: Gruppierung (Swipe-Karte) gilt NUR für automatische Aktivität
+        // (Pseudo-Posts aus recentlyWatched) und Schauspieler-Rankings. Bewusste
+        // Film-/Serien-Posts („Im Feed posten") bleiben IMMER eigene Karten — sonst
+        // verschwindet ein bewusst geposteter Titel auf einem versteckten Slide.
+        const isActorType = p.type === "actor_ranked" || p.type === "actor_number_one";
+        const canGroup = BINGE_TYPES.test(p.type || "") && (p._pseudo || isActorType);
         const last = groups[groups.length - 1];
         if (canGroup && last && last.groupable && last.userId === p.userId && last.kind === kindOf(p) &&
             Math.abs(tsOf(last.items[last.items.length - 1]) - tsOf(p)) <= BINGE_WINDOW) {
@@ -12951,7 +12968,9 @@
       "R34": {
         title: "Was ist neu",
         notes: [
-          "<strong>Feed aktualisiert sich live:</strong> Postet oder kommentiert ein Freund, erscheint der Beitrag jetzt sofort in deinem Feed — du musst die Ansicht nicht mehr neu öffnen."
+          "<strong>Feed aktualisiert sich live:</strong> Postet oder kommentiert ein Freund, erscheint der Beitrag jetzt sofort in deinem Feed — du musst die Ansicht nicht mehr neu öffnen.",
+          "<strong>Jeder bewusste Post wird gezeigt:</strong> Titel, die du mit „Im Feed posten\" teilst, erscheinen jetzt immer als eigene Karte — auch Serien werden nicht mehr in einer Sammelkarte versteckt.",
+          "<strong>Ehrliche Rückmeldung:</strong> Klappt ein Feed-Post technisch nicht, bekommst du jetzt einen Hinweis statt eines stillen Fehlschlags."
         ]
       },
       "R33": {
