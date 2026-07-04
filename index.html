@@ -1763,6 +1763,62 @@
       border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border);
       color: var(--text); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 
+    /* ---------- Profile header (R37: Instagram-Stil) ---------- */
+    .prof-header { display: flex; align-items: center; gap: 16px; margin: 4px 0 20px; }
+    .prof-avatar {
+      width: 68px; height: 68px; border-radius: 50%; flex: 0 0 auto;
+      background: linear-gradient(135deg, var(--accent), #c8901f);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; font-weight: 800; color: #1a1206;
+      box-shadow: 0 0 0 3px rgba(232,179,57,.22), 0 8px 24px rgba(0,0,0,.5);
+    }
+    .prof-name-row { flex: 1; min-width: 0; }
+    .prof-name {
+      font-size: 22px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15;
+      display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .prof-menu-btn {
+      flex: 0 0 auto; width: 42px; height: 42px; border-radius: 12px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .prof-menu-btn svg { width: 22px; height: 22px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; }
+    .prof-menu-btn:active { background: var(--surface); }
+    .prof-section-head { margin: 26px 0 14px; }
+    .prof-section-head h2 { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+
+    /* ---------- Settings drawer (R37: hinter dem Burger, wie Instagram) ---------- */
+    .settings-drawer {
+      position: fixed; inset: 0; z-index: 200;
+      background: var(--bg);
+      display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform .26s cubic-bezier(.4,0,.2,1);
+      overscroll-behavior: contain;
+    }
+    .settings-drawer.open { transform: translateX(0); }
+    .settings-drawer-head {
+      flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
+      padding: calc(var(--safe-top) + 12px) 16px 12px;
+      border-bottom: 1px solid var(--border);
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+      backdrop-filter: saturate(140%) blur(16px);
+      -webkit-backdrop-filter: saturate(140%) blur(16px);
+    }
+    .settings-drawer-head h1 { font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
+    .settings-close {
+      flex: 0 0 auto; width: 38px; height: 38px; border-radius: 10px; margin-left: -6px;
+      background: none; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .settings-close svg { width: 24px; height: 24px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .settings-close:active { background: var(--surface-2); }
+    .settings-drawer-body {
+      flex: 1; min-height: 0; overflow-y: auto;
+      padding: 16px 16px calc(var(--safe-bottom) + 40px);
+      -webkit-overflow-scrolling: touch;
+    }
+    .settings-drawer-body > div:empty { display: none; }
+
     /* ---------- Clickable people ---------- */
     .person { cursor: pointer; }
     .crew-link { color: var(--text); cursor: pointer; border-bottom: 1px solid var(--border); }
@@ -1821,6 +1877,9 @@
     /* ===== SOCIAL TAB ===== */
     .notif-bell-wrap { position: fixed; top: calc(var(--safe-top) + 14px); right: var(--pad); z-index: 60; display: none; }
     .notif-bell-wrap.visible { display: inline-flex; }
+    /* R37: Auf dem Profil-Tab übernimmt der ☰-Button oben rechts — die fixierte Glocke
+       würde damit kollidieren, daher hier ausblenden (wie bei Instagram). */
+    body[data-tab="profile"] .notif-bell-wrap { display: none !important; }
     .notif-bell {
       width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
       background: var(--surface-2); border: 1px solid var(--border); color: var(--text-mute); cursor: pointer;
@@ -2497,42 +2556,6 @@
     </section>
 
     <!-- ============ TAB 2: LISTEN ============ -->
-    <section class="view" id="view-lists" data-view="lists">
-
-      <!-- Overview: all lists -->
-      <div id="lists-overview">
-        <div class="view-head">
-          <h1>Listen</h1>
-          <p>Watchlist, eigene Listen und der Würfel.</p>
-        </div>
-        <div id="lists-cards" class="lists-cards"></div>
-        <button id="new-list-btn" class="new-list-btn" type="button">
-          <svg viewBox="0 0 24 24"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></svg>
-          Neue Liste
-        </button>
-      </div>
-
-      <!-- Detail: one list's contents -->
-      <div id="list-detail" hidden>
-        <button id="list-back" class="list-back" type="button">
-          <svg viewBox="0 0 24 24"><polyline points="15 5 8 12 15 19"/></svg>
-          Listen
-        </button>
-        <div class="list-detail-head">
-          <h1 id="list-detail-name"></h1>
-          <span id="list-detail-count" class="list-detail-count"></span>
-        </div>
-        <button id="open-wuerfel" class="wuerfel-btn" type="button">
-          <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.3"/><circle cx="15" cy="15" r="1.3"/><circle cx="15" cy="9" r="1.3"/><circle cx="9" cy="15" r="1.3"/></svg>
-          Würfeln
-        </button>
-        <div id="list-detail-grid" class="poster-grid"></div>
-        <div id="list-settings" class="list-settings" hidden></div>
-        <button id="delete-list" class="delete-list-btn" type="button" hidden>Liste löschen</button>
-      </div>
-
-    </section>
-
     <!-- ============ TAB 3: ENTDECKEN ============ -->
     <section class="view" id="view-discover" data-view="discover">
 
@@ -2757,16 +2780,70 @@
       </div>
     </section>
 
-    <!-- ============ TAB 6: PROFIL ============ -->
+    <!-- ============ TAB 6: PROFIL (R37: Instagram-Stil — Header + Listen; Einstellungen in der Schublade) ============ -->
     <section class="view" id="view-profile" data-view="profile">
-      <div class="view-head">
-        <h1>Profil</h1>
-        <p>Deine Statistiken.</p>
+
+      <!-- Kopf + Statistiken (in der Listen-Detailansicht ausgeblendet, R37) -->
+      <div id="profile-top">
+        <!-- Instagram-style profile header: Avatar, Name, Burger-Menü -->
+        <div class="prof-header">
+          <div class="prof-avatar" id="prof-avatar">?</div>
+          <div class="prof-name-row">
+            <span class="prof-name" id="prof-name">Profil</span>
+          </div>
+          <button class="prof-menu-btn" id="settings-open" type="button" aria-label="Einstellungen und Menü">
+            <svg viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+          </button>
+        </div>
+        <!-- Statistiken (Filme / Serien / Stunden / Episoden) -->
+        <div id="profile-stats" class="stat-grid"></div>
+        <div id="profile-note" class="profile-note"></div>
       </div>
-      <!-- R17-A2: correct section order -->
-      <!-- 1. Statistiken -->
-      <div id="profile-stats" class="stat-grid"></div>
-      <div id="profile-note" class="profile-note"></div>
+
+      <!-- Listen (aus dem alten Listen-Tab hierher gezogen, R37) -->
+      <div id="lists-overview">
+        <div class="prof-section-head">
+          <h2>Deine Listen</h2>
+        </div>
+        <div id="lists-cards" class="lists-cards"></div>
+        <button id="new-list-btn" class="new-list-btn" type="button">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></svg>
+          Neue Liste
+        </button>
+      </div>
+
+      <!-- Detail: Inhalt einer Liste -->
+      <div id="list-detail" hidden>
+        <button id="list-back" class="list-back" type="button">
+          <svg viewBox="0 0 24 24"><polyline points="15 5 8 12 15 19"/></svg>
+          Listen
+        </button>
+        <div class="list-detail-head">
+          <h1 id="list-detail-name"></h1>
+          <span id="list-detail-count" class="list-detail-count"></span>
+        </div>
+        <button id="open-wuerfel" class="wuerfel-btn" type="button">
+          <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.3"/><circle cx="15" cy="15" r="1.3"/><circle cx="15" cy="9" r="1.3"/><circle cx="9" cy="15" r="1.3"/></svg>
+          Würfeln
+        </button>
+        <div id="list-detail-grid" class="poster-grid"></div>
+        <div id="list-settings" class="list-settings" hidden></div>
+        <button id="delete-list" class="delete-list-btn" type="button" hidden>Liste löschen</button>
+      </div>
+
+    </section>
+
+  </div>
+
+  <!-- ============ SETTINGS DRAWER (R37: Instagram-Stil Menü hinter dem Burger) ============ -->
+  <div id="settings-drawer" class="settings-drawer" hidden aria-hidden="true">
+    <div class="settings-drawer-head">
+      <button id="settings-close" class="settings-close" type="button" aria-label="Zurück">
+        <svg viewBox="0 0 24 24"><polyline points="15 5 8 12 15 19"/></svg>
+      </button>
+      <h1>Einstellungen und Aktivität</h1>
+    </div>
+    <div class="settings-drawer-body">
       <!-- 2. Benutzername -->
       <div id="profile-username"></div>
       <!-- 3. Account block (E-Mail, Sync, Passwort, Logout) -->
@@ -2785,7 +2862,7 @@
       <div id="profile-list-shares"></div>
       <!-- R31: Neuigkeiten / Update-Historie (alte Patch-Notes erneut ansehen) -->
       <div id="profile-patchnotes"></div>
-      <!-- 10. Daten exportieren — absolute last item -->
+      <!-- 10. Daten exportieren -->
       <div class="export-section">
         <button class="export-btn" onclick="exportDB()">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -2793,9 +2870,8 @@
         </button>
       </div>
       <!-- R23: version stamp so you can tell which build is live -->
-      <div id="profile-version" class="profile-version">VAULT · R28</div>
-    </section>
-
+      <div id="profile-version" class="profile-version">VAULT · R37</div>
+    </div>
   </div>
 
   <!-- Bell notification button (fixed, all tabs) -->
@@ -2824,10 +2900,6 @@
     <button class="nav-btn" data-target="ranking" aria-label="Ranking">
       <svg viewBox="0 0 24 24"><line x1="5" y1="20" x2="5" y2="11"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="19" y1="20" x2="19" y2="14"/></svg>
       <span class="nav-label">Ranking</span>
-    </button>
-    <button class="nav-btn" data-target="lists" aria-label="Listen">
-      <svg viewBox="0 0 24 24"><line x1="8" y1="7" x2="20" y2="7"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="8" y1="17" x2="20" y2="17"/><circle cx="4" cy="7" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="17" r="1"/></svg>
-      <span class="nav-label">Listen</span>
     </button>
     <button class="nav-btn" data-target="profile" aria-label="Profil">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21c0-3.5 3-6 7-6s7 2.5 7 6"/></svg>
@@ -4040,11 +4112,6 @@
       if (target === "ranking" && typeof renderRanking === "function") {
         populateRankFilters().then(renderRanking);
       }
-      // Lists tab always returns to the overview
-      if (target === "lists" && typeof showListsOverview === "function") {
-        showListsOverview();
-        if (typeof syncSharedLists === "function") syncSharedLists();   // R13-#6 phase 2: pick up newly-shared lists
-      }
       // Discover loads its curated content once
       if (target === "discover" && typeof initDiscover === "function") {
         initDiscover();
@@ -4056,8 +4123,12 @@
       }
       // Social tab loads friend/request data each open
       if (target === "social" && typeof initSocialTab === "function") initSocialTab();
-      // Profile recomputes stats each open
-      if (target === "profile" && typeof renderProfile === "function") renderProfile();
+      // Profile recomputes stats each open — and (R37) shows the merged Listen section
+      if (target === "profile") {
+        if (typeof renderProfile === "function") renderProfile();
+        if (typeof showListsOverview === "function") showListsOverview();
+        if (typeof syncSharedLists === "function") syncSharedLists();   // R13-#6 phase 2: pick up newly-shared lists
+      }
     }
 
     // Fix #1 (R20-G2): the bottom bar now sits ABOVE all navigation overlays, so a tab
@@ -4078,9 +4149,41 @@
       if (fl && !fl.hidden) { fl.hidden = true; closed = true; }
       const nc = document.getElementById("notif-center");
       if (nc && !nc.hidden) { closeNotifCenter(); closed = true; }
+      const sd = document.getElementById("settings-drawer");   // R37: Einstellungen-Schublade
+      if (sd && !sd.hidden) { closeSettingsDrawer(); closed = true; }
       navStack = [];
       if (closed) document.body.style.overflow = "";
       return closed;
+    }
+
+    // R37: Instagram-Stil Einstellungen-Schublade hinter dem Burger im Profil.
+    function openSettingsDrawer() {
+      const sd = document.getElementById("settings-drawer");
+      if (!sd) return;
+      // Profil-Abschnitte sicherheitshalber frisch rendern (falls Profil noch nie offen war)
+      if (typeof renderProfile === "function") renderProfile();
+      sd.hidden = false;
+      sd.setAttribute("aria-hidden", "false");
+      void sd.offsetWidth;   // Reflow erzwingen → Transition hat einen Startframe (robuster als rAF,
+                             // das in Hintergrund-Tabs / im Preview pausiert und die Klasse nie setzte)
+      sd.classList.add("open");
+      document.body.style.overflow = "hidden";
+    }
+    function closeSettingsDrawer() {
+      const sd = document.getElementById("settings-drawer");
+      if (!sd) return;
+      sd.classList.remove("open");
+      sd.setAttribute("aria-hidden", "true");
+      const done = () => { sd.hidden = true; sd.removeEventListener("transitionend", done); };
+      sd.addEventListener("transitionend", done);
+      setTimeout(done, 320);   // Fallback, falls transitionend nicht feuert
+      document.body.style.overflow = "";
+    }
+    {
+      const soBtn = document.getElementById("settings-open");
+      const scBtn = document.getElementById("settings-close");
+      if (soBtn) soBtn.addEventListener("click", openSettingsDrawer);
+      if (scBtn) scBtn.addEventListener("click", closeSettingsDrawer);
     }
 
     let lastNavTap = { target: null, time: 0 };
@@ -5490,12 +5593,12 @@
     });
 
     function onHomeSectionHeaderClick(id) {
-      if (id === "lh-watchlist") { switchTab("lists"); setTimeout(() => openListDetail("watchlist"), 60); return; }
+      if (id === "lh-watchlist") { switchTab("profile"); setTimeout(() => openListDetail("watchlist"), 60); return; }
       if (id === "lh-movies" || id === "lh-series") { switchTab("ranking"); return; }
       // R18-B2: a list section's header opens that list; recent/progress get the
       // full overlay. Genre/tag rows have no "see all" page, so the header is inert.
       const sec = getHomeSections().find(s => sectionKey(s) === id);
-      if (sec && sec.type === "list") { switchTab("lists"); setTimeout(() => openListDetail(sec.listId), 60); return; }
+      if (sec && sec.type === "list") { switchTab("profile"); setTimeout(() => openListDetail(sec.listId), 60); return; }
       if (id === "lh-recent" || id === "lh-progress") { openHomeSectionFull(id); return; }
     }
 
@@ -8534,6 +8637,8 @@
       stopSharedSub();
       listDetail.hidden = true;
       listsOverview.hidden = false;
+      const pTop = document.getElementById("profile-top");   // R37: Kopf wieder einblenden
+      if (pTop) pTop.hidden = false;
       renderListsCards();
     }
 
@@ -8603,6 +8708,8 @@
       listsOverview.hidden = true;
       listDetail.hidden = false;
       listDetail.scrollTop = 0;
+      const pTop = document.getElementById("profile-top");   // R37: Kopf ausblenden, Liste im Fokus
+      if (pTop) pTop.hidden = true;
       document.getElementById("list-detail-name").textContent = listName(listId);
       const delBtn = document.getElementById("delete-list");
       delBtn.hidden = (listId === WATCHLIST_ID);
@@ -8963,7 +9070,7 @@
         if (sl.name && l.name !== sl.name) { l.name = sl.name; changed = true; }
         try { const full = await window.__vaultSocial.getSharedList(sl.id); if (full && full.items) { l.items = full.items; changed = true; } } catch (e) {}
       }
-      if (changed) { saveDB(); if (document.body.dataset.tab === "lists") renderListsCards(); }
+      if (changed) { saveDB(); if (document.body.dataset.tab === "profile") renderListsCards(); }
     }
 
     document.getElementById("friendpick-cancel").addEventListener("click", closeFriendPicker);
@@ -11528,7 +11635,7 @@
             if (id && type) { closeNotifCenter(); openDetail(type, id); }
           } else if (tap === "list") {
             closeNotifCenter();
-            switchTab("lists");
+            switchTab("profile");
             const sharedId = span.dataset.listid;
             if (sharedId) setTimeout(() => openSharedListByShared(sharedId), 80);
           }
@@ -12664,6 +12771,7 @@
         _myProfile = await window.__vaultSocial.getProfile(uid);
         showToast("Benutzername gespeichert");
         renderUsernameField();
+        if (typeof renderProfileHeader === "function") renderProfileHeader();   // R37: Kopf sofort mitziehen
         // R32: den neuen Namen in die denormalisierten Kopien nachziehen (eigene
         // Feed-Posts + Freundes-Rückkanten), sonst zeigen Feed & Freundeslisten weiter
         // den alten Namen. Best-effort im Hintergrund — blockiert die UI nicht.
@@ -12998,8 +13106,16 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R36";
+    const APP_VERSION = "R37";
     const PATCH_NOTES = {
+      "R37": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Aufgeräumte Navigation:</strong> Der eigene „Listen\"-Tab ist weg — deine Listen leben jetzt direkt im <em>Profil</em>. Unten gibt es nur noch 5 Tabs: Home, Social, Entdecken, Ranking, Profil.",
+          "<strong>Profil im neuen Look:</strong> Oben Avatar, Name und deine Statistiken, darunter deine Listen — alles auf einen Blick.",
+          "<strong>Einstellungen wie bei Instagram:</strong> Über das ☰-Menü oben rechts im Profil öffnest du jetzt Einstellungen, Design, Empfehlungen, Datenschutz, gesperrte Titel, Neuigkeiten & mehr — schön gebündelt statt endlos gescrollt."
+        ]
+      },
       "R36": {
         title: "Was ist neu",
         notes: [
@@ -13385,7 +13501,7 @@
             if (localEntry) {
               const [localId] = localEntry;
               closeFriendProfile();
-              switchTab("lists");
+              switchTab("profile");
               setTimeout(() => openListDetail(localId), 80);
               return;
             }
@@ -13809,8 +13925,23 @@
       });
     }
 
+    // R37: Avatar + Name im Instagram-Stil-Profilkopf setzen.
+    async function renderProfileHeader() {
+      const avEl = document.getElementById("prof-avatar");
+      const nmEl = document.getElementById("prof-name");
+      if (!avEl || !nmEl) return;
+      let uname = (_myProfile && _myProfile.username) || "";
+      if (!uname && window.__vaultUser && window.__vaultSocial && !_myProfile) {
+        try { _myProfile = await window.__vaultSocial.getProfile(window.__vaultUser.uid); uname = (_myProfile && _myProfile.username) || ""; } catch (e) {}
+      }
+      const display = uname || (window.__vaultUser && window.__vaultUser.email) || "Gast";
+      nmEl.textContent = uname ? "@" + uname : display;
+      avEl.textContent = avatarInitial(uname || display);
+    }
+
     // Hook into the existing vault-auth-changed to refresh notif settings + friend mgmt
     window.addEventListener("vault-auth-changed", () => {
+      renderProfileHeader();   // R37: Kopf immer aktuell halten (auch außerhalb des Profils)
       if (document.body.dataset.tab === "profile") {
         renderNotifSettings(); renderUsernameField();
         renderFriendsManagement(); renderListShares();
@@ -13820,6 +13951,7 @@
     const _origRenderProfile = renderProfile;
     renderProfile = async function() {
       await _origRenderProfile();
+      renderProfileHeader();   // R37: Avatar + Name
       renderNotifSettings();
       renderUsernameField();
       renderFriendsManagement();
