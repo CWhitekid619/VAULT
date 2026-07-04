@@ -4058,6 +4058,9 @@
         initDiscover();
         // R9-P4: recommendation sources changed in settings → regenerate the slideshow
         if (recoDirty && typeof buildRecos === "function") { recoDirty = false; buildRecos(dfMedia.value || null); }
+        // R35.1: beim Öffnen die „Ausblenden"-Filter auf bereits gerenderte Karten
+        // nachziehen (Watchlist-/Gesehen-Änderungen seit dem letzten Bau der Reihen).
+        if (typeof refreshAllCardActions === "function") refreshAllCardActions();
       }
       // Social tab loads friend/request data each open
       if (target === "social" && typeof initSocialTab === "function") initSocialTab();
@@ -7174,6 +7177,19 @@
           wlBtn.title = on ? "Auf Watchlist" : "Zur Watchlist";
           wlBtn.innerHTML = CARD_SVG_BOOKMARK;
         }
+        // R35.1: Die Entdecken-Browse-Flächen werden nur beim Bau gefiltert — kommt ein
+        // Titel DANACH auf die Watchlist / wird gesehen, blieb seine Karte trotz aktivem
+        // „Ausblenden"-Filter stehen. Daher hier (ohne TMDB-Refetch) die Karte nachträglich
+        // aus-/einblenden. Gilt NUR für Browse (Reihen, Genre, Filter) — die Suche zeigt
+        // bewusst alles.
+        const browse = wrap.closest("#disc-rows, #disc-genre-grid, #disc-filtered");
+        if (browse) {
+          const card = wrap.closest(".pcard, .grid-item");
+          if (card) {
+            const hide = (db.hideWatched && !!db.items[k]) || (db.hideWatchlist && !!db.watchlist[k]);
+            card.style.display = hide ? "none" : "";
+          }
+        }
       });
     }
 
@@ -7779,13 +7795,15 @@
     // ====================================================================
     function getMeta(key) {
       const m = db.meta[key];
-      return { note: (m && m.note) || "", tags: (m && m.tags) || [], rewatch: !!(m && m.rewatch), flagged: !!(m && m.flagged), removedTags: (m && m.removedTags) || [], autoTags: (m && m.autoTags) || [] };
+      // R35.1: posted gehört zur Feld-Whitelist — sonst verwarf saveMeta das Flag
+      // stillschweigend und der 3★-Feed-Fix (meta.posted) kam nie in der Cloud an.
+      return { note: (m && m.note) || "", tags: (m && m.tags) || [], rewatch: !!(m && m.rewatch), flagged: !!(m && m.flagged), removedTags: (m && m.removedTags) || [], autoTags: (m && m.autoTags) || [], posted: !!(m && m.posted) };
     }
     function saveMeta(key, meta) {
       const removed = meta.removedTags || [];
       const auto = meta.autoTags || [];
-      if (!meta.note && (!meta.tags || !meta.tags.length) && !meta.rewatch && !meta.flagged && !removed.length) delete db.meta[key];
-      else db.meta[key] = { note: meta.note || "", tags: meta.tags || [], rewatch: !!meta.rewatch, flagged: !!meta.flagged, removedTags: removed, autoTags: auto };
+      if (!meta.note && (!meta.tags || !meta.tags.length) && !meta.rewatch && !meta.flagged && !removed.length && !meta.posted) delete db.meta[key];
+      else db.meta[key] = { note: meta.note || "", tags: meta.tags || [], rewatch: !!meta.rewatch, flagged: !!meta.flagged, removedTags: removed, autoTags: auto, posted: !!meta.posted };
       saveDB();
     }
 
@@ -12978,8 +12996,15 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R35";
+    const APP_VERSION = "R35.1";
     const PATCH_NOTES = {
+      "R35.1": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>2–3★-Posts jetzt wirklich sichtbar:</strong> Der Fix aus R35 griff nicht — ein interner Speicher-Filter verwarf die „gepostet\"-Markierung wieder. Jetzt kommt sie zuverlässig bei deinen Freunden an.",
+          "<strong>Entdecken respektiert die Ausblenden-Filter:</strong> Titel, die du auf die Watchlist setzt oder als gesehen markierst, verschwinden jetzt sofort bzw. beim nächsten Öffnen aus den Entdecken-Reihen — nicht erst nach einem Neuladen."
+        ]
+      },
       "R35": {
         title: "Was ist neu",
         notes: [
