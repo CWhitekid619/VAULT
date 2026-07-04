@@ -4323,6 +4323,26 @@
     const TMDB_REGION = "DE";
     const IMG_BASE = "https://image.tmdb.org/t/p/";
 
+    // ---------- R38-#1: TMDB-Fetch mit In-Memory-Cache ----------
+    // Rückgabe ist Response-kompatibel (ok/status/json()), damit alle Callsites
+    // unverändert weiterlaufen. Genre-Listen sind statisch → kein Verfall,
+    // alles andere 10 Min Session-TTL. json() liefert Klone, damit Callsites
+    // gecachte Daten nicht gegenseitig mutieren. Fehl-Responses werden nie gecacht.
+    const _tmCache = new Map(); // url -> { t, status, data }
+    const TM_TTL_MS = 10 * 60 * 1000;
+    async function tmFetch(url, opts) {
+      const ttl = url.indexOf("/genre/") !== -1 ? Infinity : TM_TTL_MS;
+      const hit = _tmCache.get(url);
+      if (hit && (ttl === Infinity || Date.now() - hit.t < ttl))
+        return { ok: true, status: hit.status, json: () => Promise.resolve(structuredClone(hit.data)) };
+      const res = await fetch(url, opts);
+      if (!res.ok) return res;
+      const data = await res.json();
+      _tmCache.set(url, { t: Date.now(), status: res.status, data: data });
+      if (_tmCache.size > 400) _tmCache.delete(_tmCache.keys().next().value);
+      return { ok: true, status: res.status, json: () => Promise.resolve(structuredClone(data)) };
+    }
+
     // ---------- Local storage data model ----------
     // db.items[key]     = watched/ranked record (key = "movie:123" / "tv:456")
     // db.watchlist[key] = titles the user wants to watch
@@ -4392,13 +4412,28 @@
       return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, trackedSeries: {}, homeCustomSections: [], homeSections: null, people: {}, recoExcludeLists: {}, recoExcludeTags: {}, recoSnoozed: {}, manualRankOrder: {}, settings: {}, recentlyWatchedExcluded: {}, spotlight: null, matchSeen: {}, autoTaggedKeys: {}, milestonePosted: {} };
     }
     let db = loadDB();
-    function saveDB() {
+    // R38-#2: das lokale Speichern ist jetzt debounced — vorher lief
+    // JSON.stringify(db) der KOMPLETTEN Bibliothek synchron bei jeder Aktion
+    // (jede Bewertung, jeder Haken). flushDB() schreibt sofort und läuft
+    // zusätzlich bei App-Wechsel/Verlassen, damit nichts verloren geht.
+    const DB_SAVE_DEBOUNCE_MS = 300;
+    let _dbDirty = false, _dbSaveTimer = null;
+    function flushDB() {
+      if (!_dbDirty) return;
+      _dbDirty = false;
+      if (_dbSaveTimer) { clearTimeout(_dbSaveTimer); _dbSaveTimer = null; }
       try { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
       catch (e) { showToast("Speichern fehlgeschlagen"); }
+    }
+    function saveDB() {
+      _dbDirty = true;
+      if (!_dbSaveTimer) _dbSaveTimer = setTimeout(flushDB, DB_SAVE_DEBOUNCE_MS);
       // R2: mirror to Firestore in the background (debounced, never blocks the UI).
       // No-op when logged out or Firebase is unavailable.
       if (typeof queueCloudSync === "function") queueCloudSync();
     }
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushDB(); });
+    window.addEventListener("pagehide", flushDB);
 
     // R2/R4: cloud-sync state lives here (not in the controller block far below)
     // so saveDB() — which runs during early init, e.g. the trackedSeries reset
@@ -4556,8 +4591,8 @@
       const personUrl = "https://api.themoviedb.org/3/search/person" + base;
       try {
         const [mRes, pRes] = await Promise.all([
-          fetch(mediaUrl,  { signal: searchAbort.signal }),
-          fetch(personUrl, { signal: searchAbort.signal })
+          tmFetch(mediaUrl,  { signal: searchAbort.signal }),
+          tmFetch(personUrl, { signal: searchAbort.signal })
         ]);
         if (!mRes.ok) throw new Error("HTTP " + mRes.status);
         const [mData, pData] = await Promise.all([mRes.json(), pRes.ok ? pRes.json() : { results: [] }]);
@@ -4577,7 +4612,7 @@
       btn.className = "result"; btn.type = "button";
       if (p.profile_path) {
         const img = document.createElement("img"); img.className = "result-poster"; img.loading = "lazy";
-        img.src = IMG_BASE + "w92" + p.profile_path; img.alt = "";
+        img.loading = "lazy"; img.src = IMG_BASE + "w92" + p.profile_path; img.alt = "";
         btn.appendChild(img);
       } else {
         const ph = document.createElement("div"); ph.className = "result-poster empty";
@@ -4633,7 +4668,7 @@
         const img = document.createElement("img");
         img.className = "result-poster";
         img.loading = "lazy";
-        img.src = IMG_BASE + "w92" + r.poster_path;
+        img.loading = "lazy"; img.src = IMG_BASE + "w92" + r.poster_path;
         img.alt = "";
         btn.appendChild(img);
       } else {
@@ -4875,7 +4910,7 @@
 
         if (it.poster) {
           const img = document.createElement("img");
-          img.className = "prog-thumb"; img.src = IMG_BASE + "w92" + it.poster; img.alt = "";
+          img.className = "prog-thumb"; img.loading = "lazy"; img.src = IMG_BASE + "w92" + it.poster; img.alt = "";
           contentEl.appendChild(img);
         } else {
           const ph = document.createElement("div"); ph.className = "prog-thumb-ph";
@@ -4915,7 +4950,7 @@
 
         if (total === null) {
           const id = parseInt(key.split(":")[1], 10);
-          fetch("https://api.themoviedb.org/3/tv/" + id + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG)
+          tmFetch("https://api.themoviedb.org/3/tv/" + id + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG)
             .then(r => r.ok ? r.json() : null)
             .then(data => {
               if (!data) return;
@@ -5105,7 +5140,7 @@
       // Fetch film backdrops in parallel (B8: imagery must match each title)
       const slides = await Promise.all(candidates.map(async ({ it, label }) => {
         try {
-          const res = await fetch(
+          const res = await tmFetch(
             "https://api.themoviedb.org/3/" + it.mediaType + "/" + it.id +
             "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG
           );
@@ -5618,7 +5653,7 @@
         all.forEach(it => {
           const row = document.createElement("div");
           row.className = "hso-row";
-          row.innerHTML = (it.poster ? '<img class="hso-thumb" src="' + IMG_BASE + 'w92' + it.poster + '" alt="">' : '<div class="hso-thumb hso-thumb-ph"></div>') +
+          row.innerHTML = (it.poster ? '<img class="hso-thumb" loading="lazy" src="' + IMG_BASE + 'w92' + it.poster + '" alt="">' : '<div class="hso-thumb hso-thumb-ph"></div>') +
             '<div class="hso-row-body"><div class="hso-row-title">' + esc(it.title) + '</div>' +
             '<div class="hso-row-sub">' + (it.year || "") + (it.year && it.mediaType ? " · " : "") + (it.mediaType === "tv" ? "Serie" : "Film") + '</div></div>';
           row.style.cssText = "display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;";
@@ -5639,7 +5674,7 @@
           const tot = seriesTotalCache[key] || null;
           const row = document.createElement("div");
           row.style.cssText = "display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;";
-          row.innerHTML = (it.poster ? '<img style="flex:0 0 40px;width:40px;height:60px;border-radius:6px;object-fit:cover" src="' + IMG_BASE + 'w92' + it.poster + '" alt="">' : '<div style="flex:0 0 40px;width:40px;height:60px;border-radius:6px;background:var(--surface-2)"></div>') +
+          row.innerHTML = (it.poster ? '<img style="flex:0 0 40px;width:40px;height:60px;border-radius:6px;object-fit:cover" loading="lazy" src="' + IMG_BASE + 'w92' + it.poster + '" alt="">' : '<div style="flex:0 0 40px;width:40px;height:60px;border-radius:6px;background:var(--surface-2)"></div>') +
             '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(it.title) + '</div>' +
             '<div style="font-size:12px;color:var(--text-mute);margin-top:3px">' + watched + (tot ? " / " + tot : "") + " Episoden</div></div>";
           row.addEventListener("click", () => { closeHomeSectionFull(); openDetail("tv", parseInt(key.split(":")[1], 10)); });
@@ -6979,7 +7014,7 @@
     async function loadKnownFilms(personId) {
       if (personCreditsCache[personId]) return personCreditsCache[personId];
       try {
-        const res = await fetch("https://api.themoviedb.org/3/person/" + personId
+        const res = await tmFetch("https://api.themoviedb.org/3/person/" + personId
           + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG + "&append_to_response=combined_credits");
         if (!res.ok) throw new Error();
         const data = await res.json();
@@ -7191,7 +7226,7 @@
         + "&include_image_language=null,en,de";   // point 7: text-free + EN/DE scene stills
       let data, videos = [];
       try {
-        const res = await fetch(url);
+        const res = await tmFetch(url);
         if (!res.ok) throw new Error("HTTP " + res.status);
         data = await res.json();
         if (reqId !== detailReqId) return; // a newer request superseded this one
@@ -7199,14 +7234,14 @@
         // German overview / trailer fall back to English when missing
         if (!data.overview) {
           try {
-            const r2 = await fetch(base + "?api_key=" + TMDB_KEY + "&language=en-US");
+            const r2 = await tmFetch(base + "?api_key=" + TMDB_KEY + "&language=en-US");
             if (r2.ok) { const d2 = await r2.json(); if (reqId !== detailReqId) return; data.overview = d2.overview || ""; }
           } catch (e) { /* keep empty */ }
         }
         videos = (data.videos && data.videos.results) || [];
         // Always pull English videos too — the user wants English trailers (A7)
         try {
-          const r3 = await fetch(base + "/videos?api_key=" + TMDB_KEY + "&language=en-US");
+          const r3 = await tmFetch(base + "/videos?api_key=" + TMDB_KEY + "&language=en-US");
           if (r3.ok) {
             const d3 = await r3.json();
             if (reqId !== detailReqId) return;
@@ -7434,7 +7469,7 @@
       if (flat && flat.length) {
         html += '<div class="hscroll">' + flat.map(p =>
           '<div class="provider">' +
-            (p.logo_path ? '<img src="' + IMG_BASE + "w92" + p.logo_path + '" alt="">' : '<div class="provider-name"></div>') +
+            (p.logo_path ? '<img loading="lazy" src="' + IMG_BASE + "w92" + p.logo_path + '" alt="">' : '<div class="provider-name"></div>') +
             '<div class="provider-name">' + esc(p.provider_name) + "</div>" +
           "</div>").join("") + "</div>";
       } else {
@@ -7450,7 +7485,7 @@
           const pRanked = !!(db.people && db.people[c.id]);
           return '<div class="person" data-person="' + c.id + '" data-name="' + esc(c.name) + '">' +
             (c.profile_path
-              ? '<img src="' + IMG_BASE + "w185" + c.profile_path + '" alt="">'
+              ? '<img loading="lazy" src="' + IMG_BASE + "w185" + c.profile_path + '" alt="">'
               : '<div class="person-noimg">' + esc((c.name || "?").charAt(0)) + "</div>") +
             '<div class="person-name">' + esc(c.name) + "</div>" +
             (c.character ? '<div class="person-role">' + esc(c.character) + "</div>" : "") +
@@ -7636,7 +7671,7 @@
       const host = document.getElementById("detail-collection");
       if (!host || !coll) return;
       try {
-        const res = await fetch("https://api.themoviedb.org/3/collection/" + coll.id
+        const res = await tmFetch("https://api.themoviedb.org/3/collection/" + coll.id
           + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
         if (!res.ok) return;
         const d = await res.json();
@@ -7750,7 +7785,7 @@
       const reqId = ++detailReqId;
       let data;
       try {
-        const res = await fetch("https://api.themoviedb.org/3/person/" + personId
+        const res = await tmFetch("https://api.themoviedb.org/3/person/" + personId
           + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG + "&append_to_response=combined_credits,images");
         if (!res.ok) throw new Error("HTTP " + res.status);
         data = await res.json();
@@ -7758,7 +7793,7 @@
         // R25-#3: German bio is often empty → fall back to the English biography
         if (!data.biography) {
           try {
-            const r2 = await fetch("https://api.themoviedb.org/3/person/" + personId + "?api_key=" + TMDB_KEY + "&language=en-US");
+            const r2 = await tmFetch("https://api.themoviedb.org/3/person/" + personId + "?api_key=" + TMDB_KEY + "&language=en-US");
             if (r2.ok) { const d2 = await r2.json(); if (reqId !== detailReqId) return; data.biography = d2.biography || ""; }
           } catch (e) { /* keep empty */ }
         }
@@ -8079,7 +8114,7 @@
     // Fetch genres + keywords + cast for one title in a single request.
     async function fetchAutoTagData(mediaType, id) {
       try {
-        const res = await fetch("https://api.themoviedb.org/3/" + mediaType + "/" + id +
+        const res = await tmFetch("https://api.themoviedb.org/3/" + mediaType + "/" + id +
           "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG + "&append_to_response=keywords,credits");
         if (!res.ok) return null;
         const data = await res.json();
@@ -8164,7 +8199,7 @@
           let data = cache[key];
           if (data === undefined) {
             try {
-              const res = await fetch("https://api.themoviedb.org/3/" + mt + "/" + id +
+              const res = await tmFetch("https://api.themoviedb.org/3/" + mt + "/" + id +
                 "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
               data = res.ok ? await res.json() : null;
             } catch (e) { data = null; }
@@ -8446,7 +8481,7 @@
       const cacheKey = dataId + ":" + season;
       if (seasonCache[cacheKey]) return seasonCache[cacheKey];
       try {
-        const res = await fetch("https://api.themoviedb.org/3/tv/" + dataId + "/season/" + season
+        const res = await tmFetch("https://api.themoviedb.org/3/tv/" + dataId + "/season/" + season
           + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
         if (!res.ok) throw new Error();
         const d = await res.json();
@@ -8485,7 +8520,7 @@
       let episodes = seasonCache[cacheKey];
       if (!episodes) {
         try {
-          const res = await fetch("https://api.themoviedb.org/3/tv/" + data.id + "/season/" + season
+          const res = await tmFetch("https://api.themoviedb.org/3/tv/" + data.id + "/season/" + season
             + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
           if (!res.ok) throw new Error();
           const d = await res.json();
@@ -9215,7 +9250,7 @@
       genreMapById = {};
       for (const t of ["movie", "tv"]) {
         try {
-          const res = await fetch("https://api.themoviedb.org/3/genre/" + t + "/list?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
+          const res = await tmFetch("https://api.themoviedb.org/3/genre/" + t + "/list?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
           if (res.ok) { const d = await res.json(); (d.genres || []).forEach(g => { genreMapById[g.id] = g.name; }); }
         } catch (e) { /* ignore */ }
       }
@@ -9225,7 +9260,7 @@
     async function enrichOne(rec) {
       if (rec.enriched) return;
       try {
-        const res = await fetch("https://api.themoviedb.org/3/" + rec.mediaType + "/" + rec.id + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
+        const res = await tmFetch("https://api.themoviedb.org/3/" + rec.mediaType + "/" + rec.id + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
         if (res.ok) {
           const d = await res.json();
           rec.runtime = rec.mediaType === "tv"
@@ -9314,7 +9349,7 @@
       const it = pool[Math.floor(Math.random() * pool.length)];
       wuerfelResult.innerHTML = "";
       if (it.poster) {
-        const img = document.createElement("img"); img.src = IMG_BASE + "w185" + it.poster; img.alt = "";
+        const img = document.createElement("img"); img.loading = "lazy"; img.src = IMG_BASE + "w185" + it.poster; img.alt = "";
         wuerfelResult.appendChild(img);
       } else {
         const e = document.createElement("div"); e.className = "wr-empty"; e.textContent = "Kein Bild";
@@ -9508,7 +9543,7 @@
 
       let ep = null;
       try {
-        const res = await fetch("https://api.themoviedb.org/3/tv/" + seriesId +
+        const res = await tmFetch("https://api.themoviedb.org/3/tv/" + seriesId +
           "/season/" + ctx.s + "/episode/" + ctx.e +
           "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG + "&append_to_response=credits");
         ep = res.ok ? await res.json() : null;
@@ -9546,7 +9581,7 @@
         html += cast.map(c =>
           '<div class="person" data-person="' + c.id + '" data-name="' + esc(c.name || "") + '">' +
           (c.profile_path
-            ? '<img src="' + IMG_BASE + "w185" + c.profile_path + '" alt="">'
+            ? '<img loading="lazy" src="' + IMG_BASE + "w185" + c.profile_path + '" alt="">'
             : '<div class="person-noimg">' + esc((c.name || "?").charAt(0)) + "</div>") +
           '<div class="person-name">' + esc(c.name || "") + "</div>" +
           (c.character ? '<div class="person-role">' + esc(c.character) + "</div>" : "") +
@@ -9609,7 +9644,7 @@
       if (!episodes) {
         gridEl.innerHTML = '<div class="ep-loading">Lädt …</div>';
         try {
-          const res = await fetch("https://api.themoviedb.org/3/tv/" + data.id + "/season/" + season
+          const res = await tmFetch("https://api.themoviedb.org/3/tv/" + data.id + "/season/" + season
             + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
           if (!res.ok) throw new Error();
           const d = await res.json();
@@ -9655,7 +9690,7 @@
       const rtng = it.vote_average ? it.vote_average.toFixed(1).replace(".", ",") : null;
       dwResult.innerHTML = "";
       if (it.poster_path) {
-        const img = document.createElement("img"); img.src = IMG_BASE + "w185" + it.poster_path; img.alt = "";
+        const img = document.createElement("img"); img.loading = "lazy"; img.src = IMG_BASE + "w185" + it.poster_path; img.alt = "";
         dwResult.appendChild(img);
       } else {
         const e = document.createElement("div"); e.className = "wr-empty"; e.textContent = "Kein Bild";
@@ -9759,7 +9794,7 @@
       if (castPerson)    base += "&with_cast=" + castPerson.id;   // R9-P2: actor (movie path)
 
       try {
-        const r1 = await fetch(base + "&page=1");
+        const r1 = await tmFetch(base + "&page=1");
         if (!r1.ok) throw new Error();
         const d1 = await r1.json();
         const totalPages = Math.min(d1.total_pages || 1, 100);
@@ -9772,7 +9807,7 @@
           if (page === 1) {
             pool = (d1.results || []).filter(it => it.poster_path);
           } else {
-            const r2 = await fetch(base + "&page=" + page);
+            const r2 = await tmFetch(base + "&page=" + page);
             if (!r2.ok) throw new Error();
             const d2 = await r2.json();
             pool = (d2.results || []).filter(it => it.poster_path);
@@ -9962,7 +9997,7 @@
       try {
         let url = "https://api.themoviedb.org/3" + def.url + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG + "&include_adult=false";
         if (def.region) url += "&region=" + TMDB_REGION;
-        const res = await fetch(url);
+        const res = await tmFetch(url);
         if (!res.ok) throw new Error();
         const d = await res.json();
         let items = (d.results || []);
@@ -9997,8 +10032,8 @@
       const out = { movie: {}, tv: {} };
       try {
         const [mr, tr] = await Promise.all([
-          fetch("https://api.themoviedb.org/3/genre/movie/list?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG),
-          fetch("https://api.themoviedb.org/3/genre/tv/list?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG)
+          tmFetch("https://api.themoviedb.org/3/genre/movie/list?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG),
+          tmFetch("https://api.themoviedb.org/3/genre/tv/list?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG)
         ]);
         if (mr.ok) (await mr.json()).genres.forEach(g => out.movie[g.id] = g.name);
         if (tr.ok) (await tr.json()).genres.forEach(g => out.tv[g.id] = g.name);
@@ -10034,7 +10069,7 @@
 
     async function fetchRecsFor(mediaType, id) {
       try {
-        const res = await fetch("https://api.themoviedb.org/3/" + mediaType + "/" + id +
+        const res = await tmFetch("https://api.themoviedb.org/3/" + mediaType + "/" + id +
           "/recommendations?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG + "&page=1");
         if (!res.ok) return [];
         const d = await res.json();
@@ -10219,7 +10254,7 @@
 
     async function buildGenreChips() {
       try {
-        const res = await fetch("https://api.themoviedb.org/3/genre/movie/list?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
+        const res = await tmFetch("https://api.themoviedb.org/3/genre/movie/list?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
         if (!res.ok) return;
         const d = await res.json();
         const frag = document.createDocumentFragment();
@@ -10257,8 +10292,8 @@
       const personUrl = "https://api.themoviedb.org/3/search/person" + base;
       try {
         const [mRes, pRes] = await Promise.all([
-          fetch(mediaUrl,  { signal: discAbort.signal }),
-          fetch(personUrl, { signal: discAbort.signal })
+          tmFetch(mediaUrl,  { signal: discAbort.signal }),
+          tmFetch(personUrl, { signal: discAbort.signal })
         ]);
         if (!mRes.ok) throw new Error();
         const [d, pd] = await Promise.all([mRes.json(), pRes.ok ? pRes.json() : { results: [] }]);
@@ -10366,7 +10401,7 @@
           + "&with_genres=" + gb.id + "&sort_by=" + gb.sort + "&page=" + gb.page + "&include_adult=false";
         if (gb.sort === "vote_average.desc") url += "&vote_count.gte=200";
         if (gb.sort === "primary_release_date.desc") url += "&vote_count.gte=20";
-        const res = await fetch(url);
+        const res = await tmFetch(url);
         if (!res.ok) throw new Error();
         const d = await res.json();
         gb.totalPages = Math.min(d.total_pages || 1, 500);
@@ -10436,7 +10471,7 @@
       const media = dfMedia.value || "movie";
       if (dfGenresFilled === media) return;
       try {
-        const res = await fetch("https://api.themoviedb.org/3/genre/" + media + "/list?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
+        const res = await tmFetch("https://api.themoviedb.org/3/genre/" + media + "/list?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
         if (!res.ok) return;
         const d = await res.json();
         const prev = dfGenre.value;
@@ -10510,7 +10545,7 @@
       dfMore.hidden = true;
       if (fb.page === 1) dfGrid.innerHTML = '<div class="grid-empty">Lädt …</div>';
       try {
-        const res = await fetch(fb.url + "&page=" + fb.page);
+        const res = await tmFetch(fb.url + "&page=" + fb.page);
         if (!res.ok) throw new Error();
         const d = await res.json();
         fb.totalPages = Math.min(d.total_pages || 1, 500);
@@ -10531,7 +10566,7 @@
     // person's credits (works for both movie and tv) and apply the other filters client-side.
     async function fetchPersonCredits(personId, media) {
       const ep = media === "tv" ? "tv_credits" : "movie_credits";
-      const res = await fetch("https://api.themoviedb.org/3/person/" + personId + "/" + ep
+      const res = await tmFetch("https://api.themoviedb.org/3/person/" + personId + "/" + ep
         + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
       if (!res.ok) throw new Error();
       return res.json();
@@ -10609,7 +10644,7 @@
           if (abort) abort.abort();
           abort = new AbortController();
           try {
-            const res = await fetch("https://api.themoviedb.org/3/search/person?api_key=" + TMDB_KEY
+            const res = await tmFetch("https://api.themoviedb.org/3/search/person?api_key=" + TMDB_KEY
               + "&language=" + TMDB_LANG + "&include_adult=false&query=" + encodeURIComponent(q), { signal: abort.signal });
             if (!res.ok) throw new Error();
             const d = await res.json();
@@ -10622,7 +10657,7 @@
               const item = document.createElement("button");
               item.type = "button"; item.className = "person-ac-item";
               item.innerHTML = (p.profile_path
-                  ? '<img src="' + IMG_BASE + "w92" + p.profile_path + '" alt="">'
+                  ? '<img loading="lazy" src="' + IMG_BASE + "w92" + p.profile_path + '" alt="">'
                   : '<span class="person-ac-noimg">' + esc((p.name || "?").charAt(0)) + "</span>")
                 + '<span class="person-ac-name">' + esc(p.name) + (known ? ' <em>· ' + esc(known) + "</em>" : "") + "</span>";
               item.addEventListener("click", () => { input.value = p.name; close(); onPick({ id: p.id, name: p.name }); });
@@ -11308,6 +11343,7 @@
     // "Neu anfangen" → keep a local backup of the old library (not synced) and
     // reset the working db to a fresh empty state, which becomes the cloud seed.
     function migrateFresh() {
+      flushDB();   // R38-#2: pending Debounce-Save erst rausschreiben, damit das Backup vollständig ist
       try {
         const cur = localStorage.getItem(DB_KEY);
         if (cur) localStorage.setItem("reel.db.premigration", cur);
@@ -13106,8 +13142,22 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R37";
+    const APP_VERSION = "R38";
+    // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
+    // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
+    if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
+    }
     const PATCH_NOTES = {
+      "R38": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Alles schneller:</strong> Filme, Serien und Personen, die du dir schon angesehen hast, öffnen sich jetzt sofort wieder — Daten werden für die Sitzung zwischengespeichert statt jedes Mal neu geladen.",
+          "<strong>Weniger Datenverbrauch:</strong> Poster und Bilder werden auf dem Gerät gecacht und Listen laden Bilder erst, wenn sie ins Bild scrollen.",
+          "<strong>Offline-Start:</strong> Die App startet jetzt auch ohne Internet (mit deiner lokalen Bibliothek) — dank neuem Hintergrund-Cache.",
+          "<strong>Flüssigeres Bedienen:</strong> Das Speichern deiner Bibliothek blockiert die Oberfläche nicht mehr bei jedem einzelnen Tap."
+        ]
+      },
       "R37": {
         title: "Was ist neu",
         notes: [
