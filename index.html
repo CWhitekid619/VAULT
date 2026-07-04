@@ -5741,11 +5741,17 @@
       // beiden sind also dieselbe Notiz; daher hier zurückschreiben, damit sie über den
       // Profil-Snapshot beim Freund ankommt. Nur bei echtem Text — leere Eingabe darf keine
       // bestehende Notiz löschen.
-      if (noteTrim) {
-        const key = keyOf(rec.mediaType, rec.id);
-        const m = getMeta(key);
-        if (m.note !== noteTrim) { m.note = noteTrim; saveMeta(key, m); }
-      }
+      // R35-Fix (3★-Posts unsichtbar): Der Feed beim Freund zeigt Pseudo-Posts aus dem
+      // recentlyWatched-Schnappschuss nur bei „Highlight" (4–5★ oder 1★) — ein bewusst
+      // geposteter 3★/2★-Titel hatte dort KEIN Sicherheitsnetz und verschwand, wenn der
+      // echte posts-Eintrag nicht ankam. Daher: bewussten Post als meta.posted markieren;
+      // buildProfileSnapshot nimmt das Flag mit, paintFeed zeigt geflaggte Titel IMMER.
+      const key = keyOf(rec.mediaType, rec.id);
+      const m = getMeta(key);
+      let metaChanged = false;
+      if (noteTrim && m.note !== noteTrim) { m.note = noteTrim; metaChanged = true; }
+      if (!m.posted) { m.posted = true; metaChanged = true; }
+      if (metaChanged) saveMeta(key, m);
       if (typeof addFeedPost !== "function") return;
       // R34.1: auf das Schreibergebnis warten und ehrlich melden — ein bewusster Post
       // darf nicht spurlos verschwinden (früher: sofort „gepostet", auch bei Fehler).
@@ -8701,7 +8707,8 @@
           return {
             id: it.id, title: it.title || "", posterPath: it.poster || null,
             mediaType: it.mediaType, bucket: it.bucket || null, watchedAt: it.loggedAt || 0,
-            year: it.year || null, note: (m && m.note) ? m.note : ""   // R18-A: feed shows the friend's note
+            year: it.year || null, note: (m && m.note) ? m.note : "",   // R18-A: feed shows the friend's note
+            posted: !!(m && m.posted)   // R35-Fix: bewusst gepostet → im Feed IMMER zeigen (auch 2–3★)
           };
         });
       // Top ranked — movies + series merged, honouring manual order, by Elo, max 20.
@@ -12327,7 +12334,9 @@
         const profile = _feedProfiles[f.uid];
         if (!profile || profile.privacy?.shareWatched === false) return;
         (profile.recentlyWatched || []).forEach(it => {
-          if (!feedIsHighlight(it.bucket)) return;   // Feed bleibt auf Highlights beschränkt
+          // R35-Fix: bewusst gepostete Titel (it.posted) IMMER zeigen — sonst
+          // verschwand ein 2–3★-Post, weil der Highlight-Filter (4–5★/1★) griff.
+          if (!it.posted && !feedIsHighlight(it.bucket)) return;
           pseudo.push({
             type: it.bucket ? "rated" : "watched",
             userId: f.uid, username: f.username || f.uid,
@@ -12969,8 +12978,14 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R34";
+    const APP_VERSION = "R35";
     const PATCH_NOTES = {
+      "R35": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Auch 2–3★-Posts erscheinen:</strong> Bewertest du einen Film oder eine Serie mit „Im Feed posten\", wird der Beitrag jetzt zuverlässig bei deinen Freunden angezeigt — egal wie viele Sterne. Vorher konnten mittlere Wertungen (z. B. 3★) unsichtbar bleiben."
+        ]
+      },
       "R34": {
         title: "Was ist neu",
         notes: [
