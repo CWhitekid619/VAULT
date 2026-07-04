@@ -2888,30 +2888,22 @@
   <div id="qr-backdrop" class="sheet-backdrop" hidden>
     <div class="sheet qr-sheet" role="dialog" aria-modal="true" aria-label="Bewerten">
       <div class="sheet-handle"></div>
-      <!-- Step 1: Bewerten -->
+      <!-- Step 1: Bewerten (R36: nur bewerten — die Post-Entscheidung kommt in Schritt 2) -->
       <div id="qr-step1">
         <div class="sheet-section-label">Wie war's?</div>
         <div id="qr-buckets" class="bucket-list"></div>
-        <div class="qr-share-row" id="qr-share-row" hidden>
-          <span class="qr-share-label">Im Feed posten</span>
-          <div class="qr-share-actions">
-            <!-- R31: Standard-Teilen-Icon → Empfehlung an einzelne Freunde -->
-            <button id="qr-share-friends" class="qr-share-icon-btn" type="button" aria-label="Mit Freunden teilen">
-              <svg viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-            </button>
-            <label class="qr-toggle">
-              <input type="checkbox" id="qr-share-toggle">
-              <span class="qr-toggle-track"><span class="qr-toggle-thumb"></span></span>
-            </label>
-          </div>
-        </div>
         <button id="qr-skip" class="sheet-btn-cancel" type="button">Überspringen</button>
       </div>
-      <!-- Step 2: Notiz (shown only when the "post to feed" toggle is ON) -->
+      <!-- Step 2: Posten oder nur speichern (R36) -->
       <div id="qr-step2" hidden>
-        <div class="sheet-section-label">Notiz für deinen Post</div>
-        <textarea id="qr-note" class="qr-note-input" placeholder="Optional: deine Notiz zum Film …" rows="3"></textarea>
+        <div class="sheet-section-label">In den Feed posten?</div>
+        <textarea id="qr-note" class="qr-note-input" placeholder="Optional: deine Notiz / Beschreibung für den Post …" rows="3"></textarea>
         <button id="qr-share-confirm" class="sheet-btn-primary" type="button">Posten</button>
+        <button id="qr-done" class="sheet-btn-ghost" type="button">Fertig – nicht posten</button>
+        <button id="qr-share-friends" class="sheet-btn-ghost" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
+          Mit Freund teilen
+        </button>
         <button id="qr-share-back" class="sheet-btn-cancel" type="button">Zurück</button>
       </div>
     </div>
@@ -5755,6 +5747,15 @@
       if (noteTrim && m.note !== noteTrim) { m.note = noteTrim; metaChanged = true; }
       if (!m.posted) { m.posted = true; metaChanged = true; }
       if (metaChanged) saveMeta(key, m);
+      // R36: Profil-Schnappschuss SOFORT neu veröffentlichen (nicht auf den ~2s-Debounce
+      // warten). Der recentlyWatched-Kanal ist der zuverlässige Weg zum Freund — die
+      // posts-Collection kam browser→handy nachweislich nicht an (nur 1/4/5★-Highlights
+      // gingen durch). Mit meta.posted im frisch veröffentlichten Snapshot erscheinen jetzt
+      // auch 2–3★ sofort im Feed des Freundes (paintFeed zeigt geflaggte Titel immer).
+      if (window.__vaultUser && window.__vaultSocial && window.__vaultSocial.saveProfile
+          && typeof buildProfileSnapshot === "function") {
+        window.__vaultSocial.saveProfile(window.__vaultUser.uid, buildProfileSnapshot()).catch(() => {});
+      }
       if (typeof addFeedPost !== "function") return;
       // R34.1: auf das Schreibergebnis warten und ehrlich melden — ein bewusster Post
       // darf nicht spurlos verschwinden (früher: sofort „gepostet", auch bei Fehler).
@@ -5808,10 +5809,6 @@
       // Reset to step 1
       document.getElementById("qr-step1").hidden = false;
       document.getElementById("qr-step2").hidden = true;
-      // R30: „Im Feed posten" ist jetzt standardmäßig AN (Opt-out) — alles wird
-      // gepostet, außer der Nutzer wählt den Schalter vor der Bewertung ab.
-      const toggleEl = document.getElementById("qr-share-toggle");
-      if (toggleEl) toggleEl.checked = true;
       qrBuckets.innerHTML = "";
       BUCKETS.forEach((b, i) => {
         const el = document.createElement("button");
@@ -5819,28 +5816,22 @@
         el.type = "button";
         el.innerHTML = '<span class="bucket-rank">' + (i + 1) + "</span><span>" + b.label + "</span>";
         el.addEventListener("click", () => {
-          const sharing = document.getElementById("qr-share-toggle")?.checked;
-          if (sharing) {
-            _qrPendingBucket = b.id;
-            document.getElementById("qr-step1").hidden = true;
-            document.getElementById("qr-step2").hidden = false;
-            const noteEl = document.getElementById("qr-note");
-            // R28: bereits vorhandene persönliche Notiz als Vorschlag übernehmen.
-            if (noteEl) {
-              const m = getMeta(keyOf(r.media_type, r.id));
-              noteEl.value = (m && m.note) || "";
-              setTimeout(() => noteEl.focus(), 50);
-            }
-          } else {
-            logItem(r, b.id);
-            closeQuickRate();
+          // R36: Bewertung SOFORT speichern (Titel ist gerankt + in der Liste, egal ob
+          // später gepostet wird). Danach immer Schritt 2 → Nutzer entscheidet bewusst
+          // „Posten" oder „Fertig – nicht posten". Kein Auto-Post-Toggle mehr.
+          _qrPendingBucket = b.id;
+          logItem(r, b.id);
+          document.getElementById("qr-step1").hidden = true;
+          document.getElementById("qr-step2").hidden = false;
+          const noteEl = document.getElementById("qr-note");
+          if (noteEl) {
+            const m = getMeta(keyOf(r.media_type, r.id));
+            noteEl.value = (m && m.note) || "";
+            setTimeout(() => noteEl.focus(), 50);
           }
         });
         qrBuckets.appendChild(el);
       });
-      // A1: Show share toggle when logged in and has friends; refresh if not yet loaded
-      const shareRow = document.getElementById("qr-share-row");
-      if (shareRow) shareRow.hidden = false;   // R23.3: always visible — no login/friend gating
       // A3: if opened from a friend-profile stacked detail, raise z-index above it
       const detailOverlay = document.getElementById("detail");
       if (detailOverlay && detailOverlay.classList.contains("over-profile")) {
@@ -5868,22 +5859,25 @@
       closeQuickRate();
       openShareSheet(rec);
     });
-    // R28: Step 2: confirm → Titel bewerten + bewussten Feed-Post mit Notiz erstellen.
+    // R36: Step 2 „Posten" → bewussten Feed-Post erstellen (bewertet wurde schon in
+    // Schritt 1). postWatchToFeed setzt meta.posted + veröffentlicht das Profil sofort neu.
     document.getElementById("qr-share-confirm").addEventListener("click", () => {
-      if (!qrItem || !_qrPendingBucket) { closeQuickRate(); return; }
+      if (!qrItem) { closeQuickRate(); return; }
       const note   = (document.getElementById("qr-note")?.value || "").trim();
       const bucket = _qrPendingBucket;
-      const item   = qrItem;
-      logItem(item, bucket);
-      const rec = db.items[keyOf(item.media_type, item.id)];
+      const rec    = db.items[keyOf(qrItem.media_type, qrItem.id)];
       closeQuickRate();
-      postWatchToFeed(rec, bucket, note);
+      if (rec) postWatchToFeed(rec, bucket, note);
     });
-    // Step 2: back → return to step 1
+    // R36: Step 2 „Fertig – nicht posten" → Bewertung bleibt gespeichert, KEIN Feed-Post.
+    document.getElementById("qr-done").addEventListener("click", () => {
+      closeQuickRate();
+      showToast("Gespeichert – nicht gepostet");
+    });
+    // Step 2: back → return to step 1 (Bewertung bleibt gespeichert)
     document.getElementById("qr-share-back").addEventListener("click", () => {
       document.getElementById("qr-step1").hidden = false;
       document.getElementById("qr-step2").hidden = true;
-      _qrPendingBucket = null;
     });
 
     // ---------- Block undo snackbar (R6-P10b) ----------
@@ -5929,8 +5923,15 @@
     });
     document.getElementById("sheet-cancel").addEventListener("click", closeSheet);
     document.getElementById("sheet-cancel2").addEventListener("click", closeSheet);
+    // R36: „Watch" im Aktions-Sheet nutzt jetzt denselben einheitlichen Bewerten→
+    // Posten/Fertig-Ablauf wie Entdecken/Detail (openQuickRate), statt des alten
+    // Log-Sheet-Schritts mit Auto-Post-Toggle.
     document.getElementById("sheet-watched-btn").addEventListener("click", () => {
-      if (sheetItem) showSheetStep2(sheetItem);
+      if (!sheetItem) return;
+      const r = sheetItem;
+      closeSheet();
+      if (!db.items[keyOf(r.media_type, r.id)]) logWatched(r);   // neu → als gesehen markieren
+      openQuickRate(r);
     });
     // Fix #1: share an already-watched title with friends (same flow as detail/feed/discover).
     document.getElementById("sheet-share-btn").addEventListener("click", () => {
@@ -7396,7 +7397,8 @@
       // Tap the status line of an unranked title to rate it later (P3 optional rating)
       const statusEl = document.getElementById("detail-status");
       if (statusEl) statusEl.addEventListener("click", () => {
-        if (db.items[keyOf(mediaType, data.id)]) { openSheet(r); showSheetStep2(r); }
+        // R36: erneut bewerten → einheitlicher Bewerten→Posten/Fertig-Ablauf.
+        if (db.items[keyOf(mediaType, data.id)]) openQuickRate(r);
       });
       document.getElementById("detail-watchlist").addEventListener("click", () => {
         const key = keyOf(mediaType, data.id);
@@ -12996,8 +12998,16 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R35.1";
+    const APP_VERSION = "R36";
     const PATCH_NOTES = {
+      "R36": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Neuer Bewerten-Ablauf:</strong> Nach dem Bewerten entscheidest du jetzt bewusst — <em>Posten</em> (mit optionaler Beschreibung) oder <em>Fertig – nicht posten</em> (Titel landet nur in deiner Liste). Kein Auto-Post mehr, überall gleich (Home, Entdecken, Detailseite).",
+          "<strong>Posten funktioniert zuverlässig:</strong> Gepostete Titel erscheinen jetzt sofort bei deinen Freunden — unabhängig von der Sternzahl (auch 2★ und 3★).",
+          "<strong>Mit Freund teilen:</strong> Direkt im Bewerten-Fenster kannst du einen Titel gezielt an einen Freund empfehlen — jetzt auch von der Startseite aus."
+        ]
+      },
       "R35.1": {
         title: "Was ist neu",
         notes: [
