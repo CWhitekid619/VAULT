@@ -630,6 +630,8 @@
       fill: none; stroke-width: 1.6; stroke-linejoin: round;
     }
     .sheet-btn-ghost:active { background: var(--surface-2); }
+    .sheet-btn-ghost.active { border-color: var(--accent); color: var(--accent); }
+    .sheet-btn-ghost.active svg { stroke: var(--accent); }
     .sheet-btn-cancel {
       width: 100%; padding: 13px; background: none; border: none;
       color: var(--text-mute); font-family: inherit; font-size: 15px; cursor: pointer;
@@ -1208,14 +1210,16 @@
     }
     .detail-log-btn:active { filter: brightness(.92); }
     .detail-log-btn.watched { background: var(--surface-2); color: var(--text-mute); }
-    .detail-actions-2 { padding-top: 8px; }
+    /* Zweite Action-Reihe: Instagram-artige, reine Icon-Buttons (kein Label). Als
+       flex:1-Zeile teilen sich alle Buttons die Breite gleichmäßig auf und passen immer
+       in den Screen — „Getrackt" rutscht nie mehr rechts raus, kein horizontales Scrollen. */
+    .detail-actions-2 { padding-top: 8px; display: flex; gap: 8px; }
     .detail-sec-btn {
-      flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
-      padding: 11px; border-radius: 12px; cursor: pointer;
+      flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: center;
+      padding: 12px; border-radius: 12px; cursor: pointer;
       background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
-      font-family: inherit; font-size: 14px; font-weight: 600;
     }
-    .detail-sec-btn svg { width: 18px; height: 18px; stroke: var(--text); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .detail-sec-btn svg { width: 22px; height: 22px; stroke: var(--text); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
     .detail-sec-btn:active { filter: brightness(1.15); }
     .detail-sec-btn.active { border-color: var(--accent); color: var(--accent); }
     .detail-sec-btn.active svg { stroke: var(--accent); fill: var(--accent); }
@@ -1486,12 +1490,11 @@
     .disc-top-row { display: flex; gap: 10px; align-items: stretch; }
     .disc-top-row .search-bar { flex: 1; margin: 0; }   /* 2a: match the Würfeln button height */
     .wuerfel-btn-sm {
-      flex: 0 0 auto; display: flex; align-items: center; gap: 6px;
-      padding: 0 14px; border-radius: 12px; cursor: pointer;
+      flex: 0 0 49px; align-self: stretch; display: flex; align-items: center; justify-content: center;
+      padding: 0; border-radius: 12px; cursor: pointer;
       background: var(--accent); color: #1a1206; border: none;
-      font-family: inherit; font-size: 14px; font-weight: 700;
     }
-    .wuerfel-btn-sm svg { width: 17px; height: 17px; stroke: #1a1206; fill: none; stroke-width: 1.7; }
+    .wuerfel-btn-sm svg { width: 22px; height: 22px; stroke: #1a1206; fill: none; stroke-width: 1.7; }
     .wuerfel-btn-sm:active { filter: brightness(.92); }
 
     /* Discover filter bar (A3) */
@@ -2570,9 +2573,8 @@
             <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
           </button>
         </div>
-        <button id="disc-wuerfel-btn" class="wuerfel-btn-sm" type="button">
+        <button id="disc-wuerfel-btn" class="wuerfel-btn-sm" type="button" aria-label="Würfeln" title="Würfeln">
           <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.3"/><circle cx="15" cy="15" r="1.3"/><circle cx="15" cy="9" r="1.3"/><circle cx="9" cy="15" r="1.3"/></svg>
-          Würfeln
         </button>
       </div>
 
@@ -2935,6 +2937,10 @@
         <button id="sheet-list-btn" class="sheet-btn-ghost" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           Zu Liste hinzufügen
+        </button>
+        <button id="sheet-track-btn" class="sheet-btn-ghost" type="button" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+          <span id="sheet-track-label">Tracken</span>
         </button>
         <button id="sheet-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
       </div>
@@ -5723,6 +5729,18 @@
       document.getElementById("sheet-watched-btn").textContent = watched ? "Watched" : "Watch";
       document.getElementById("sheet-share-btn").hidden = !watched;
 
+      // „Tracken" direkt aus dem Suchergebnis — nur für Serien, spiegelt den Getrackt-Status.
+      const trackBtn = document.getElementById("sheet-track-btn");
+      if (trackBtn) {
+        const isTv = r.media_type === "tv";
+        trackBtn.hidden = !isTv;
+        if (isTv) {
+          const tracked = !!db.trackedSeries[keyOf(r.media_type, r.id)];
+          trackBtn.classList.toggle("active", tracked);
+          document.getElementById("sheet-track-label").textContent = tracked ? "Getrackt" : "Tracken";
+        }
+      }
+
       // always start at step 1 (action choice)
       document.getElementById("sheet-step1").hidden = false;
       document.getElementById("sheet-step2").hidden = true;
@@ -6098,6 +6116,26 @@
       const r = sheetItem;
       closeSheet();
       openListPicker(r, true);   // custom lists only; "+ Neue Liste" lives inside the picker
+    });
+    // „Tracken" direkt aus dem Suchergebnis-Sheet (nur Serien) — Umweg über „Details" entfällt.
+    document.getElementById("sheet-track-btn").addEventListener("click", () => {
+      if (!sheetItem) return;
+      const r = sheetItem;
+      const key = keyOf(r.media_type, r.id);
+      const tracked = !!db.trackedSeries[key];
+      if (tracked) {
+        delete db.trackedSeries[key];
+      } else {
+        db.trackedSeries[key] = true;
+      }
+      saveDB();
+      // Button-Zustand im offenen Sheet sofort spiegeln (kein Schließen — Nutzer sieht das Ergebnis)
+      const btn = document.getElementById("sheet-track-btn");
+      btn.classList.toggle("active", !tracked);
+      document.getElementById("sheet-track-label").textContent = !tracked ? "Getrackt" : "Tracken";
+      showToast(!tracked ? "Zu Aktuelle Serien hinzugefügt" : "Aus Aktuelle Serien entfernt");
+      refreshDetailStatus();
+      if (typeof buildProgressSection === "function") buildProgressSection();
     });
     backdrop.addEventListener("click", e => { if (e.target === backdrop) closeSheet(); });
 
@@ -7382,19 +7420,17 @@
       html += "</div>";
       // secondary actions: Watchlist (toggle) + Listen (custom lists) + Tracken (TV only)
       html += '<div class="detail-actions detail-actions-2">';
-      html += '<button class="detail-sec-btn" id="detail-watchlist" type="button">' +
-        '<svg id="detail-wl-icon" viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></svg>' +
-        '<span id="detail-wl-label">Watchlist</span></button>';
-      html += '<button class="detail-sec-btn" id="detail-lists" type="button">' +
-        '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Listen</button>';
+      html += '<button class="detail-sec-btn" id="detail-watchlist" type="button" aria-label="Watchlist" title="Watchlist">' +
+        '<svg id="detail-wl-icon" viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></svg></button>';
+      html += '<button class="detail-sec-btn" id="detail-lists" type="button" aria-label="Listen" title="Listen">' +
+        '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></button>';
       // R30: „Mit Freunden teilen" (Empfehlung an einzelne Freunde) — getrennt vom
       // „Im Feed posten". Diese Funktion war zuvor nur im Log-Sheet erreichbar.
-      html += '<button class="detail-sec-btn" id="detail-share" type="button">' +
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>Teilen</button>';
-      if (isTv) html += '<button class="detail-sec-btn" id="detail-track" type="button">' +
+      html += '<button class="detail-sec-btn" id="detail-share" type="button" aria-label="Teilen" title="Teilen">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg></button>';
+      if (isTv) html += '<button class="detail-sec-btn" id="detail-track" type="button" aria-label="Tracken" title="Tracken">' +
         '<svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>' +
-        '<line x1="4" y1="22" x2="4" y2="15"/></svg>' +
-        '<span id="detail-track-label">Tracken</span></button>';
+        '<line x1="4" y1="22" x2="4" y2="15"/></svg></button>';
       html += "</div>";
 
       // ---- already logged status ----
@@ -7719,16 +7755,17 @@
       if (wlBtn) {
         const on = !!db.watchlist[key];
         wlBtn.classList.toggle("active", on);
-        const lab = document.getElementById("detail-wl-label");
-        if (lab) lab.textContent = on ? "Auf Watchlist" : "Watchlist";
+        // Icon-only (Insta-Stil): Aktiv-Zustand färbt das Icon; Text nur noch als title/aria.
+        const wlTitle = on ? "Auf Watchlist" : "Watchlist";
+        wlBtn.title = wlTitle; wlBtn.setAttribute("aria-label", wlTitle);
       }
       // Tracken state (tv only — explicit opt-in via trackedSeries)
       const trkBtn = document.getElementById("detail-track");
       if (trkBtn) {
         const tracked = !!db.trackedSeries[key];
         trkBtn.classList.toggle("active", tracked);
-        const trkLab = document.getElementById("detail-track-label");
-        if (trkLab) trkLab.textContent = tracked ? "Getrackt" : "Tracken";
+        const trkTitle = tracked ? "Getrackt" : "Tracken";
+        trkBtn.title = trkTitle; trkBtn.setAttribute("aria-label", trkTitle);
       }
     }
 
@@ -13142,13 +13179,20 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R38";
+    const APP_VERSION = "R39";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R39": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Aufgeräumte Detailseite:</strong> Die Aktions-Buttons (Watchlist, Listen, Teilen, Getrackt) sind jetzt kompakte Symbole und passen immer in den Bildschirm — „Getrackt\" rutscht nicht mehr aus dem Bild.",
+          "<strong>Würfeln als Symbol:</strong> Der Würfeln-Knopf im Entdecken-Tab ist jetzt ein sauberes Würfel-Icon und wird nicht mehr abgeschnitten."
+        ]
+      },
       "R38": {
         title: "Was ist neu",
         notes: [
