@@ -1797,6 +1797,30 @@
     .prof-section-head { margin: 26px 0 14px; }
     .prof-section-head h2 { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
 
+    /* ---------- R42: „Mit Freunden geschaut" — Statistik auf dem Profil ---------- */
+    .wws-friend-row {
+      display: flex; align-items: center; gap: 12px; width: 100%;
+      padding: 10px 12px; margin-bottom: 8px; border-radius: 14px;
+      background: var(--surface); border: 1px solid var(--border);
+      cursor: pointer; text-align: left; color: var(--text);
+    }
+    .wws-friend-row:active { background: var(--surface-2); }
+    .wws-friend-row .friend-avatar { width: 40px; height: 40px; font-size: 15px; }
+    .wws-friend-body { flex: 1; min-width: 0; }
+    .wws-friend-name { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wws-friend-sub { font-size: 12px; color: var(--text-mute); margin-top: 2px; }
+    .wws-chev { flex: 0 0 auto; width: 18px; height: 18px; stroke: var(--text-mute); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .wws-list { max-height: 52vh; overflow-y: auto; margin: 4px 0 12px; }
+    .wws-item { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+    .wws-item:last-child { border-bottom: none; }
+    .wws-thumb { flex: 0 0 40px; width: 40px; height: 60px; border-radius: 6px; object-fit: cover; }
+    .wws-thumb-ph { background: var(--surface-2); }
+    .wws-item-body { flex: 1; min-width: 0; }
+    .wws-item-title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wws-item-sub { font-size: 12px; color: var(--text-mute); margin-top: 2px; }
+    .wws-group-label { font-size: 12px; font-weight: 700; color: var(--text-mute); text-transform: uppercase; letter-spacing: .04em; margin: 14px 0 4px; }
+    .wws-empty { padding: 18px 0; text-align: center; color: var(--text-mute); font-size: 13px; }
+
     /* ---------- Settings drawer (R37: hinter dem Burger, wie Instagram) ---------- */
     .settings-drawer {
       position: fixed; inset: 0; z-index: 200;
@@ -2810,6 +2834,8 @@
         <!-- Statistiken (Filme / Serien / Stunden / Episoden) -->
         <div id="profile-stats" class="stat-grid"></div>
         <div id="profile-note" class="profile-note"></div>
+        <!-- R42: „Mit Freunden geschaut" — Statistik aus watchedWith/watchingWith -->
+        <div id="profile-with-friends"></div>
       </div>
 
       <!-- Listen (aus dem alten Listen-Tab hierher gezogen, R37) -->
@@ -3213,6 +3239,16 @@
       <div id="wwp-list" class="share-friends-list"></div>
       <button id="wwp-save" class="sheet-btn-primary" type="button">Speichern</button>
       <button id="wwp-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
+    </div>
+  </div>
+
+  <!-- ============ R42: „MIT FREUNDEN GESCHAUT" — Detail-Sheet pro Freund ============ -->
+  <div id="wws-backdrop" class="sheet-backdrop" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Mit Freunden geschaut">
+      <div class="sheet-handle"></div>
+      <div class="sheet-section-label" id="wws-title">Zusammen geschaut</div>
+      <div id="wws-list" class="wws-list"></div>
+      <button id="wws-close" class="sheet-btn-cancel" type="button">Schließen</button>
     </div>
   </div>
 
@@ -5131,7 +5167,8 @@
       pushIf(sortedMovies[1], "Dein #2 Film");
       pushIf(sortedTv[0], "Deine #1 Serie");
       pushIf(sortedTv[1], "Deine #2 Serie");
-      pushIf(sortedRecent[0], "Zuletzt gesehen");
+      // R42: der „Zuletzt gesehen"-Hero-Slide nimmt den neuesten GEPOSTETEN Titel.
+      pushIf(sortedRecent.find(it => { const m = db.meta[it.mediaType + ":" + it.id]; return !!(m && m.posted); }), "Zuletzt gesehen");
 
       // Favourite-genre picks — best-scored title in a random well-rated genre.
       const topGenreOf = (arr) => {
@@ -5475,8 +5512,14 @@
         case "progress": buildProgressSection(); break;
         case "recent": {
           const excluded = db.recentlyWatchedExcluded || {};
-          const recent = all.filter(it => !excluded[(it.mediaType || it.media_type) + ":" + it.id])
-            .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0)).slice(0, 10);
+          // R42: „Zuletzt gesehen" = nur bewusst gepostete Titel. „Fertig – nicht
+          // posten" heißt nachgeholt und gehört nicht in die Reihe.
+          const recent = all.filter(it => {
+            const key = (it.mediaType || it.media_type) + ":" + it.id;
+            if (excluded[key]) return false;
+            const m = db.meta[key];
+            return !!(m && m.posted);
+          }).sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0)).slice(0, 10);
           buildHomeRow("lh-recent", "Zuletzt gesehen", recent, false, true); break;
         }
         case "watchlist": {
@@ -5697,8 +5740,11 @@
       armHsoBack();
 
       if (sectionId === "lh-recent") {
-        const all = Object.values(db.items).sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0));
-        if (!all.length) { listEl.innerHTML = '<div class="placeholder"><span>Noch nichts gesehen.</span></div>'; return; }
+        // R42: auch die „Alle anzeigen"-Seite zeigt nur gepostete Titel.
+        const all = Object.values(db.items)
+          .filter(it => { const m = db.meta[it.mediaType + ":" + it.id]; return !!(m && m.posted); })
+          .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0));
+        if (!all.length) { listEl.innerHTML = '<div class="placeholder"><span>Noch nichts gepostet.</span></div>'; return; }
         all.forEach(it => {
           const row = document.createElement("div");
           row.className = "hso-row";
@@ -11595,6 +11641,7 @@
       renderSettings();     // R9-P4: recommendation source toggles
       renderPrivacy();      // R3: Datenschutz (without Listen-Freigaben in R17)
       renderListShares();   // R17-A2: Listen-Freigaben as separate accordion (#9)
+      renderWithFriends();  // R42: „Mit Freunden geschaut"-Statistik
       const noteEl = document.getElementById("profile-note");
       const items = Object.values(db.items);
       const movies = items.filter(i => i.mediaType === "movie");
@@ -12547,6 +12594,94 @@
           ? (added.length ? "Gespeichert – Partner wird gefragt 👥" : "Gespeichert 👥")
           : "Gemeinsames Schauen entfernt");
       });
+    })();
+
+    // ====================================================================
+    //  R42: „Mit Freunden geschaut" — Statistik auf dem Profil.
+    //  Quelle: meta.watchedWith (Filme/Serien fertig geschaut) und
+    //  meta.watchingWith (Serien, die gerade zusammen laufen).
+    // ====================================================================
+    function collectWithFriendsStats() {
+      const byFriend = {};
+      const grab = uid => byFriend[uid] || (byFriend[uid] = { uid, name: "", watched: [], watching: [] });
+      for (const key in db.meta) {
+        const m = db.meta[key];
+        if (!m) continue;
+        // Ohne lokalen Eintrag fehlen Titel/Poster — Partner-Vermerke ohne
+        // Bibliothekseintrag (Edge: nur bestätigt, nie eingetragen) fallen raus.
+        const rec = db.items[key] || db.watchlist[key];
+        if (!rec) continue;
+        (Array.isArray(m.watchedWith) ? m.watchedWith : []).forEach(p => {
+          if (!p || !p.uid) return;
+          const g = grab(p.uid); if (p.name) g.name = p.name;
+          g.watched.push(rec);
+        });
+        (Array.isArray(m.watchingWith) ? m.watchingWith : []).forEach(p => {
+          if (!p || !p.uid) return;
+          const g = grab(p.uid); if (p.name) g.name = p.name;
+          g.watching.push(rec);
+        });
+      }
+      const groups = Object.values(byFriend);
+      groups.forEach(g => {
+        g.watched.sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0));
+        g.watching.sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0));
+      });
+      return groups.sort((a, b) => (b.watched.length + b.watching.length) - (a.watched.length + a.watching.length));
+    }
+    function renderWithFriends() {
+      const host = document.getElementById("profile-with-friends");
+      if (!host) return;
+      const groups = collectWithFriendsStats();
+      if (!groups.length) { host.innerHTML = ""; return; }
+      let html = '<div class="prof-section-head"><h2>Mit Freunden geschaut</h2></div>';
+      html += groups.map(g => {
+        const movies = g.watched.filter(it => it.mediaType === "movie").length;
+        const doneTv = g.watched.filter(it => it.mediaType === "tv").length;
+        const parts = [];
+        if (movies) parts.push(movies + (movies === 1 ? " Film" : " Filme"));
+        if (doneTv) parts.push(doneTv + (doneTv === 1 ? " Serie" : " Serien"));
+        if (g.watching.length) parts.push(g.watching.length === 1 ? "1 Serie läuft" : g.watching.length + " Serien laufen");
+        return '<button class="wws-friend-row" type="button" data-uid="' + socialEsc(g.uid) + '">' +
+          '<div class="friend-avatar">' + avatarInitial(g.name || "?") + '</div>' +
+          '<div class="wws-friend-body"><div class="wws-friend-name">' + socialEsc(g.name || "Freund") + '</div>' +
+          '<div class="wws-friend-sub">' + parts.join(" · ") + '</div></div>' +
+          '<svg class="wws-chev" viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></button>';
+      }).join("");
+      host.innerHTML = html;
+      host.querySelectorAll(".wws-friend-row").forEach(btn =>
+        btn.addEventListener("click", () => openWithFriendSheet(btn.dataset.uid)));
+    }
+    function openWithFriendSheet(uid) {
+      const g = collectWithFriendsStats().find(x => x.uid === uid);
+      if (!g) return;
+      document.getElementById("wws-title").textContent = "Mit " + (g.name || "Freund") + " geschaut";
+      const row = (it, live) =>
+        '<div class="wws-item" data-type="' + esc(it.mediaType) + '" data-id="' + it.id + '">' +
+          (it.poster ? '<img class="wws-thumb" loading="lazy" src="' + IMG_BASE + 'w92' + it.poster + '" alt="">' : '<div class="wws-thumb wws-thumb-ph"></div>') +
+          '<div class="wws-item-body"><div class="wws-item-title">' + esc(dispTitleOf ? dispTitleOf(it) : (it.title || "")) + '</div>' +
+          '<div class="wws-item-sub">' + (it.mediaType === "tv" ? "Serie" : "Film") + (live ? " · schaut ihr gerade 📺" : "") + '</div></div></div>';
+      let html = g.watched.map(it => row(it, false)).join("");
+      if (g.watching.length) {
+        html += '<div class="wws-group-label">Schaut ihr gerade</div>';
+        html += g.watching.map(it => row(it, true)).join("");
+      }
+      const list = document.getElementById("wws-list");
+      list.innerHTML = html || '<div class="wws-empty">Nichts gemeinsam vermerkt</div>';
+      list.querySelectorAll(".wws-item").forEach(el =>
+        el.addEventListener("click", () => { closeWithFriendSheet(); openDetail(el.dataset.type, parseInt(el.dataset.id, 10)); }));
+      document.getElementById("wws-backdrop").hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+    function closeWithFriendSheet() {
+      document.getElementById("wws-backdrop").hidden = true;
+      document.body.style.overflow = "";
+    }
+    (function wireWWStats() {
+      const backdrop = document.getElementById("wws-backdrop");
+      if (backdrop) backdrop.addEventListener("click", e => { if (e.target === backdrop) closeWithFriendSheet(); });
+      const closeBtn = document.getElementById("wws-close");
+      if (closeBtn) closeBtn.addEventListener("click", closeWithFriendSheet);
     })();
 
     // R21-#8/#5: the feed is now backed by the persistent "posts" collection
@@ -13559,13 +13694,20 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R41";
+    const APP_VERSION = "R42";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R42": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Zuletzt gesehen aufgeräumt:</strong> Die Reihe „Zuletzt gesehen“ zeigt jetzt nur noch Titel, die du beim Bewerten auch gepostet hast. Nachgeholte Filme und Serien („Fertig – nicht posten“) bleiben draußen — bei dir zu Hause und auf deinem Profil für Freunde.",
+          "<strong>Mit Freunden geschaut:</strong> Neu im Profil: eine Übersicht, mit wem du was geschaut hast. Pro Freund siehst du die gemeinsamen Filme und Serien — antippen öffnet die komplette Liste, inklusive der Serien, die ihr gerade zusammen schaut."
+        ]
+      },
       "R41": {
         title: "Was ist neu",
         notes: [
@@ -13880,7 +14022,10 @@
       }
 
       // ── Zuletzt gesehen ─────────────────────────────────────────
-      const watched = profile.recentlyWatched || [];
+      // R42: nur bewusst gepostete Titel zeigen — „nicht posten" = nachgeholt.
+      // posted===undefined (alter Snapshot vor R35) bleibt sichtbar, damit
+      // Freundes-Profile mit altem Datenstand nicht komplett leer wirken.
+      const watched = (profile.recentlyWatched || []).filter(it => it.posted !== false);
       html += `<div class="fprof-section"><div class="fprof-section-head">
         <span class="fprof-section-title">Zuletzt gesehen</span>
         ${watched.length ? `<span class="fprof-section-count">${watched.length} Titel</span>` : ""}
