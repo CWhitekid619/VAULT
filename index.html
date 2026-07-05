@@ -706,6 +706,13 @@
     .qr-note-input { width: 100%; box-sizing: border-box; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: inherit; font-size: 14px; padding: 10px 12px; resize: none; margin-bottom: 12px; outline: none; }
     .qr-note-input:focus { border-color: var(--accent); }
     .qr-note-input::placeholder { color: var(--text-mute); }
+    /* R41: „Geschaut mit"-Freunde-Chips über der Bewertung */
+    .qr-with-row { margin-bottom: 14px; }
+    .qr-with-label { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-mute); margin-bottom: 6px; }
+    .qr-with-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .qr-with-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px 4px 5px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-family: inherit; font-size: 12px; cursor: pointer; }
+    .qr-with-chip .friend-avatar { width: 22px; height: 22px; font-size: 10px; }
+    .qr-with-chip.active { border-color: var(--accent); color: var(--accent); }
 
     /* ---------- Undo-block snackbar (R6-P10b) ---------- */
     .undo-toast {
@@ -2142,6 +2149,9 @@
     .match-text { font-size: 14px; color: var(--text-dim); line-height: 1.45; margin-bottom: 16px; }
     .match-text b { color: var(--accent); }
     .match-close-btn { width: 100%; padding: 12px; border-radius: 12px; border: none; background: var(--accent); color: #1a1206; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+    /* R41: „Zusammen geschaut?"-Bestätigungs-Popup (gleicher Look wie das Match-Popup) */
+    #ww-popup { position: fixed; inset: 0; z-index: 206; background: rgba(0,0,0,.88); display: flex; align-items: center; justify-content: center; padding: 24px; animation: fade-in .3s ease; }
+    .ww-no-btn { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: transparent; color: var(--text-mute); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; }
 
     /* Patch notes — one-time "what's new" modal per version */
     /* R31: Safe-Area-Padding + dvh, damit das Popup auch am Handy (Adressleiste)
@@ -2968,6 +2978,11 @@
       <div class="sheet-handle"></div>
       <!-- Step 1: Bewerten (R36: nur bewerten — die Post-Entscheidung kommt in Schritt 2) -->
       <div id="qr-step1">
+        <!-- R41: „Geschaut mit" — Partner auswählen, der Film landet nach Bestätigung auch bei ihm -->
+        <div id="qr-with-row" class="qr-with-row" hidden>
+          <div class="qr-with-label">Geschaut mit</div>
+          <div id="qr-with-chips" class="qr-with-chips"></div>
+        </div>
         <div class="sheet-section-label">Wie war's?</div>
         <div id="qr-buckets" class="bucket-list"></div>
         <button id="qr-skip" class="sheet-btn-cancel" type="button">Überspringen</button>
@@ -3170,6 +3185,34 @@
         <div class="match-text" id="match-text"></div>
         <button class="match-close-btn" id="match-close-btn" type="button">Stark!</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ============ R41: „ZUSAMMEN GESCHAUT?"-BESTÄTIGUNG (Gegenseite von „Geschaut mit") ============ -->
+  <div id="ww-popup" hidden>
+    <div class="match-card">
+      <div class="match-poster-wrap">
+        <img id="ww-poster" class="match-poster" alt="" style="display:none" />
+        <div class="match-poster-ph" id="ww-poster-ph"></div>
+        <div class="match-badge" id="ww-badge">Zusammen geschaut? 👥</div>
+      </div>
+      <div class="match-body">
+        <div class="match-title" id="ww-title"></div>
+        <div class="match-text" id="ww-text"></div>
+        <button class="match-close-btn" id="ww-yes" type="button">Ja, hab ich!</button>
+        <button class="ww-no-btn" id="ww-no" type="button">Nein</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ R41: SERIEN-PARTNER-PICKER („Zusammen schauen mit …") ============ -->
+  <div id="wwp-backdrop" class="sheet-backdrop" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Zusammen schauen">
+      <div class="sheet-handle"></div>
+      <div class="sheet-section-label">Zusammen schauen mit …</div>
+      <div id="wwp-list" class="share-friends-list"></div>
+      <button id="wwp-save" class="sheet-btn-primary" type="button">Speichern</button>
+      <button id="wwp-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
     </div>
   </div>
 
@@ -5957,10 +6000,41 @@
     let qrItem = null;
 
     let _qrPendingBucket = null;
+    // R41: „Geschaut mit"-Auswahl (uid → name) + vorheriger Stand aus meta.watchedWith
+    let _qrWithSel = new Map();
+    let _qrWithPrev = [];
 
     function openQuickRate(r) {
       qrItem = r;
       _qrPendingBucket = null;
+      // R41: Freunde-Chips „Geschaut mit" über der Bewertung. Auswahl wird beim
+      // Schließen des Sheets übernommen (_commitWatchedWith) — egal ob bewertet,
+      // gepostet oder übersprungen wurde.
+      _qrWithSel = new Map();
+      _qrWithPrev = [];
+      const wwRow = document.getElementById("qr-with-row");
+      const wwChips = document.getElementById("qr-with-chips");
+      const wwFriends = (window.__vaultUser && typeof _acceptedFriends === "function") ? _acceptedFriends() : [];
+      if (wwRow && wwChips) {
+        wwRow.hidden = !wwFriends.length;
+        if (wwFriends.length) {
+          _qrWithPrev = (getMeta(keyOf(r.media_type, r.id)).watchedWith || []).slice();
+          _qrWithPrev.forEach(p => _qrWithSel.set(p.uid, p.name));
+          wwChips.innerHTML = "";
+          wwFriends.forEach(f => {
+            const name = f.username || f.uid;
+            const chip = document.createElement("button");
+            chip.type = "button";
+            chip.className = "qr-with-chip" + (_qrWithSel.has(f.uid) ? " active" : "");
+            chip.innerHTML = '<div class="friend-avatar">' + avatarInitial(name) + '</div><span>' + socialEsc(name) + '</span>';
+            chip.addEventListener("click", () => {
+              if (_qrWithSel.has(f.uid)) _qrWithSel.delete(f.uid); else _qrWithSel.set(f.uid, name);
+              chip.classList.toggle("active", _qrWithSel.has(f.uid));
+            });
+            wwChips.appendChild(chip);
+          });
+        }
+      }
       const existing = db.items[keyOf(r.media_type, r.id)];
       // Reset to step 1
       document.getElementById("qr-step1").hidden = false;
@@ -5999,6 +6073,9 @@
       document.body.style.overflow = "hidden";
     }
     function closeQuickRate() {
+      // R41: „Geschaut mit"-Auswahl übernehmen + neue Partner benachrichtigen,
+      // bevor der Kontext (qrItem) verloren geht.
+      try { _commitWatchedWith(); } catch (e) {}
       qrBackdrop.hidden = true;
       qrBackdrop.classList.remove("over-profile");
       qrItem = null;
@@ -7828,6 +7905,13 @@
         el.className = "detail-status";
         if (db.items[key]) el.textContent = "Eingetragen · " + (db.items[key].unranked ? "Ungerankt · tippen zum Bewerten" : bucketLabel(deriveBucket(ensureScore(db.items[key]))));
         else el.textContent = membershipLabel(key) || "";
+        // R41: Partner-Vermerk klein im Status — „Schaust du mit X" (Serie, laufend)
+        // hat Vorrang vor „Geschaut mit X" (abgeschlossen).
+        const _wwMeta = getMeta(key);
+        const _wingNames = (_wwMeta.watchingWith || []).map(p => p.name);
+        const _wWithNames = (_wwMeta.watchedWith || []).map(p => p.name);
+        if (_wingNames.length) el.textContent += (el.textContent ? " · " : "") + "Schaust du mit " + _wingNames.join(", ");
+        else if (_wWithNames.length && db.items[key]) el.textContent += (el.textContent ? " · " : "") + "Geschaut mit " + _wWithNames.join(", ");
         el.classList.toggle("ratable", !!(db.items[key] && db.items[key].unranked));
       }
       // Watch / Watched toggle button (B3)
@@ -8061,13 +8145,17 @@
       const m = db.meta[key];
       // R35.1: posted gehört zur Feld-Whitelist — sonst verwarf saveMeta das Flag
       // stillschweigend und der 3★-Feed-Fix (meta.posted) kam nie in der Cloud an.
-      return { note: (m && m.note) || "", tags: (m && m.tags) || [], rewatch: !!(m && m.rewatch), flagged: !!(m && m.flagged), removedTags: (m && m.removedTags) || [], autoTags: (m && m.autoTags) || [], posted: !!(m && m.posted) };
+      // R41: watchedWith/watchingWith ([{uid,name}]) gehören zur Whitelist — sonst
+      // verwirft saveMeta die Partner-Vermerke stillschweigend (Lektion aus R35.1).
+      return { note: (m && m.note) || "", tags: (m && m.tags) || [], rewatch: !!(m && m.rewatch), flagged: !!(m && m.flagged), removedTags: (m && m.removedTags) || [], autoTags: (m && m.autoTags) || [], posted: !!(m && m.posted), watchedWith: (m && m.watchedWith) || [], watchingWith: (m && m.watchingWith) || [] };
     }
     function saveMeta(key, meta) {
       const removed = meta.removedTags || [];
       const auto = meta.autoTags || [];
-      if (!meta.note && (!meta.tags || !meta.tags.length) && !meta.rewatch && !meta.flagged && !removed.length && !meta.posted) delete db.meta[key];
-      else db.meta[key] = { note: meta.note || "", tags: meta.tags || [], rewatch: !!meta.rewatch, flagged: !!meta.flagged, removedTags: removed, autoTags: auto, posted: !!meta.posted };
+      const wWith = meta.watchedWith || [];
+      const wingWith = meta.watchingWith || [];
+      if (!meta.note && (!meta.tags || !meta.tags.length) && !meta.rewatch && !meta.flagged && !removed.length && !meta.posted && !wWith.length && !wingWith.length) delete db.meta[key];
+      else db.meta[key] = { note: meta.note || "", tags: meta.tags || [], rewatch: !!meta.rewatch, flagged: !!meta.flagged, removedTags: removed, autoTags: auto, posted: !!meta.posted, watchedWith: wWith, watchingWith: wingWith };
       saveDB();
     }
 
@@ -8562,6 +8650,7 @@
         '<div class="detail-section"><h3>Fortschritt</h3>' +
         '<div class="prog-summary" id="prog-summary"></div>' +
         '<button class="ep-season-toggle whole-series-toggle" id="prog-whole-series" type="button"></button>' +
+        '<button class="ep-season-toggle whole-series-toggle" id="prog-watch-with" type="button" hidden></button>' +
         '<div class="season-chips" id="prog-seasons"></div>' +
         '<div id="prog-eps" class="ep-list"></div></div>';
 
@@ -8570,6 +8659,13 @@
       // R27-#4: "whole series watched" toggle (marks/unmarks every real season at once)
       const wholeBtn = document.getElementById("prog-whole-series");
       if (wholeBtn) wholeBtn.addEventListener("click", () => setWholeSeriesWatched(data, tvId));
+
+      // R41: „Zusammen schauen mit …" — Serie gemeinsam mit einem Freund tracken.
+      const wwBtn = document.getElementById("prog-watch-with");
+      if (wwBtn) {
+        updateWatchWithBtn(tvId);
+        wwBtn.addEventListener("click", () => openWatchWithPicker(data, tvId));
+      }
 
       const chipWrap = document.getElementById("prog-seasons");
       seasons.forEach(s => {
@@ -11654,6 +11750,9 @@
         // R33: eingehende Matches → dasselbe zentrierte Match-Popup auf diesem Gerät zeigen.
         const unreadMatches = notifs.filter(n => n.type === "match" && !n.read);
         if (unreadMatches.length && !_matchPopupShown) { _matchPopupShown = true; showIncomingMatches(unreadMatches); }
+        // R41: eingehende „Geschaut mit"/„Zusammen schauen"-Anfragen → Bestätigungs-Popup.
+        const unreadWW = notifs.filter(n => (n.type === "watched_with" || n.type === "watching_with") && !n.read);
+        if (unreadWW.length && !_wwPopupShown) { _wwPopupShown = true; showIncomingWW(unreadWW); }
       });
     }
 
@@ -11777,6 +11876,11 @@
           } else if (el.dataset.type === "post_comment") {
             // R23-#17: jump to the activity feed where the commented post lives.
             closeNotifCenter(); switchTab("social");
+          } else if (el.dataset.type === "watched_with" || el.dataset.type === "watching_with") {
+            // R41: Bestätigungs-Popup (wieder) öffnen — funktioniert auch für alte,
+            // schon gelesene Anfragen; ein zweites „Ja" richtet keinen Schaden an.
+            const full = _notifCache.find(x => x.id === nid);
+            if (full) { closeNotifCenter(); openSingleWW(full); }
           }
         });
       });
@@ -11843,6 +11947,8 @@
       if (type === "reco_seen")      return "👁️";
       if (type === "reco_added_list")return "📋";
       if (type === "match")          return "🍿";
+      if (type === "watched_with")   return "👥";
+      if (type === "watching_with")  return "📺";
       return "🔔";
     }
     function notifText(n) {
@@ -11873,6 +11979,8 @@
       if (n.type === "reco_watched")     return `${from} hat ${item} geschaut`;
       if (n.type === "reco_seen")        return `${from} hat ${item} bereits gesehen`;
       if (n.type === "match")            return `Match mit ${from}! Ihr habt beide ${item} gesehen 🎬`;
+      if (n.type === "watched_with")     return `${from} hat ${item} zusammen mit dir geschaut – tippen zum Bestätigen`;
+      if (n.type === "watching_with")    return `${from} schaut ${item} zusammen mit dir – tippen zum Bestätigen`;
       if (n.type === "reco_added_list")  return n.listName
                                            ? `Den Film den du empfohlen hast hat ${from} jetzt in „${socialEsc(n.listName)}“ gepackt`
                                            : `Den Film den du empfohlen hast hat ${from} jetzt in eine Liste gelegt`;
@@ -11884,7 +11992,7 @@
     let _recoItems = [];
     let _recoCurrent = 0;
 
-    window.addEventListener("vault-auth-changed", () => { _recoPopupShown = false; _matchPopupShown = false; });
+    window.addEventListener("vault-auth-changed", () => { _recoPopupShown = false; _matchPopupShown = false; _wwPopupShown = false; });
 
     function showRecoPopup(recos) {
       const notifSettings = (db.settings && db.settings.notificationSettings) || {};
@@ -12254,6 +12362,191 @@
       const pop = document.getElementById("match-popup");
       if (btn) btn.addEventListener("click", closeMatchPopup);
       if (pop) pop.addEventListener("click", e => { if (e.target === pop) closeMatchPopup(); });
+    })();
+
+    // ====================================================================
+    //  R41: „GESCHAUT MIT" (Filme) + „ZUSAMMEN SCHAUEN" (Serien)
+    //  Sender wählt Partner → Partner bekommt ein Bestätigungs-Popup (wie beim
+    //  Match). Erst NACH dem „Ja" landet der Titel auch bei ihm — nie automatisch.
+    // ====================================================================
+    function _acceptedFriends() {
+      return (_socialFriends || []).filter(f => f.status === "accepted");
+    }
+
+    // --- Sender-Seite (Filme/Serien nach dem Schauen): Auswahl aus dem
+    // Bewerten-Sheet übernehmen. Wird zentral aus closeQuickRate aufgerufen,
+    // deckt also ALLE Wege ab (bewerten, posten, überspringen, wegtippen).
+    function _commitWatchedWith() {
+      if (!qrItem) return;
+      const key = keyOf(qrItem.media_type, qrItem.id);
+      if (!db.items[key]) return;   // nur wenn der Titel wirklich als gesehen eingetragen ist
+      const sel = Array.from(_qrWithSel, ([uid, name]) => ({ uid, name }));
+      const prevUids = new Set(_qrWithPrev.map(p => p.uid));
+      if (sel.length === _qrWithPrev.length && sel.every(p => prevUids.has(p.uid))) return;   // unverändert
+      const m = getMeta(key);
+      m.watchedWith = sel;
+      saveMeta(key, m);
+      refreshDetailStatus();
+      // Nur NEU hinzugekommene Partner benachrichtigen — beim Bestätigen auf der
+      // Gegenseite steht der Absender schon in watchedWith und löst nichts erneut aus.
+      const added = sel.filter(p => !prevUids.has(p.uid));
+      const myUid = window.__vaultUser && window.__vaultUser.uid;
+      if (!added.length || !myUid || !window.__vaultSocial || !window.__vaultSocial.pushNotification) return;
+      const rec = db.items[key];
+      const myName = (_myProfile && _myProfile.username) || (window.__vaultUser.email || "");
+      added.forEach(p => window.__vaultSocial.pushNotification(p.uid, {
+        type: "watched_with", fromUid: myUid, fromUsername: myName,
+        itemTitle: rec.title || "", itemPoster: rec.poster || "",
+        itemType: rec.mediaType || "movie", tmdbId: rec.id || null
+      }).catch(() => {}));
+      showToast(added.length > 1 ? "Partner benachrichtigt 👥" : added[0].name + " wird gefragt 👥");
+    }
+
+    // --- Empfänger-Seite: Bestätigungs-Popup (Queue wie beim Match-Popup).
+    let _wwPopupShown = false;
+    let _wwQueue = [];
+    function showIncomingWW(notifs) { _wwQueue = (notifs || []).slice(); _showNextWW(); }
+    function openSingleWW(n) { _wwQueue = [n]; _showNextWW(); }
+    function _wwItemR(n) {
+      return { id: n.tmdbId, media_type: n.itemType || "movie", title: n.itemTitle || "", name: n.itemTitle || "", poster_path: n.itemPoster || null };
+    }
+    function _showNextWW() {
+      const n = _wwQueue[0];
+      const pop = document.getElementById("ww-popup");
+      if (!n || !pop) return;
+      const posterEl = document.getElementById("ww-poster");
+      const phEl = document.getElementById("ww-poster-ph");
+      if (n.itemPoster) { posterEl.src = IMG_BASE + "w500" + n.itemPoster; posterEl.style.display = "block"; phEl.style.display = "none"; }
+      else { posterEl.style.display = "none"; phEl.style.display = "block"; }
+      document.getElementById("ww-title").textContent = n.itemTitle || "";
+      const who = "<b>" + socialEsc(n.fromUsername || "Ein Freund") + "</b>";
+      const isSeries = n.type === "watching_with";
+      document.getElementById("ww-badge").textContent = isSeries ? "Zusammen schauen? 📺" : "Zusammen geschaut? 👥";
+      document.getElementById("ww-text").innerHTML = isSeries
+        ? "Schaust du diese Serie gerade zusammen mit " + who + "?"
+        : "Hast du " + (n.itemType === "tv" ? "diese Serie" : "diesen Film") + " zusammen mit " + who + " geschaut?";
+      document.getElementById("ww-yes").textContent = isSeries ? "Ja, schauen wir!" : "Ja, hab ich!";
+      pop.hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+    function _answerWW(yes) {
+      const n = _wwQueue.shift();
+      const pop = document.getElementById("ww-popup");
+      let openedQR = false;
+      if (n) {
+        // beantwortet = gelesen (Ja wie Nein), sonst ploppt es beim nächsten Start wieder auf
+        if (n.id && window.__vaultUser && window.__vaultSocial) window.__vaultSocial.markNotificationRead(window.__vaultUser.uid, n.id);
+        const cached = Array.isArray(_notifCache) ? _notifCache.find(x => x.id === n.id) : null;
+        if (cached) { cached.read = true; updateNotifBadge(_notifCache); }
+        if (yes && n.tmdbId && n.itemType && n.fromUid) {
+          const key = n.itemType + ":" + n.tmdbId;
+          const partner = { uid: n.fromUid, name: n.fromUsername || "Freund" };
+          const m = getMeta(key);
+          if (n.type === "watching_with") {
+            // Serie gemeinsam tracken: taucht bei „Aktuelle Serien" auf, Partner vermerkt.
+            db.trackedSeries[key] = true;
+            m.watchingWith = (m.watchingWith || []).filter(p => p.uid !== partner.uid).concat([partner]);
+            saveMeta(key, m);
+            refreshDetailStatus();
+            showToast("Ihr schaut „" + (n.itemTitle || "die Serie") + "“ jetzt zusammen 📺");
+          } else {
+            // Film/Serie zusammen geschaut: Partner vermerken, als gesehen eintragen,
+            // dann ganz normal bewerten (openQuickRate).
+            m.watchedWith = (m.watchedWith || []).filter(p => p.uid !== partner.uid).concat([partner]);
+            saveMeta(key, m);
+            const r = _wwItemR(n);
+            if (!db.items[key]) logWatched(r);
+            if (pop) pop.hidden = true;
+            document.body.style.overflow = "";
+            openQuickRate(r);
+            openedQR = true;
+          }
+        }
+      }
+      if (openedQR) { _wwQueue = []; return; }   // Rest bleibt ungelesen erreichbar (Glocke)
+      if (_wwQueue.length) { _showNextWW(); return; }
+      if (pop) pop.hidden = true;
+      document.body.style.overflow = "";
+    }
+    (function wireWWPopup() {
+      const yes = document.getElementById("ww-yes");
+      const no  = document.getElementById("ww-no");
+      const pop = document.getElementById("ww-popup");
+      if (yes) yes.addEventListener("click", () => _answerWW(true));
+      if (no)  no.addEventListener("click", () => _answerWW(false));
+      // Wegtippen = keine Antwort: Notiz bleibt ungelesen und kommt wieder.
+      if (pop) pop.addEventListener("click", e => {
+        if (e.target === pop) { _wwQueue = []; pop.hidden = true; document.body.style.overflow = ""; }
+      });
+    })();
+
+    // --- Serien: „Zusammen schauen mit …"-Picker im Fortschritt-Bereich.
+    let _wwpCtx = null;
+    function updateWatchWithBtn(tvId) {
+      const btn = document.getElementById("prog-watch-with");
+      if (!btn) return;
+      const withArr = getMeta(tvId).watchingWith || [];
+      const canPick = !!(window.__vaultUser && _acceptedFriends().length);
+      btn.hidden = !canPick && !withArr.length;
+      btn.textContent = withArr.length
+        ? "👥 Zusammen mit " + withArr.map(p => p.name).join(", ")
+        : "👥 Zusammen schauen mit …";
+    }
+    function openWatchWithPicker(data, tvId) {
+      if (!window.__vaultUser) { showToast("Bitte anmelden"); return; }
+      const friends = _acceptedFriends();
+      if (!friends.length) { showToast("Noch keine Freunde hinzugefügt"); return; }
+      _wwpCtx = { data, tvId };
+      const cur = new Set((getMeta(tvId).watchingWith || []).map(p => p.uid));
+      document.getElementById("wwp-list").innerHTML = friends.map(f =>
+        '<label class="share-friend-check" data-uid="' + socialEsc(f.uid) + '">' +
+          '<input type="checkbox" value="' + socialEsc(f.uid) + '"' + (cur.has(f.uid) ? " checked" : "") + ' />' +
+          '<div class="friend-avatar" style="width:32px;height:32px;font-size:12px">' + avatarInitial(f.username || f.uid) + '</div>' +
+          '<span>' + socialEsc(f.username || f.uid) + '</span>' +
+        '</label>').join("");
+      document.getElementById("wwp-backdrop").hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+    function closeWWPicker() {
+      document.getElementById("wwp-backdrop").hidden = true;
+      document.body.style.overflow = "";
+      _wwpCtx = null;
+    }
+    (function wireWWPicker() {
+      const backdrop = document.getElementById("wwp-backdrop");
+      if (backdrop) backdrop.addEventListener("click", e => { if (e.target === backdrop) closeWWPicker(); });
+      document.getElementById("wwp-cancel").addEventListener("click", closeWWPicker);
+      document.getElementById("wwp-save").addEventListener("click", () => {
+        if (!_wwpCtx) { closeWWPicker(); return; }
+        const { data, tvId } = _wwpCtx;
+        const friends = _acceptedFriends();
+        const sel = [...document.querySelectorAll("#wwp-list input:checked")].map(cb => {
+          const f = friends.find(x => x.uid === cb.value);
+          return { uid: cb.value, name: (f && f.username) || cb.value };
+        });
+        const m = getMeta(tvId);
+        const prevUids = new Set((m.watchingWith || []).map(p => p.uid));
+        m.watchingWith = sel;
+        saveMeta(tvId, m);
+        if (sel.length && !db.trackedSeries[tvId]) { db.trackedSeries[tvId] = true; saveDB(); }   // gemeinsame Serie automatisch tracken
+        // Neu hinzugekommene Partner fragen (Bestätigungs-Popup auf deren Gerät).
+        const added = sel.filter(p => !prevUids.has(p.uid));
+        const myUid = window.__vaultUser && window.__vaultUser.uid;
+        if (added.length && myUid && window.__vaultSocial && window.__vaultSocial.pushNotification) {
+          const myName = (_myProfile && _myProfile.username) || (window.__vaultUser.email || "");
+          added.forEach(p => window.__vaultSocial.pushNotification(p.uid, {
+            type: "watching_with", fromUid: myUid, fromUsername: myName,
+            itemTitle: (data && (data.name || data.title)) || "", itemPoster: (data && data.poster_path) || "",
+            itemType: "tv", tmdbId: (data && data.id) || null
+          }).catch(() => {}));
+        }
+        closeWWPicker();
+        updateWatchWithBtn(tvId);
+        refreshDetailStatus();
+        showToast(sel.length
+          ? (added.length ? "Gespeichert – Partner wird gefragt 👥" : "Gespeichert 👥")
+          : "Gemeinsames Schauen entfernt");
+      });
     })();
 
     // R21-#8/#5: the feed is now backed by the persistent "posts" collection
@@ -13266,13 +13559,21 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R40";
+    const APP_VERSION = "R41";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R41": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Geschaut mit:</strong> Beim Bewerten kannst du jetzt oben auswählen, mit wem du den Film geschaut hast. Dein Partner bekommt ein Popup („Hast du das mit … geschaut?\") — bestätigt er, landet der Titel auch bei ihm als gesehen und er kann ganz normal bewerten. Nichts wird ungefragt eingetragen.",
+          "<strong>Serien zusammen schauen:</strong> Im Fortschritt-Bereich einer Serie gibt es jetzt „Zusammen schauen mit …\". Dein Partner bestätigt per Popup — dann trackt ihr die Serie beide, und auf der Detailseite steht klein, mit wem du gerade schaust.",
+          "<strong>Benachrichtigungen:</strong> Anfragen zum gemeinsamen Schauen findest du auch in der Glocke — antippen öffnet das Bestätigungs-Popup erneut."
+        ]
+      },
       "R40": {
         title: "Was ist neu",
         notes: [
