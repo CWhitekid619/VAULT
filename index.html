@@ -6671,6 +6671,38 @@
     let duelPair = null;
     let duelSeenPairs = new Set(); // canonical "smallerId|largerId" — resets per session
 
+    // R40: Stichproben-Kletterlogik (Binärsuche). Pro Titel wird in der Sitzung gemerkt,
+    // gegen wen er zuletzt VERLOREN hat („Deckel" — besser kann er nicht sein) und wie
+    // lang seine aktuelle Siegesserie ist. Ein Titel im Aufwind bekommt statt des
+    // nächsten Nachbarn eine Stichprobe in der MITTE zwischen Deckel und eigener
+    // Position: Sieg → die Insertion in chooseWinner hebt ihn direkt dorthin und die
+    // nächste Probe halbiert erneut; Niederlage → der Gegner wird der neue Deckel.
+    // So braucht Platz 400 → Platz 1 ~9 Duelle statt 400 („betteln").
+    let duelStreaks = {};   // "media:id" → Siege in Folge (Session)
+    let duelCeil    = {};   // "media:id" → id des besten Gegners, gegen den zuletzt verloren wurde
+    function duelKeyOf(it) { return rankMedia + ":" + it.id; }
+    function probeOpponent(sp, rankedArr) {
+      const si = rankedArr.findIndex(it => String(it.id) === String(sp.id));
+      if (si < 0) return null;
+      let ceil = -1;                                     // -1 = könnte bis Platz 1 steigen
+      const lostTo = duelCeil[duelKeyOf(sp)];
+      if (lostTo != null) {
+        const ci = rankedArr.findIndex(it => String(it.id) === String(lostTo));
+        if (ci >= 0 && ci < si) ceil = ci;
+      }
+      if (si - ceil <= 1) return null;                   // sitzt schon direkt unter seinem Deckel
+      const mid = Math.floor((ceil + si) / 2);
+      for (let d = 0; ; d++) {                           // nächster ungesehener Gegner um die Mitte
+        const lo = mid - d, hi = mid + d;
+        if (lo <= ceil && hi >= si) return null;
+        for (const k of (d === 0 ? [mid] : [lo, hi])) {
+          if (k <= ceil || k >= si) continue;
+          if (duelSeenPairs.has(pairSig(sp, rankedArr[k]))) continue;
+          return rankedArr[k];
+        }
+      }
+    }
+
     function duelItems() {
       if (rankMedia === "person") {
         const arr = Object.values(db.people || {});
@@ -6703,24 +6735,31 @@
       const arr = duelItems();
       if (arr.length < 2) return null;
       arr.sort((a, b) => b.score - a.score);
+      // R40: Positionen für Stichproben = die Reihenfolge, die der Nutzer SIEHT
+      // (manuelle Sortierung + Sterne-Band-Klammer), nicht die rohe Elo-Reihenfolge.
+      const rankedDisplayed = orderedRankedItems(arr.filter(it => !it.unranked), rankMedia);
 
       // --- Priority 0: Spotlight focus (toggled inside the duel) ---
       if (db.spotlight && db.spotlight.mediaType === rankMedia) {
         const sp = arr.find(it => String(it.id) === String(db.spotlight.id));
         if (sp) {   // (if filtered out by the duel pre-filter, just skip forcing this round)
-          const rankedArr = arr.filter(it => !it.unranked).sort((a, b) => b.score - a.score);
-          const si = rankedArr.findIndex(it => it === sp);
+          const si = rankedDisplayed.findIndex(it => it === sp);
           if (sp.unranked || si < 0) {
-            const pool = rankedArr.length ? rankedArr : arr.filter(it => it !== sp);
+            const pool = rankedDisplayed.length ? rankedDisplayed : arr.filter(it => it !== sp);
             if (pool.length) return [sp, pool[Math.floor(pool.length / 2)]];   // first placement near the middle
           } else {
-            // nearest-by-position opponent whose pair hasn't been seen yet → lets the
-            // focused title be compared against its neighbours to find its true rank
+            // R40: erst EIN Nachbar-Duell (unten), danach klettert der Spotlight-Titel
+            // per Stichproben-Binärsuche — nicht mehr Platz für Platz.
+            if ((duelCeil[duelKeyOf(sp)] != null) || (duelStreaks[duelKeyOf(sp)] || 0) >= 1) {
+              const probe = probeOpponent(sp, rankedDisplayed);
+              if (probe) return [sp, probe];
+            }
+            // erstes Duell oder Position gefunden → nächster ungesehener Nachbar
             let best = null, bestDist = Infinity;
-            for (let k = 0; k < rankedArr.length; k++) {
-              if (k === si || duelSeenPairs.has(pairSig(sp, rankedArr[k]))) continue;
+            for (let k = 0; k < rankedDisplayed.length; k++) {
+              if (k === si || duelSeenPairs.has(pairSig(sp, rankedDisplayed[k]))) continue;
               const d = Math.abs(k - si);
-              if (d < bestDist) { bestDist = d; best = rankedArr[k]; }
+              if (d < bestDist) { bestDist = d; best = rankedDisplayed[k]; }
             }
             if (best) return [sp, best];
             // all of the focused title's pairs are seen → fall through to normal pairing
@@ -6747,6 +6786,18 @@
         }
       }
 
+      // --- Priority 1.5 (R40): Siegesserie → automatische Stichprobe weit oben.
+      // Gewinnt ein Titel 2+ Duelle in Folge, fragt das System von selbst nach:
+      // „Warte mal — gehört der viel höher?" und stellt ihn gegen einen Gegner in
+      // der Mitte zwischen seinem bekannten Deckel und seiner aktuellen Position.
+      const hot = rankedDisplayed
+        .filter(it => (duelStreaks[duelKeyOf(it)] || 0) >= 2)
+        .sort((a, b) => (duelStreaks[duelKeyOf(b)] || 0) - (duelStreaks[duelKeyOf(a)] || 0));
+      for (const it of hot) {
+        const probe = probeOpponent(it, rankedDisplayed);
+        if (probe) return [it, probe];
+      }
+
       // --- Priority 2: refine the leaderboard via near-adjacent (gap 1–3) pairs ---
       for (let gap = 1; gap <= Math.min(3, arr.length - 1); gap++) {
         const candidates = [];
@@ -6761,16 +6812,10 @@
     // point 9a: a title's current leaderboard position ("#12") or "Ungerankt"
     function currentRankLabel(it) {
       if (it.unranked) return "Ungerankt";
-      if (rankMedia === "person") {
-        const pool = Object.values(db.people || {}).filter(p => !p.unranked).sort((a, b) => b.score - a.score);
-        const idx = pool.findIndex(p => p.id === it.id);
-        return idx >= 0 ? "#" + (idx + 1) : "Ungerankt";
-      }
-      const ranked = Object.values(db.items)
-        .filter(x => x.mediaType === it.mediaType && !x.unranked)
-        .sort((a, b) => b.score - a.score);
-      const idx = ranked.findIndex(x => x.id === it.id);
-      return idx >= 0 ? "#" + (idx + 1) : "Ungerankt";
+      // R40: same displayed-order position as the ranking list (manual order + star clamp)
+      const media = rankMedia === "person" ? "person" : it.mediaType;
+      const { pos } = eloRankPos(it, media);
+      return isFinite(pos) ? "#" + pos : "Ungerankt";
     }
 
     function fillDuelCard(card, it) {
@@ -6843,7 +6888,15 @@
       if (!lastDuel) return;
       lastDuel.a.score = lastDuel.aScore; lastDuel.a.unranked = lastDuel.aUn;
       lastDuel.b.score = lastDuel.bScore; lastDuel.b.unranked = lastDuel.bUn;
+      lastDuel.a.bucket = lastDuel.aBucket;   // R40: undo a star promotion
       db.spotlight = lastDuel.spot;   // R19-#6 Part C: restore spotlight state
+      // R40: restore climb state (streaks + ceilings) and the manual display order
+      if (lastDuel.streakA == null) delete duelStreaks[lastDuel.kA]; else duelStreaks[lastDuel.kA] = lastDuel.streakA;
+      if (lastDuel.streakB == null) delete duelStreaks[lastDuel.kB]; else duelStreaks[lastDuel.kB] = lastDuel.streakB;
+      if (lastDuel.ceilA == null) delete duelCeil[lastDuel.kA]; else duelCeil[lastDuel.kA] = lastDuel.ceilA;
+      if (lastDuel.ceilB == null) delete duelCeil[lastDuel.kB]; else duelCeil[lastDuel.kB] = lastDuel.ceilB;
+      if (lastDuel.manual) { db.manualRankOrder = db.manualRankOrder || {}; db.manualRankOrder[rankMedia] = lastDuel.manual; }
+      else if (db.manualRankOrder) delete db.manualRankOrder[rankMedia];
       duelSeenPairs.delete(lastDuel.sig);
       saveDB();
       // R19-B5: restore original left/right display order so undo shows the same pair
@@ -6896,7 +6949,9 @@
     // Winner's 1-based position in the Elo-score order of the current media type
     // (0 / Infinity-style "not ranked" handled by callers).
     function eloRankPos(item, media) {
-      const pool = rankedPool(media).sort((a, b) => b.score - a.score);
+      // R40: use the DISPLAYED order (manual order + star-band clamp), so celebrations,
+      // milestones and duel-card ranks match the list the user actually sees.
+      const pool = orderedRankedItems(rankedPool(media).sort((a, b) => b.score - a.score), media);
       const idx = pool.findIndex(x => String(x.id) === String(item.id));
       return { pos: idx >= 0 ? idx + 1 : Infinity, total: pool.length };
     }
@@ -6932,13 +6987,21 @@
     function chooseWinner(winner) {
       if (!duelPair) return;
       const loser = winner === duelPair[0] ? duelPair[1] : duelPair[0];
+      const wKey = rankMedia + ":" + winner.id, lKey = rankMedia + ":" + loser.id;   // R40
       // point 11: snapshot both titles BEFORE changing anything, for one-level undo
       lastDuel = {
         a: winner, b: loser,
         origPair: [duelPair[0], duelPair[1]],   // R19-B5: preserve original left/right order
         aScore: winner.score, bScore: loser.score,
         aUn: winner.unranked, bUn: loser.unranked,
+        aBucket: winner.bucket,                   // R40: undo restores a star promotion too
         spot: db.spotlight,                       // R19-#6 Part C: restore spotlight on undo
+        // R40: snapshot climb state + manual order for undo
+        kA: wKey, kB: lKey,
+        streakA: duelStreaks[wKey], streakB: duelStreaks[lKey],
+        ceilA: duelCeil[wKey], ceilB: duelCeil[lKey],
+        manual: (db.manualRankOrder && db.manualRankOrder[rankMedia])
+          ? db.manualRankOrder[rankMedia].slice() : null,
         sig: pairSig(winner, loser)
       };
       const isPerson = rankMedia === "person";
@@ -6977,9 +7040,33 @@
         const above = posPool[li - 1];                   // title directly above the loser (none if loser is #1)
         winner.score = above ? (above.score + loser.score) / 2 : loser.score + EPS;
       }
+      const newBucket = deriveBucket(winner.score);
+      // R40: Sterne folgen dem Aufstieg — klettert ein Titel per Duell in ein höheres
+      // Sterne-Band, wird auch seine explizite Bewertung angehoben (z. B. 4★ → 5★),
+      // damit Detailseite, Filter und Feed zum neuen Rang passen. Nie abwärts.
+      if (!isPerson && BUCKET_ORDER.indexOf(newBucket) > BUCKET_ORDER.indexOf(winner.bucket)) {
+        winner.bucket = newBucket;
+      }
+      // R40: Kletter-Zustand pflegen — Siegesserie hoch, Verlierer bekommt den Sieger
+      // als neuen Deckel (nach der Insertion steht der Sieger direkt über ihm).
+      duelStreaks[wKey] = (duelStreaks[wKey] || 0) + 1;
+      duelStreaks[lKey] = 0;
+      duelCeil[lKey] = winner.id;
+      if (duelCeil[wKey] != null && String(duelCeil[wKey]) === String(loser.id)) delete duelCeil[wKey];
+      // R40: die manuelle Anzeige-Reihenfolge folgt dem Duell-Ergebnis. Ohne diesen
+      // Sync würde ein gewonnenes Duell den Score ändern, aber die sichtbare Liste
+      // (manuelle Sortierung) unverändert lassen — der Aufstieg wäre unsichtbar.
+      const manual = db.manualRankOrder && db.manualRankOrder[rankMedia];
+      if (manual && manual.length) {
+        const wid = String(winner.id), lid = String(loser.id);
+        const wIdx = manual.indexOf(wid), lIdx = manual.indexOf(lid);
+        if (lIdx >= 0 && (wIdx < 0 || wIdx > lIdx)) {   // winner shown below loser → lift above
+          if (wIdx >= 0) manual.splice(wIdx, 1);
+          manual.splice(manual.indexOf(lid), 0, wid);
+        }
+      }
       saveDB();
       updateUndoBtn();
-      const newBucket = deriveBucket(winner.score);
       const after = eloRankPos(winner, rankMedia);
       const posAfter = after.pos, total = after.total;
 
@@ -13179,13 +13266,21 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R39";
+    const APP_VERSION = "R40";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R40": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Schlaueres Duell-Ranking:</strong> Ein Titel im Spotlight klettert jetzt per Stichproben nach oben — statt Platz für Platz. Gewinnt er, fordert ihn das nächste Duell gleich viel weiter oben heraus; verliert er, weiß die App, wo seine Grenze liegt. Von Platz 400 auf Platz 1 in einer Handvoll Duelle.",
+          "<strong>Automatische Stichproben:</strong> Auch ohne Spotlight — gewinnt ein Titel mehrere Duelle in Folge, fragt die App von selbst: „Gehört der viel höher?\" und stellt ihn gegen einen deutlich besser platzierten Gegner.",
+          "<strong>Sterne steigen mit:</strong> Klettert ein Film per Duell in ein höheres Sterne-Band (z. B. von 4★ zu 5★), wird seine Bewertung automatisch angehoben — mit Aufstiegs-Animation. Gilt auch für Serien; Schauspieler ranken wie gewohnt ohne Sterne."
+        ]
+      },
       "R39": {
         title: "Was ist neu",
         notes: [
