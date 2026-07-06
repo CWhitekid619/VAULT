@@ -4581,12 +4581,7 @@
         db.people[personId] = { id: personId, name: name || "", photo: photo || "", known_for: knownFor || "", score: 1400, unranked: true, addedAt: Date.now() };
         saveDB();
         showToast("Ins Ranking hinzugefügt");
-        // R30: Schauspieler ins Ranking aufnehmen postet wieder in den Feed (Opt-out-
-        // Philosophie). So erscheinen Schauspieler-Karten im Social-Feed (swipebar +
-        // Direkt-ins-Ranking-Icon). photo ist ein TMDB-profile_path.
-        if (typeof addFeedPost === "function") {
-          addFeedPost({ type: "actor_ranked", actorId: personId, actorName: name || "", actorPhoto: photo || "" });
-        }
+        // Kein Feed-Post mehr: der Feed zeigt nur noch bewusst geteilte Filme/Serien.
       }
       if (rankMedia === "person") renderRanking();
     }
@@ -7083,28 +7078,9 @@
     // notable ranking tier (#1 or Top 10). De-duped per item so ordinary duel churn
     // — items bobbing in and out of the tier — never floods the feed.
     function postRankMilestone(media, item, rankAfter, total, rankBefore) {
-      // R28-Fix: Rang-1 / Top-10-Meilensteine werden wieder automatisch in den Feed
-      // gepostet (auf Nutzerwunsch reaktiviert). De-dupe über db.milestonePosted, damit
-      // pro Titel/Tier nur EIN Post entsteht (kein Duell-für-Duell-Spam).
-      if (!item || !rankAfter || !total || typeof addFeedPost !== "function") return;
-      let tier = 0;                                   // milestone tier: 1 = #1, 10 = Top 10
-      if (rankAfter === 1) tier = 1;
-      else if (rankAfter <= 10 && total >= 10) tier = 10;
-      if (!tier) return;
-      const threshold = tier;                         // must have been OUTSIDE this tier before
-      if (isFinite(rankBefore) && rankBefore <= threshold) return;
-      const key = media + ":" + item.id;
-      db.milestonePosted = db.milestonePosted || {};
-      if ((db.milestonePosted[key] || 99) <= tier) return;   // already posted an equal/better tier
-      db.milestonePosted[key] = tier;
-      saveDB();
-      const post = { type: "ranking_milestone", mediaType: media, rank: rankAfter, milestone: tier };
-      if (media === "person") {
-        post.actorId = item.id; post.actorName = item.name || ""; post.actorPhoto = item.photo || null;
-      } else {
-        post.itemId = item.id; post.title = item.title || ""; post.posterPath = item.poster || null;
-      }
-      addFeedPost(post);
+      // Keine Rang-1/Top-10-Meilensteine mehr im Feed — der Feed zeigt nur noch
+      // bewusst geteilte Filme/Serien, keine automatischen Ranking-Ereignisse.
+      return;
     }
 
     function chooseWinner(winner) {
@@ -12269,7 +12245,6 @@
     // R18-A: Instagram-style activity feed — highlights from friends'
     // recentlyWatched, with live profile listeners while the Feed pane is open.
     const FEED_STAR = { great: 5, good: 4, watchable: 3, meh: 2, bad: 1 };
-    const feedIsHighlight = b => { const s = FEED_STAR[b] || 0; return s >= 4 || s === 1; };
 
     let _feedUnsubs = [];
     let _feedProfiles = {};
@@ -13049,9 +13024,9 @@
         const profile = _feedProfiles[f.uid];
         if (!profile || profile.privacy?.shareWatched === false) return;
         (profile.recentlyWatched || []).forEach(it => {
-          // R35-Fix: bewusst gepostete Titel (it.posted) IMMER zeigen — sonst
-          // verschwand ein 2–3★-Post, weil der Highlight-Filter (4–5★/1★) griff.
-          if (!it.posted && !feedIsHighlight(it.bucket)) return;
+          // Nur bewusst geteilte Titel (it.posted) — der Feed zeigt keine
+          // automatischen Aktivitäten mehr, nur was der Nutzer aktiv gepostet hat.
+          if (!it.posted) return;
           pseudo.push({
             type: it.bucket ? "rated" : "watched",
             userId: f.uid, username: f.username || f.uid,
@@ -13064,7 +13039,12 @@
       });
       // Echte Posts gewinnen gegen einen Pseudo-Post für dasselbe (Nutzer, Titel).
       const realKeys = new Set(_feedPosts.map(idKey));
-      const merged = _feedPosts.concat(pseudo.filter(p => !realKeys.has(idKey(p))));
+      // Nur echte, bewusst geteilte Aktivität im Feed — keine Ranking-/Schauspieler-
+      // Meilensteine und keine übrig gebliebenen Alt-Kommentar-Posts (Bugfix: Kommentare
+      // erzeugen keinen eigenen Post mehr, bleiben aber ggf. als Altlast in Firestore).
+      const FEED_HIDDEN_TYPES = /^(actor_ranked|actor_number_one|ranking_milestone|comment)$/;
+      const merged = _feedPosts.concat(pseudo.filter(p => !realKeys.has(idKey(p))))
+        .filter(p => !FEED_HIDDEN_TYPES.test(p.type || ""));
       merged.sort((a, b) => tsOf(b) - tsOf(a));
 
       if (!merged.length) {
@@ -13262,10 +13242,9 @@
         renderCommentList(section.querySelector(".feed-cmt-list"), arr);
         updateCommentBadge(postId, arr.length);
         input.value = ""; input.style.height = "auto";
-        // R27-#9: a comment is also a feed activity (shows the comment text as the note)
-        addFeedPost({ type: "comment", itemId: parseInt(btn.dataset.id, 10) || null,
-          mediaType: btn.dataset.type || "movie", title: btn.dataset.title || "",
-          posterPath: btn.dataset.poster || null, note: text });
+        // Ein Kommentar bleibt im Kommentarthread des Posts (oben) — er darf NICHT
+        // als eigener Feed-Post erscheinen, sonst taucht der Post bei jedem Kommentar
+        // erneut im Feed auf.
         // Notify the post owner — but never notify yourself.
         const ownerUid = btn.dataset.owner;
         if (ownerUid && ownerUid !== window.__vaultUser.uid && window.__vaultSocial.pushNotification) {
@@ -13694,13 +13673,20 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R42";
+    const APP_VERSION = "R43";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R43": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Feed aufgeräumt:</strong> Im Social-Feed erscheinen jetzt nur noch Filme und Serien, die bewusst gepostet oder geteilt wurden — keine „Schauspieler XY ins Ranking geschickt“- oder „Steht jetzt in den Top 10“-Meldungen mehr.",
+          "<strong>Kommentar-Fehler behoben:</strong> Wenn jemand einen Post kommentiert hat, ist der Post fälschlich erneut im Feed aufgetaucht. Kommentare bleiben jetzt nur noch im Kommentarbereich des Posts."
+        ]
+      },
       "R42": {
         title: "Was ist neu",
         notes: [
