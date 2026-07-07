@@ -2190,6 +2190,7 @@
     /* R41: „Zusammen geschaut?"-Bestätigungs-Popup (gleicher Look wie das Match-Popup) */
     #ww-popup { position: fixed; inset: 0; z-index: 206; background: rgba(0,0,0,.88); display: flex; align-items: center; justify-content: center; padding: 24px; animation: fade-in .3s ease; }
     .ww-no-btn { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: transparent; color: var(--text-mute); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+    .ww-details-btn { width: 100%; padding: 4px 0 12px; border: none; background: transparent; color: var(--accent); font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 
     /* Patch notes — one-time "what's new" modal per version */
     /* R31: Safe-Area-Padding + dvh, damit das Popup auch am Handy (Adressleiste)
@@ -3239,6 +3240,7 @@
       <div class="match-body">
         <div class="match-title" id="ww-title"></div>
         <div class="match-text" id="ww-text"></div>
+        <button class="ww-details-btn" id="ww-details" type="button">Welcher war das nochmal? Details ansehen ›</button>
         <button class="match-close-btn" id="ww-yes" type="button">Ja, hab ich!</button>
         <button class="ww-no-btn" id="ww-no" type="button">Nein</button>
       </div>
@@ -12564,6 +12566,8 @@
         ? "Schaust du diese Serie gerade zusammen mit " + who + "?"
         : "Hast du " + (n.itemType === "tv" ? "diese Serie" : "diesen Film") + " zusammen mit " + who + " geschaut?";
       document.getElementById("ww-yes").textContent = isSeries ? "Ja, schauen wir!" : "Ja, hab ich!";
+      const det = document.getElementById("ww-details");
+      if (det) det.hidden = !n.tmdbId;   // ohne TMDB-Id gibt es keine Detail-Seite
       pop.hidden = false;
       document.body.style.overflow = "hidden";
     }
@@ -12612,6 +12616,16 @@
       const pop = document.getElementById("ww-popup");
       if (yes) yes.addEventListener("click", () => _answerWW(true));
       if (no)  no.addEventListener("click", () => _answerWW(false));
+      // Details ansehen = keine Antwort: Popup zu, Notiz bleibt ungelesen (Glocke),
+      // Detail-Seite öffnet — damit man erst nachschauen kann, welcher Titel das war.
+      const det = document.getElementById("ww-details");
+      if (det) det.addEventListener("click", () => {
+        const n = _wwQueue[0];
+        _wwQueue = [];
+        if (pop) pop.hidden = true;
+        document.body.style.overflow = "";
+        if (n && n.tmdbId) openDetail(n.itemType || "movie", n.tmdbId);
+      });
       // Wegtippen = keine Antwort: Notiz bleibt ungelesen und kommt wieder.
       if (pop) pop.addEventListener("click", e => {
         if (e.target === pop) { _wwQueue = []; pop.hidden = true; document.body.style.overflow = ""; }
@@ -13880,7 +13894,7 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R44";
+    const APP_VERSION = "R45";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
