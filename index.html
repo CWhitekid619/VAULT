@@ -1991,6 +1991,20 @@
     .friend-card { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); margin-bottom: 8px; cursor: pointer; }
     .friend-card:active { background: var(--surface-2); }
     .friend-avatar { width: 44px; height: 44px; border-radius: 50%; flex: 0 0 auto; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #1a1206; }
+
+    /* ---------- R44: Profilbilder (Upload + Standard-Avatare) ---------- */
+    .av-photo { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+    .av-emoji { width: 100%; height: 100%; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.25em; line-height: 1; }
+    .friend-avatar, .feed-av, .feed-mini-av, .feed-cmt-av, .also-seen-avatar, .prof-avatar, .fprof-avatar { overflow: hidden; }
+    .prof-avatar { cursor: pointer; }
+    .prof-avatar:active { transform: scale(.96); }
+    .avatar-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 10px 0 16px; }
+    .avatar-grid button {
+      aspect-ratio: 1 / 1; border-radius: 50%; border: 2px solid transparent;
+      font-size: 26px; line-height: 1; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; padding: 0; color: #fff; font-family: inherit;
+    }
+    .avatar-grid button.sel { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(232,179,57,.3); }
     .friend-info { flex: 1; min-width: 0; }
     .friend-name { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .friend-sub { font-size: 12px; color: var(--text-mute); margin-top: 2px; }
@@ -3249,6 +3263,19 @@
       <div class="sheet-section-label" id="wws-title">Zusammen geschaut</div>
       <div id="wws-list" class="wws-list"></div>
       <button id="wws-close" class="sheet-btn-cancel" type="button">Schließen</button>
+    </div>
+  </div>
+
+  <!-- ============ R44: PROFILBILD WÄHLEN (Upload + Standard-Avatare) ============ -->
+  <div id="avatar-backdrop" class="sheet-backdrop" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Profilbild wählen">
+      <div class="sheet-handle"></div>
+      <div class="sheet-section-label">Profilbild wählen</div>
+      <div id="avatar-grid" class="avatar-grid"></div>
+      <button id="avatar-upload-btn" class="sheet-btn-primary" type="button">Eigenes Foto hochladen</button>
+      <input id="avatar-file" type="file" accept="image/*" hidden>
+      <button id="avatar-remove" class="sheet-btn-cancel" type="button">Initiale verwenden</button>
+      <button id="avatar-close" class="sheet-btn-cancel" type="button">Abbrechen</button>
     </div>
   </div>
 
@@ -6067,7 +6094,7 @@
             const chip = document.createElement("button");
             chip.type = "button";
             chip.className = "qr-with-chip" + (_qrWithSel.has(f.uid) ? " active" : "");
-            chip.innerHTML = '<div class="friend-avatar">' + avatarInitial(name) + '</div><span>' + socialEsc(name) + '</span>';
+            chip.innerHTML = '<div class="friend-avatar">' + avatarHtml(f.uid, name) + '</div><span>' + socialEsc(name) + '</span>';
             chip.addEventListener("click", () => {
               if (_qrWithSel.has(f.uid)) _qrWithSel.delete(f.uid); else _qrWithSel.set(f.uid, name);
               chip.classList.toggle("active", _qrWithSel.has(f.uid));
@@ -7849,6 +7876,7 @@
       await Promise.all(accepted.map(async f => {
         try {
           const p = await window.__vaultSocial.getProfile(f.uid);
+          if (p) noteAvatar(f.uid, p.avatar);   // R44
           if (!p || p.privacy?.shareWatched === false) return;
           const watched = p.recentlyWatched || [];
           const match = watched.find(it => String(it.id) === String(tmdbId) && (it.mediaType || "movie") === mediaType);
@@ -7862,7 +7890,7 @@
       sec.innerHTML = '<div class="also-seen-label">Auch gesehen von</div>' +
         seenFriends.map(({ friend, bucket }) =>
           `<div class="also-seen-row" data-uid="${socialEsc(friend.uid)}">
-            <div class="also-seen-avatar">${avatarInitial(friend.username || friend.uid)}</div>
+            <div class="also-seen-avatar">${avatarHtml(friend.uid, friend.username || friend.uid)}</div>
             <span class="also-seen-name">${socialEsc(friend.username || friend.uid)}</span>
             <span class="also-seen-rating">${bucketToStars(bucket)}</span>
           </div>`
@@ -9223,7 +9251,7 @@
       const listEl = document.getElementById("friendpick-list");
       listEl.innerHTML = friends.map(f =>
         '<button class="friendpick-item" type="button" data-uid="' + socialEsc(f.uid) + '" data-name="' + socialEsc(f.username || f.uid) + '">' +
-          '<div class="friend-avatar" style="width:36px;height:36px;font-size:13px">' + avatarInitial(f.username || f.uid) + '</div>' +
+          '<div class="friend-avatar" style="width:36px;height:36px;font-size:13px">' + avatarHtml(f.uid, f.username || f.uid) + '</div>' +
           '<span>' + socialEsc(f.username || f.uid) + '</span>' +
         '</button>').join("");
       listEl.querySelectorAll(".friendpick-item").forEach(btn => {
@@ -11639,7 +11667,7 @@
       movies.forEach(m => { if (m.runtime) mins += m.runtime; });
       series.forEach(s => { const w = watchedCount(keyOf("tv", s.id)); if (s.runtime) mins += w * s.runtime; });
       paintStats(movies.length, series.length, Math.round(mins / 60), episodesWatchedTotal());
-      noteEl.textContent = "Serien-Stunden zählen nur abgehakte Episoden.";
+      noteEl.textContent = "";   // R44: Hinweis „Serien-Stunden zählen nur abgehakte Episoden" entfernt (Nutzerwunsch)
     }
 
     function exportDB() {
@@ -11724,6 +11752,94 @@
     // --- helpers ---
     function socialEsc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
     function avatarInitial(name) { return (name || "?").charAt(0).toUpperCase(); }
+
+    // ---------- R44: Profilbilder (Upload + 20 Standard-Avatare) ----------
+    // Avatar-Wert: "d:<n>" = Standard-Avatar Nr. n, oder eine data:image-URL (Upload,
+    // clientseitig auf 144×144 verkleinert). Der eigene Avatar lebt im Profil-Dokument
+    // (_myProfile.avatar → synct über Geräte und kommt bei Freunden über getProfile an)
+    // + lokal in db.settings.avatar (Offline-Anzeige). Avatare von Freunden werden beim
+    // Laden ihrer Profile in localStorage gemerkt (_avatarCache), damit Freundeslisten,
+    // Feed und Kommentare sie sofort und offline zeigen.
+    const DEFAULT_AVATARS = [
+      ["🦊","#c2571b"],["🐼","#4a5568"],["🐸","#2f855a"],["🦁","#b7791f"],
+      ["🐙","#9b2c2c"],["🦄","#6b46c1"],["👽","#276749"],["🤖","#2b6cb0"],
+      ["🍿","#975a16"],["👻","#4c51bf"],["🐨","#718096"],["🐯","#c05621"],
+      ["🐵","#8d6e3f"],["🦉","#5f370e"],["🐺","#3c4b64"],["🐰","#b83280"],
+      ["🐻","#7b341e"],["🐢","#285e61"],["🐳","#2c5282"],["😎","#1a202c"]
+    ];
+    const AVATAR_CACHE_KEY = "reel.avatars.v1";
+    let _avatarCache = {};
+    try { _avatarCache = JSON.parse(localStorage.getItem(AVATAR_CACHE_KEY)) || {}; } catch (e) { _avatarCache = {}; }
+    function noteAvatar(uid, avatar) {
+      if (!uid) return;
+      const v = avatar || null;
+      if ((_avatarCache[uid] || null) === v) return;
+      if (v) _avatarCache[uid] = v; else delete _avatarCache[uid];
+      try { localStorage.setItem(AVATAR_CACHE_KEY, JSON.stringify(_avatarCache)); } catch (e) { /* Quota — optional */ }
+    }
+    function avatarValueFor(uid) {
+      if (!uid) return null;
+      const myUid = window.__vaultUser && window.__vaultUser.uid;
+      if (myUid && uid === myUid) {
+        const own = (typeof _myProfile !== "undefined" && _myProfile && _myProfile.avatar) || null;
+        return own || (db.settings && db.settings.avatar) || null;
+      }
+      const p = (typeof _feedProfiles !== "undefined") ? _feedProfiles[uid] : null;
+      if (p && p.avatar) return p.avatar;
+      return _avatarCache[uid] || null;
+    }
+    // Liefert das INNERE eines runden Avatar-Containers (.friend-avatar, .feed-av, …):
+    // Foto, Standard-Avatar oder — wie bisher — die Initiale des Namens.
+    function avatarHtml(uid, name) {
+      const v = avatarValueFor(uid);
+      if (v && v.slice(0, 2) === "d:") {
+        const d = DEFAULT_AVATARS[parseInt(v.slice(2), 10)];
+        if (d) return '<span class="av-emoji" style="background:' + d[1] + '">' + d[0] + '</span>';
+      }
+      if (v && v.slice(0, 11) === "data:image/") {
+        return '<img class="av-photo" src="' + v.replace(/"/g, "") + '" alt="">';
+      }
+      return socialEsc(avatarInitial(name));
+    }
+    async function saveMyAvatar(v) {
+      db.settings = db.settings || {};
+      if (v) db.settings.avatar = v; else delete db.settings.avatar;
+      saveDB();
+      if (typeof _myProfile !== "undefined" && _myProfile) _myProfile.avatar = v || null;
+      const uid = window.__vaultUser && window.__vaultUser.uid;
+      if (uid) noteAvatar(uid, v);
+      if (typeof renderProfileHeader === "function") renderProfileHeader();
+      if (typeof repaintFeedIfOpen === "function") repaintFeedIfOpen();
+      if (uid && window.__vaultSocial && window.__vaultSocial.saveProfile) {
+        try { await window.__vaultSocial.saveProfile(uid, { avatar: v || null }); }
+        catch (e) { /* offline — lokal ist gespeichert, Sync beim nächsten Online-Save */ }
+      }
+    }
+    // Upload → mittig quadratisch zuschneiden → 144×144 JPEG-Daten-URL (klein genug
+    // fürs Profil-Dokument; Firestore-Limit 1 MB pro Dokument bleibt weit entfernt).
+    function resizeAvatarPhoto(file, cb) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const S = 144;
+            const canvas = document.createElement("canvas");
+            canvas.width = S; canvas.height = S;
+            const ctx = canvas.getContext("2d");
+            const side = Math.min(img.width, img.height);
+            ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, S, S);
+            let url = canvas.toDataURL("image/jpeg", 0.82);
+            if (url.length > 60000) url = canvas.toDataURL("image/jpeg", 0.6);
+            cb(url);
+          } catch (e) { cb(null); }
+        };
+        img.onerror = () => cb(null);
+        img.src = reader.result;
+      };
+      reader.onerror = () => cb(null);
+      reader.readAsDataURL(file);
+    }
     function relativeTime(ts) {
       if (!ts) return "";
       const d = ts.toDate ? ts.toDate() : new Date(ts);
@@ -12296,7 +12412,7 @@
         if (!accepted.length) return;
         const profs = await Promise.all(accepted.map(async f => {
           let p = _feedProfiles[f.uid];
-          if (!p) { try { p = await window.__vaultSocial.getProfile(f.uid); _feedProfiles[f.uid] = p; } catch (e) {} }
+          if (!p) { try { p = await window.__vaultSocial.getProfile(f.uid); _feedProfiles[f.uid] = p; if (p) noteAvatar(f.uid, p.avatar); } catch (e) {} }
           return { f, p };
         }));
         const names = [];
@@ -12523,7 +12639,7 @@
       document.getElementById("wwp-list").innerHTML = friends.map(f =>
         '<label class="share-friend-check" data-uid="' + socialEsc(f.uid) + '">' +
           '<input type="checkbox" value="' + socialEsc(f.uid) + '"' + (cur.has(f.uid) ? " checked" : "") + ' />' +
-          '<div class="friend-avatar" style="width:32px;height:32px;font-size:12px">' + avatarInitial(f.username || f.uid) + '</div>' +
+          '<div class="friend-avatar" style="width:32px;height:32px;font-size:12px">' + avatarHtml(f.uid, f.username || f.uid) + '</div>' +
           '<span>' + socialEsc(f.username || f.uid) + '</span>' +
         '</label>').join("");
       document.getElementById("wwp-backdrop").hidden = false;
@@ -12618,7 +12734,7 @@
         if (doneTv) parts.push(doneTv + (doneTv === 1 ? " Serie" : " Serien"));
         if (g.watching.length) parts.push(g.watching.length === 1 ? "1 Serie läuft" : g.watching.length + " Serien laufen");
         return '<button class="wws-friend-row" type="button" data-uid="' + socialEsc(g.uid) + '">' +
-          '<div class="friend-avatar">' + avatarInitial(g.name || "?") + '</div>' +
+          '<div class="friend-avatar">' + avatarHtml(g.uid, g.name || "?") + '</div>' +
           '<div class="wws-friend-body"><div class="wws-friend-name">' + socialEsc(g.name || "Freund") + '</div>' +
           '<div class="wws-friend-sub">' + parts.join(" · ") + '</div></div>' +
           '<svg class="wws-chev" viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></button>';
@@ -12663,29 +12779,110 @@
     // (cursor-paginated), instead of the rolling recentlyWatched snapshot.
     let _feedPosts = [], _feedCursor = null, _feedDone = false, _feedLoading = false;
     const _commentCounts = {};   // R23-#17: postId -> comment count (cache)
+
+    // ---------- R44: Feed-Cache — Feed sofort & offline verfügbar ----------
+    // Die letzte Feed-Ansicht (Posts + Freundes-Profile + Kommentar-Zähler) wird in
+    // localStorage gehalten. Beim Öffnen des Feeds wird sie SOFORT gemalt (wie bei
+    // Instagram), der Netz-Refresh läuft danach im Hintergrund. Ohne Internet bleibt
+    // der letzte Stand einfach stehen — Poster kommen aus dem Service-Worker-Bildcache.
+    const FEED_CACHE_KEY = "reel.feedCache.v1";
+    function _feedTsMs(t) {
+      return (t && typeof t.toMillis === "function") ? t.toMillis() : (typeof t === "number" ? t : 0);
+    }
+    function saveFeedCache(accepted) {
+      try {
+        if (!window.__vaultUser) return;
+        // Firestore-Timestamps überleben JSON nicht → in Millisekunden wandeln
+        // (tsOf/relativeTime verstehen Zahlen genauso).
+        const posts = _feedPosts.slice(0, 30).map(p => {
+          const q = Object.assign({}, p);
+          q.timestamp = _feedTsMs(p.timestamp) || Date.now();
+          return q;
+        });
+        const profiles = {};
+        Object.keys(_feedProfiles).forEach(uid => {
+          const p = _feedProfiles[uid];
+          if (!p) return;
+          profiles[uid] = {
+            username: p.username || "", avatar: p.avatar || null,
+            privacy: p.privacy || null, recentlyWatched: p.recentlyWatched || []
+          };
+        });
+        const friends = (accepted || _lastFeedAccepted || []).map(f =>
+          ({ uid: f.uid, username: f.username || f.uid, status: "accepted" }));
+        localStorage.setItem(FEED_CACHE_KEY, JSON.stringify({
+          uid: window.__vaultUser.uid, ts: Date.now(),
+          posts, profiles, friends, counts: _commentCounts
+        }));
+      } catch (e) { /* Quota o.ä. — der Cache ist optional und darf nie stören */ }
+    }
+    function loadFeedCache() {
+      try {
+        const raw = localStorage.getItem(FEED_CACHE_KEY);
+        if (!raw) return null;
+        const c = JSON.parse(raw);
+        if (!c || !Array.isArray(c.posts)) return null;
+        // Account-Wechsel: fremden Cache nie anzeigen
+        if (window.__vaultUser && c.uid && c.uid !== window.__vaultUser.uid) return null;
+        return c;
+      } catch (e) { return null; }
+    }
     const _commentCache  = {};   // R23-#17: postId -> loaded comments array
 
     async function renderFeed() {
       const host = document.getElementById("social-feed-list");
       if (!host) return;
-      const accepted = _socialFriends.filter(f => f.status === "accepted");
+      let accepted = _socialFriends.filter(f => f.status === "accepted");
       // R28-Fix: Der Feed zeigt jetzt AUCH die eigenen Posts (nicht nur die der
       // Freunde). Vorher wurde nur nach Freunde-UIDs abgefragt, deshalb sind
       // eigene „Im Feed posten"/Top-10/Nr.-1-Posts nie im eigenen Feed erschienen.
       // Ohne Freunde wird daher NICHT mehr abgebrochen — eigene Aktivität bleibt sichtbar.
 
-      host.innerHTML = '<div style="color:var(--text-mute);font-size:13px;padding:12px 0">Lade Feed …</div>';
+      // R44: Cache-first — letzte bekannte Feed-Ansicht SOFORT malen (auch offline),
+      // statt erst auf alle Freundes-Profile + Firestore zu warten. Der frische
+      // Stand wird danach im Hintergrund geladen und ersetzt die Ansicht.
+      const cached = loadFeedCache();
+      if (cached && !accepted.length && Array.isArray(cached.friends)) {
+        // Offline-Start: Freundesliste ist evtl. noch nicht da → gecachte nehmen,
+        // damit Pseudo-Posts (recentlyWatched) und „Auch gesehen von" funktionieren.
+        accepted = cached.friends;
+      }
+      let painted = false;
+      if (_feedPosts.length) {
+        paintFeed(host, accepted);
+        painted = true;
+      } else if (cached) {
+        _feedPosts = cached.posts || [];
+        Object.keys(cached.profiles || {}).forEach(uid => {
+          if (!_feedProfiles[uid]) _feedProfiles[uid] = cached.profiles[uid];
+        });
+        Object.keys(cached.counts || {}).forEach(id => {
+          if (!(id in _commentCounts)) _commentCounts[id] = cached.counts[id];
+        });
+        // Kein Infinite-Scroll auf dem Cache-Stand (der Cursor ist nicht serialisierbar);
+        // nach dem Netz-Refresh gilt wieder die echte Pagination.
+        _feedCursor = null; _feedDone = true;
+        if (_feedPosts.length) { paintFeed(host, accepted); painted = true; }
+      }
+      if (!painted) {
+        host.innerHTML = '<div style="color:var(--text-mute);font-size:13px;padding:12px 0">Lade Feed …</div>';
+      }
 
-      // Profiles still power the "Auch gesehen von" watcher index (recentlyWatched).
-      const results = await Promise.all(accepted.map(f =>
+      // R44: Profile (für „Auch gesehen von" + Pseudo-Posts) und erste Post-Seite
+      // PARALLEL laden — vorher liefen beide nacheinander, das war die halbe Wartezeit.
+      const profilesP = Promise.all(accepted.map(f =>
         (window.__vaultSocial ? window.__vaultSocial.getProfile(f.uid) : Promise.resolve(null))
           .catch(() => null).then(p => ({ friend: f, profile: p }))));
-      results.forEach(({ friend, profile }) => { _feedProfiles[friend.uid] = profile; });
-
-      // First page of persistent posts.
-      _feedPosts = []; _feedCursor = null; _feedDone = false;
-      await loadMoreFeedPosts(accepted, true);
+      _feedCursor = null; _feedDone = false; _feedLoading = false;
+      const postsP = loadMoreFeedPosts(accepted, true);
+      const results = await profilesP;
+      // Offline liefert getProfile null — dann den gecachten Stand NICHT überschreiben.
+      results.forEach(({ friend, profile }) => {
+        if (profile) { _feedProfiles[friend.uid] = profile; noteAvatar(friend.uid, profile.avatar); }
+      });
+      await postsP;
       paintFeed(host, accepted);
+      saveFeedCache(accepted);
 
       // R34: danach einen Live-Listener anhängen, damit neue Posts/Kommentare von
       // Freunden sofort erscheinen (ohne die Feed-Ansicht neu zu öffnen). Der Listener
@@ -12710,6 +12907,7 @@
           });
           _feedPosts = Array.from(byId.values()).sort((a, b) => ms(b.timestamp) - ms(a.timestamp));
           repaintFeedIfOpen();
+          saveFeedCache(accepted);   // R44: Live-Updates auch in den Offline-Cache übernehmen
         });
         _feedUnsubs.push(unsub);
       }
@@ -12728,6 +12926,9 @@
       const res = await window.__vaultSocial.getFeedPosts(uids, 20, reset ? null : _feedCursor);
       console.log("[VAULT] Feed geladen:", (res.posts || []).length, "Posts",
         res.fallback ? "(Fallback ohne Index)" : "", res.error ? ("FEHLER: " + res.error) : "");
+      // R44: Abfrage fehlgeschlagen (z. B. offline) → vorhandene/gecachte Posts
+      // BEHALTEN statt den Feed mit einer leeren Antwort zu überschreiben.
+      if (res.error) { _feedDone = true; _feedLoading = false; return; }
       _feedPosts = reset ? (res.posts || []) : _feedPosts.concat(res.posts || []);
       _feedCursor = res.cursor;
       _feedDone = !!res.done;
@@ -12828,7 +13029,7 @@
       const cls       = `feed-card feed-cat-${feedCategory(p)}`
                         + (starHl === 5 ? " feed-star5" : starHl === 1 ? " feed-star1" : "");
       const head = `<div class="feed-head">
-            <div class="feed-av" data-uid="${socialEsc(ownerUid)}">${avatarInitial(author)}</div>
+            <div class="feed-av" data-uid="${socialEsc(ownerUid)}">${avatarHtml(ownerUid, author)}</div>
             <div class="feed-author" data-uid="${socialEsc(ownerUid)}">${socialEsc(author)}</div>
             <div class="feed-time">${relativeTime(p.timestamp)}</div>
           </div>`;
@@ -12854,8 +13055,11 @@
       }
 
       const key        = keyOf(type, id);
-      const posterInner = p.posterPath
-        ? `<img class="feed-poster" src="${IMG_BASE}w500${p.posterPath}" alt="" loading="lazy">`
+      // R44: Episoden-Posts zeigen das Standbild der KONKRETEN Folge (stillPath),
+      // sonst das Poster — 10 geteilte Folgen sehen nicht mehr 10× gleich aus.
+      const feedImg    = p.stillPath || p.posterPath;
+      const posterInner = feedImg
+        ? `<img class="feed-poster" src="${IMG_BASE}w500${feedImg}" alt="" loading="lazy">`
         : `<div class="feed-poster feed-poster-ph"><span>${socialEsc(p.title || "")}</span></div>`;
       const stars      = p.bucket ? bucketToStars(p.bucket) : (p.epRating ? "★".repeat(Math.max(0, Math.min(5, p.epRating))) : "");
       const mediaLabel = type === "tv" ? "Serie" : "Film";
@@ -12873,7 +13077,7 @@
         ? `<div class="feed-alsoseen"><span class="feed-alsoseen-ic">${FEED_PEOPLE}</span>` +
           `<span class="feed-alsoseen-lbl">Auch gesehen von</span><div class="feed-alsoseen-avs">` +
           seen.map(w =>
-            `<div class="feed-mini-av" data-uid="${socialEsc(w.uid)}" title="${socialEsc(w.username)}">${avatarInitial(w.username)}</div>`).join("") +
+            `<div class="feed-mini-av" data-uid="${socialEsc(w.uid)}" title="${socialEsc(w.username)}">${avatarHtml(w.uid, w.username)}</div>`).join("") +
           `</div></div>`
         : "";
       // R27-#9: notable 1★/5★ badge shown next to the stars on the same card.
@@ -12904,7 +13108,7 @@
       const author   = feedDisplayName(ownerUid, p0.username || "?");
       const isActorGroup = items.every(p => p.type === "actor_ranked" || p.type === "actor_number_one");
       const head = `<div class="feed-head">
-            <div class="feed-av" data-uid="${socialEsc(ownerUid)}">${avatarInitial(author)}</div>
+            <div class="feed-av" data-uid="${socialEsc(ownerUid)}">${avatarHtml(ownerUid, author)}</div>
             <div class="feed-author" data-uid="${socialEsc(ownerUid)}">${socialEsc(author)}</div>
             <div class="feed-time">${relativeTime(p0.timestamp)}</div>
           </div>`;
@@ -12927,8 +13131,10 @@
         slides = items.map(p => {
           const type = p.mediaType || "movie";
           const id   = p.itemId;
-          const posterInner = p.posterPath
-            ? `<img class="feed-poster" src="${IMG_BASE}w500${p.posterPath}" alt="" loading="lazy">`
+          // R44: auch in Binge-Slides Episoden-Standbild bevorzugen
+          const slideImg = p.stillPath || p.posterPath;
+          const posterInner = slideImg
+            ? `<img class="feed-poster" src="${IMG_BASE}w500${slideImg}" alt="" loading="lazy">`
             : `<div class="feed-poster feed-poster-ph"><span>${socialEsc(p.title || "")}</span></div>`;
           const stars      = p.bucket ? bucketToStars(p.bucket) : (p.epRating ? "★".repeat(Math.max(0, Math.min(5, p.epRating))) : "");
           const mediaLabel = type === "tv" ? "Serie" : "Film";
@@ -13215,7 +13421,7 @@
       if (!comments.length) { list.innerHTML = '<div class="feed-cmt-empty">Noch keine Kommentare. Schreib den ersten!</div>'; return; }
       list.innerHTML = comments.map(c =>
         `<div class="feed-comment">
-          <div class="feed-cmt-av" data-uid="${socialEsc(c.userId || "")}">${avatarInitial(c.username || "?")}</div>
+          <div class="feed-cmt-av" data-uid="${socialEsc(c.userId || "")}">${avatarHtml(c.userId, c.username || "?")}</div>
           <div class="feed-cmt-body">
             <span class="feed-cmt-name" data-uid="${socialEsc(c.userId || "")}">${socialEsc(c.username || "?")}</span>
             <div class="feed-cmt-text">${socialEsc(c.text || "")}</div>
@@ -13382,7 +13588,7 @@
       let html = "";
       received.forEach(f => {
         html += `<div class="friend-card">
-          <div class="friend-avatar">${avatarInitial(f.username || f.uid)}</div>
+          <div class="friend-avatar">${avatarHtml(f.uid, f.username || f.uid)}</div>
           <div class="friend-info">
             <div class="friend-name">${socialEsc(f.username || f.uid)}</div>
             <div class="friend-sub">Anfrage erhalten</div>
@@ -13395,7 +13601,7 @@
       });
       sent.forEach(f => {
         html += `<div class="friend-card">
-          <div class="friend-avatar">${avatarInitial(f.username || f.uid)}</div>
+          <div class="friend-avatar">${avatarHtml(f.uid, f.username || f.uid)}</div>
           <div class="friend-info">
             <div class="friend-name">${socialEsc(f.username || f.uid)}</div>
             <div class="friend-sub">Anfrage gesendet</div>
@@ -13436,7 +13642,7 @@
       }
       list.innerHTML = accepted.map(f => `
         <div class="friend-card" data-uid="${socialEsc(f.uid)}">
-          <div class="friend-avatar">${avatarInitial(f.username || f.uid)}</div>
+          <div class="friend-avatar">${avatarHtml(f.uid, f.username || f.uid)}</div>
           <div class="friend-info">
             <div class="friend-name">${socialEsc(f.username || f.uid)}</div>
           </div>
@@ -13465,7 +13671,8 @@
       try { profile = await window.__vaultSocial.getProfile(inviteUid); } catch (e) {}
       const uname = (profile && profile.username) || "Unbekannt";
       nameEl.textContent = "@" + socialEsc(uname);
-      avEl.textContent = avatarInitial(uname);
+      if (profile) noteAvatar(inviteUid, profile.avatar);   // R44
+      avEl.innerHTML = avatarHtml(inviteUid, uname);
       const sendBtn = document.getElementById("invite-send");
       sendBtn.onclick = async () => {
         if (!window.__vaultUser) return;
@@ -13581,7 +13788,7 @@
       const c = document.getElementById("rcmp-content");
       c.innerHTML = '<div class="rcmp-pick-label">Mit wem vergleichen?</div><div class="rcmp-pick-list">' +
         accepted.map(f => `<button class="rcmp-pick" data-uid="${socialEsc(f.uid)}">
-            <div class="friend-avatar">${avatarInitial(f.username || f.uid)}</div>
+            <div class="friend-avatar">${avatarHtml(f.uid, f.username || f.uid)}</div>
             <span>${socialEsc(f.username || f.uid)}</span>
             <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
           </button>`).join("") + '</div>';
@@ -13673,13 +13880,21 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R43";
+    const APP_VERSION = "R44";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R44": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Feed sofort da — auch offline:</strong> Der Social-Feed merkt sich den letzten Stand auf dem Gerät. Beim Öffnen erscheint er augenblicklich (kein langes „Lade Feed …“ mehr) und wird im Hintergrund aktualisiert. Ohne Internet siehst du einfach den letzten Stand — wie bei Instagram.",
+          "<strong>Profilbilder:</strong> Tippe im Profil auf deinen Avatar — lade ein eigenes Foto hoch oder wähle einen von 20 Standard-Avataren. Dein Bild erscheint bei Freunden im Feed, in Kommentaren und in allen Freundeslisten.",
+          "<strong>Echte Episoden-Bilder:</strong> Geteilte Folgen zeigen im Feed jetzt ein Standbild aus genau dieser Folge — nicht mehr zehnmal dasselbe Serienposter."
+        ]
+      },
       "R43": {
         title: "Was ist neu",
         notes: [
@@ -13969,7 +14184,8 @@
 
       const p       = profile.privacy || {};
       const stats   = profile.stats   || {};
-      const initial = avatarInitial(profile.username || friendUid);
+      noteAvatar(friendUid, profile.avatar);   // R44: Avatar des Freundes lokal merken
+      const initial = avatarHtml(friendUid, profile.username || friendUid);
       const uname   = socialEsc(profile.username || "Unbekannt");
       const myUid   = window.__vaultUser ? window.__vaultUser.uid : null;
       const isFriend = !!(myUid && typeof _socialFriends !== "undefined" &&
@@ -14204,7 +14420,7 @@
       document.getElementById("share-friends-list").innerHTML = friends.map(f =>
         `<label class="share-friend-check" data-uid="${socialEsc(f.uid)}">
           <input type="checkbox" value="${socialEsc(f.uid)}" />
-          <div class="friend-avatar" style="width:32px;height:32px;font-size:12px">${avatarInitial(f.username || f.uid)}</div>
+          <div class="friend-avatar" style="width:32px;height:32px;font-size:12px">${avatarHtml(f.uid, f.username || f.uid)}</div>
           <span>${socialEsc(f.username || f.uid)}</span>
         </label>`).join("");
       // R25-#22.3: warn at send-time about friends who have ALREADY seen this title (episodes excluded)
@@ -14244,15 +14460,26 @@
         if (_shareEpisode) {
           // R23-#6: episode share — carries season/episode/name/rating to the recipient
           const ep = _shareEpisode;
+          // R44: Episoden-Standbild (still_path) der KONKRETEN Folge mitschicken —
+          // vorher trugen 10 geteilte Folgen derselben Serie 10× dasselbe Serienposter.
+          // Best-effort: ohne Bild wird wie bisher das Serienposter gezeigt.
+          let epStill = null;
+          try {
+            const stillRes = await tmFetch("https://api.themoviedb.org/3/tv/" + _shareItem.id +
+              "/season/" + ep.season + "/episode/" + ep.episode +
+              "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
+            if (stillRes.ok) { const epd = await stillRes.json(); epStill = epd.still_path || null; }
+          } catch (e) { /* Bild ist optional — Teilen darf nie daran scheitern */ }
           await window.__vaultSocial.shareEpisode(window.__vaultUser.uid, myName, toUids, {
             seriesTitle: _shareItem.title, seriesId: _shareItem.id, poster: _shareItem.poster,
             season: ep.season, episode: ep.episode, episodeName: ep.episodeName || "",
-            bucket: _shareRating
+            bucket: _shareRating, stillPath: epStill
           }, note);
           // Feed post for the sender (type already known to feedActionLabel).
           if (typeof addFeedPost === "function") {
             addFeedPost({ type: "episode_shared", itemId: _shareItem.id, mediaType: "tv",
               title: _shareItem.title, posterPath: _shareItem.poster || null,
+              stillPath: epStill,
               season: ep.season, episode: ep.episode, episodeName: ep.episodeName || "",
               epRating: (typeof FEED_STAR !== "undefined" && FEED_STAR[_shareRating]) || null });
           }
@@ -14333,7 +14560,7 @@
         html += '<p class="social-section-title" style="margin-top:14px">Eingehende Anfragen</p>';
         received.forEach(f => {
           html += `<div class="prof-friend-row">
-            <div class="friend-avatar" style="width:32px;height:32px;font-size:13px">${avatarInitial(f.username || f.uid)}</div>
+            <div class="friend-avatar" style="width:32px;height:32px;font-size:13px">${avatarHtml(f.uid, f.username || f.uid)}</div>
             <div class="prof-friend-info"><div class="prof-friend-name">${socialEsc(f.username || f.uid)}</div></div>
             <div class="prof-friend-btns">
               <button class="prof-friend-btn accept" data-uid="${socialEsc(f.uid)}" data-uname="${socialEsc(f.username||'')}" data-action="accept">Annehmen</button>
@@ -14347,7 +14574,7 @@
         html += '<p class="social-section-title" style="margin-top:14px">Gesendete Anfragen</p>';
         sent.forEach(f => {
           html += `<div class="prof-friend-row">
-            <div class="friend-avatar" style="width:32px;height:32px;font-size:13px">${avatarInitial(f.username || f.uid)}</div>
+            <div class="friend-avatar" style="width:32px;height:32px;font-size:13px">${avatarHtml(f.uid, f.username || f.uid)}</div>
             <div class="prof-friend-info"><div class="prof-friend-name">${socialEsc(f.username || f.uid)}</div><div class="prof-friend-sub">Ausstehend</div></div>
             <div class="prof-friend-btns">
               <button class="prof-friend-btn" data-uid="${socialEsc(f.uid)}" data-action="cancel">Abbrechen</button>
@@ -14360,7 +14587,7 @@
         html += '<p class="social-section-title" style="margin-top:14px">Freunde</p>';
         accepted.forEach(f => {
           html += `<div class="prof-friend-row">
-            <div class="friend-avatar" style="width:32px;height:32px;font-size:13px">${avatarInitial(f.username || f.uid)}</div>
+            <div class="friend-avatar" style="width:32px;height:32px;font-size:13px">${avatarHtml(f.uid, f.username || f.uid)}</div>
             <div class="prof-friend-info"><div class="prof-friend-name">${socialEsc(f.username || f.uid)}</div></div>
             <div class="prof-friend-btns">
               <button class="prof-friend-btn view-btn" data-uid="${socialEsc(f.uid)}">Profil</button>
@@ -14458,7 +14685,7 @@
         else if (rel.status === "pending_sent") action = `<span style="font-size:12px;color:var(--text-mute)">Ausstehend</span>`;
         else if (rel.status === "pending_received") action = `<button class="prof-friend-btn accept pfs-add" data-uid="${socialEsc(u.uid)}" data-action="accept">Annehmen</button>`;
         return `<div class="prof-friend-row">
-          <div class="friend-avatar" style="width:32px;height:32px;font-size:13px">${avatarInitial(u.username || u.uid)}</div>
+          <div class="friend-avatar" style="width:32px;height:32px;font-size:13px">${(noteAvatar(u.uid, u.avatar), avatarHtml(u.uid, u.username || u.uid))}</div>
           <div class="prof-friend-info"><div class="prof-friend-name">${socialEsc(u.username || u.uid)}</div><div class="prof-friend-sub">${socialEsc(u.email || "")}</div></div>
           <div class="prof-friend-btns">${action}</div>
         </div>`;
@@ -14557,8 +14784,46 @@
       }
       const display = uname || (window.__vaultUser && window.__vaultUser.email) || "Gast";
       nmEl.textContent = uname ? "@" + uname : display;
-      avEl.textContent = avatarInitial(uname || display);
+      // R44: Profilbild (Upload/Standard-Avatar) statt nur Initiale; Tap öffnet den Picker.
+      avEl.innerHTML = avatarHtml(window.__vaultUser && window.__vaultUser.uid, uname || display);
     }
+
+    // R44: Profilbild-Picker — Tap auf den Profil-Avatar öffnet ein Sheet mit
+    // 20 Standard-Avataren, Foto-Upload (clientseitig verkleinert) und Zurücksetzen.
+    (function wireAvatarPicker() {
+      const backdrop = document.getElementById("avatar-backdrop");
+      const grid     = document.getElementById("avatar-grid");
+      const avEl     = document.getElementById("prof-avatar");
+      if (!backdrop || !grid || !avEl) return;
+      const close = () => { backdrop.hidden = true; document.body.style.overflow = ""; };
+      const open  = () => {
+        const cur = avatarValueFor(window.__vaultUser && window.__vaultUser.uid);
+        grid.innerHTML = DEFAULT_AVATARS.map((d, i) =>
+          '<button type="button" data-av="d:' + i + '"' + (cur === "d:" + i ? ' class="sel"' : "") +
+          ' style="background:' + d[1] + '" aria-label="Avatar ' + (i + 1) + '">' + d[0] + '</button>').join("");
+        grid.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+          saveMyAvatar(b.dataset.av); close(); showToast("Profilbild gespeichert");
+        }));
+        backdrop.hidden = false; document.body.style.overflow = "hidden";
+      };
+      avEl.addEventListener("click", open);
+      backdrop.addEventListener("click", e => { if (e.target === backdrop) close(); });
+      document.getElementById("avatar-close").addEventListener("click", close);
+      document.getElementById("avatar-remove").addEventListener("click", () => {
+        saveMyAvatar(null); close(); showToast("Initiale wird verwendet");
+      });
+      const fileInput = document.getElementById("avatar-file");
+      document.getElementById("avatar-upload-btn").addEventListener("click", () => fileInput.click());
+      fileInput.addEventListener("change", () => {
+        const f = fileInput.files && fileInput.files[0];
+        fileInput.value = "";
+        if (!f) return;
+        resizeAvatarPhoto(f, url => {
+          if (!url) { showToast("Bild konnte nicht geladen werden"); return; }
+          saveMyAvatar(url); close(); showToast("Profilbild gespeichert");
+        });
+      });
+    })();
 
     // Hook into the existing vault-auth-changed to refresh notif settings + friend mgmt
     window.addEventListener("vault-auth-changed", () => {
