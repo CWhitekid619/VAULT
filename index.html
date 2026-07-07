@@ -1820,6 +1820,20 @@
     .wws-item-sub { font-size: 12px; color: var(--text-mute); margin-top: 2px; }
     .wws-group-label { font-size: 12px; font-weight: 700; color: var(--text-mute); text-transform: uppercase; letter-spacing: .04em; margin: 14px 0 4px; }
     .wws-empty { padding: 18px 0; text-align: center; color: var(--text-mute); font-size: 13px; }
+    /* R45: „Mit Freunden geschaut" nachträglich korrigieren — entfernen + hinzufügen */
+    .wws-item-remove {
+      flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; border: none;
+      background: transparent; color: var(--text-mute); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .wws-item-remove:active { background: var(--surface-2); color: var(--text); }
+    .wws-item-remove svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+    .wws-add-search { margin-bottom: 10px; }
+    .wws-add-list { max-height: 42vh; overflow-y: auto; margin-bottom: 12px; }
+    .wws-pick-item { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 10px; cursor: pointer; }
+    .wws-pick-item:active { background: var(--surface-2); }
+    .wws-pick-item input[type=checkbox] { accent-color: var(--accent); width: 17px; height: 17px; flex: 0 0 auto; cursor: pointer; }
+    .wws-pick-empty { padding: 14px 0; text-align: center; color: var(--text-mute); font-size: 13px; }
 
     /* ---------- Settings drawer (R37: hinter dem Burger, wie Instagram) ---------- */
     .settings-drawer {
@@ -2265,6 +2279,11 @@
     .feed-head { display: flex; align-items: center; gap: 10px; padding: 9px 12px; }
     .feed-av { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #1a1206; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
     .feed-author { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+    /* R46: Collab-Post „Geschaut mit" — überlappende Avatare wie bei Instagram */
+    .feed-av-stack { display: flex; flex: 0 0 auto; }
+    .feed-av-stack .feed-av { border: 2px solid var(--surface); box-sizing: content-box; }
+    .feed-av-stack .feed-av + .feed-av { margin-left: -11px; }
+    .feed-author-part[data-uid] { cursor: pointer; }
     .feed-time { flex: 0 0 auto; font-size: 12px; color: var(--text-mute); }
     /* R31: Social-Feed-Bilder im 1:1-Quadrat (zugeschnitten), Karten kompakter. */
     .feed-poster-wrap { position: relative; width: 100%; aspect-ratio: 1 / 1; overflow: hidden; cursor: pointer; background: var(--surface-2); -webkit-tap-highlight-color: transparent; }
@@ -3264,7 +3283,20 @@
       <div class="sheet-handle"></div>
       <div class="sheet-section-label" id="wws-title">Zusammen geschaut</div>
       <div id="wws-list" class="wws-list"></div>
+      <button id="wws-add-open" class="sheet-btn-ghost" type="button">+ Titel nachtragen</button>
       <button id="wws-close" class="sheet-btn-cancel" type="button">Schließen</button>
+    </div>
+  </div>
+
+  <!-- ============ R45: „MIT FREUNDEN GESCHAUT" — Titel nachträglich hinzufügen ============ -->
+  <div id="wws-add-backdrop" class="sheet-backdrop" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Titel nachtragen">
+      <div class="sheet-handle"></div>
+      <div class="sheet-section-label" id="wws-add-title">Titel nachtragen</div>
+      <input id="wws-add-search" class="modal-input wws-add-search" type="text" placeholder="Titel suchen …" autocomplete="off" />
+      <div id="wws-add-list" class="wws-add-list"></div>
+      <button id="wws-add-save" class="sheet-btn-primary" type="button">Hinzufügen</button>
+      <button id="wws-add-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
     </div>
   </div>
 
@@ -3665,6 +3697,10 @@
     <span>Titel gesperrt</span>
     <button id="block-undo-btn" class="undo-toast-btn" type="button">Rückgängig</button>
   </div>
+  <div id="ww-remove-toast" class="undo-toast" hidden>
+    <span>Entfernt</span>
+    <button id="ww-remove-undo-btn" class="undo-toast-btn" type="button">Rückgängig</button>
+  </div>
 
   <!-- ============ R1: Firebase Auth SDK (ES module) ============ -->
   <!-- Loads the Firebase Auth SDK, exposes window.__vaultAuth for the classic
@@ -3973,6 +4009,7 @@
             itemTitle: ep.seriesTitle, itemPoster: ep.poster || "",
             itemType: "tv", tmdbId: ep.seriesId,
             season: ep.season, episode: ep.episode, episodeName: ep.episodeName || "",
+            stillPath: ep.stillPath || null,   // R46: Standbild der konkreten Folge fürs Empfänger-Popup
             bucket: ep.bucket || null, note: note || "",
             read: false, createdAt: serverTimestamp()
           });
@@ -6032,7 +6069,9 @@
         type: bucket ? "rated" : "watched",
         itemId: rec.id, mediaType: rec.mediaType,
         title: rec.title || "", posterPath: rec.poster || null,
-        bucket: bucket || null, note: noteTrim
+        bucket: bucket || null, note: noteTrim,
+        // R46: „Geschaut mit"-Partner → Collab-Darstellung im Feed (Avatare + „haben")
+        watchedWith: (Array.isArray(m.watchedWith) ? m.watchedWith : []).map(w => ({ uid: w.uid || "", name: w.name || "" }))
       }).then(ok => showToast(ok === false
         ? "Feed-Post fehlgeschlagen – bitte erneut versuchen"
         : "Im Feed gepostet"));
@@ -9142,7 +9181,9 @@
             id: it.id, title: it.title || "", posterPath: it.poster || null,
             mediaType: it.mediaType, bucket: it.bucket || null, watchedAt: it.loggedAt || 0,
             year: it.year || null, note: (m && m.note) ? m.note : "",   // R18-A: feed shows the friend's note
-            posted: !!(m && m.posted)   // R35-Fix: bewusst gepostet → im Feed IMMER zeigen (auch 2–3★)
+            posted: !!(m && m.posted),   // R35-Fix: bewusst gepostet → im Feed IMMER zeigen (auch 2–3★)
+            // R46: „Geschaut mit"-Partner → Collab-Darstellung auch für Pseudo-Posts
+            watchedWith: (m && Array.isArray(m.watchedWith)) ? m.watchedWith.map(w => ({ uid: w.uid || "", name: w.name || "" })) : []
           };
         });
       // Top ranked — movies + series merged, honouring manual order, by Elo, max 20.
@@ -12166,8 +12207,11 @@
       if (!n) { closeRecoPopup(); return; }
       const posterEl = document.getElementById("reco-poster");
       const phEl = document.getElementById("reco-poster-ph");
-      if (n.itemPoster) {
-        posterEl.src = "https://image.tmdb.org/t/p/w500" + n.itemPoster;
+      // R46: bei geteilten Folgen das Standbild der KONKRETEN Episode zeigen,
+      // nicht das Serienposter (Fallback bleibt das Poster).
+      const recoImg = n.stillPath || n.itemPoster;
+      if (recoImg) {
+        posterEl.src = "https://image.tmdb.org/t/p/w500" + recoImg;
         posterEl.style.display = "block"; phEl.style.display = "none";
       } else {
         posterEl.style.display = "none"; phEl.style.display = "block";
@@ -12757,15 +12801,21 @@
       host.querySelectorAll(".wws-friend-row").forEach(btn =>
         btn.addEventListener("click", () => openWithFriendSheet(btn.dataset.uid)));
     }
+    // R45: aktuell offener Freund im „Mit X geschaut"-Sheet — Basis für „nachtragen".
+    let _wwsCtx = null;
     function openWithFriendSheet(uid) {
       const g = collectWithFriendsStats().find(x => x.uid === uid);
-      if (!g) return;
+      if (!g) { closeWithFriendSheet(); return; }
+      _wwsCtx = uid;
       document.getElementById("wws-title").textContent = "Mit " + (g.name || "Freund") + " geschaut";
       const row = (it, live) =>
         '<div class="wws-item" data-type="' + esc(it.mediaType) + '" data-id="' + it.id + '">' +
           (it.poster ? '<img class="wws-thumb" loading="lazy" src="' + IMG_BASE + 'w92' + it.poster + '" alt="">' : '<div class="wws-thumb wws-thumb-ph"></div>') +
           '<div class="wws-item-body"><div class="wws-item-title">' + esc(dispTitleOf ? dispTitleOf(it) : (it.title || "")) + '</div>' +
-          '<div class="wws-item-sub">' + (it.mediaType === "tv" ? "Serie" : "Film") + (live ? " · schaut ihr gerade 📺" : "") + '</div></div></div>';
+          '<div class="wws-item-sub">' + (it.mediaType === "tv" ? "Serie" : "Film") + (live ? " · schaut ihr gerade 📺" : "") + '</div></div>' +
+          '<button class="wws-item-remove" type="button" data-live="' + (live ? "1" : "0") + '" aria-label="Entfernen" title="Entfernen">' +
+            '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+          '</button></div>';
       let html = g.watched.map(it => row(it, false)).join("");
       if (g.watching.length) {
         html += '<div class="wws-group-label">Schaut ihr gerade</div>';
@@ -12775,18 +12825,156 @@
       list.innerHTML = html || '<div class="wws-empty">Nichts gemeinsam vermerkt</div>';
       list.querySelectorAll(".wws-item").forEach(el =>
         el.addEventListener("click", () => { closeWithFriendSheet(); openDetail(el.dataset.type, parseInt(el.dataset.id, 10)); }));
+      list.querySelectorAll(".wws-item-remove").forEach(btn =>
+        btn.addEventListener("click", e => {
+          e.stopPropagation();
+          const el = btn.closest(".wws-item");
+          removeWithFriendEntry(uid, el.dataset.type, parseInt(el.dataset.id, 10), btn.dataset.live === "1");
+        }));
       document.getElementById("wws-backdrop").hidden = false;
       document.body.style.overflow = "hidden";
     }
     function closeWithFriendSheet() {
       document.getElementById("wws-backdrop").hidden = true;
       document.body.style.overflow = "";
+      _wwsCtx = null;
+    }
+
+    // R45: versehentlichen „Mit X geschaut/schaut ihr gerade"-Vermerk rückgängig machen.
+    // Wirkt nur auf die eigene lokale Liste — der Freund merkt es erst über die
+    // Bestätigungs-Notification, nie automatisch (gleiches Prinzip wie beim Setzen).
+    let _wwUndo = null;
+    let _wwUndoTimer = null;
+    function removeWithFriendEntry(uid, mediaType, id, isLive) {
+      const key = keyOf(mediaType, id);
+      const m = getMeta(key);
+      const field = isLive ? "watchingWith" : "watchedWith";
+      const arr = Array.isArray(m[field]) ? m[field] : [];
+      const entry = arr.find(p => p.uid === uid);
+      if (!entry) return;
+      m[field] = arr.filter(p => p.uid !== uid);
+      saveMeta(key, m);
+      _wwUndo = { key, field, entry };
+      refreshDetailStatus();
+      renderWithFriends();
+      openWithFriendSheet(uid);   // schließt sich selbst, falls jetzt leer
+      const toast = document.getElementById("ww-remove-toast");
+      if (toast) {
+        toast.hidden = false;
+        clearTimeout(_wwUndoTimer);
+        _wwUndoTimer = setTimeout(() => { toast.hidden = true; _wwUndo = null; }, 4000);
+      }
+    }
+
+    // R45: Titel nachträglich als „gemeinsam geschaut" markieren — landet erst nach
+    // Bestätigung durch den Freund (ww-popup/_answerWW) auch bei ihm, exakt wie beim
+    // regulären „Geschaut mit" aus dem Bewerten-Sheet.
+    let _wwsAddCtx = null;
+    function openWWAddPicker(uid) {
+      const g = collectWithFriendsStats().find(x => x.uid === uid);
+      const friend = (_socialFriends || []).find(f => f.uid === uid);
+      const name = (g && g.name) || (friend && friend.username) || "Freund";
+      _wwsAddCtx = { uid, name };
+      document.getElementById("wws-add-title").textContent = "Mit " + name + " nachtragen";
+      document.getElementById("wws-add-search").value = "";
+      renderWWAddList("");
+      document.getElementById("wws-add-backdrop").hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+    function closeWWAddPicker() {
+      document.getElementById("wws-add-backdrop").hidden = true;
+      document.body.style.overflow = "";
+      _wwsAddCtx = null;
+    }
+    function renderWWAddList(term) {
+      if (!_wwsAddCtx) return;
+      const uid = _wwsAddCtx.uid;
+      const q = (term || "").trim().toLowerCase();
+      const items = Object.keys(db.items).map(k => db.items[k]).filter(it => {
+        if (!it) return false;
+        const already = (getMeta(keyOf(it.mediaType, it.id)).watchedWith || []).some(p => p.uid === uid);
+        if (already) return false;
+        if (!q) return true;
+        const t = (dispTitleOf ? dispTitleOf(it) : (it.title || "")).toLowerCase();
+        return t.indexOf(q) !== -1;
+      }).sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0)).slice(0, 60);
+      const list = document.getElementById("wws-add-list");
+      if (!items.length) { list.innerHTML = '<div class="wws-pick-empty">Keine Titel gefunden</div>'; return; }
+      list.innerHTML = items.map(it =>
+        '<label class="wws-pick-item">' +
+          '<input type="checkbox" value="' + esc(it.mediaType) + ':' + it.id + '" />' +
+          (it.poster ? '<img class="wws-thumb" loading="lazy" src="' + IMG_BASE + 'w92' + it.poster + '" alt="">' : '<div class="wws-thumb wws-thumb-ph"></div>') +
+          '<div class="wws-item-body"><div class="wws-item-title">' + esc(dispTitleOf ? dispTitleOf(it) : (it.title || "")) + '</div>' +
+          '<div class="wws-item-sub">' + (it.mediaType === "tv" ? "Serie" : "Film") + '</div></div>' +
+        '</label>'
+      ).join("");
     }
     (function wireWWStats() {
       const backdrop = document.getElementById("wws-backdrop");
       if (backdrop) backdrop.addEventListener("click", e => { if (e.target === backdrop) closeWithFriendSheet(); });
       const closeBtn = document.getElementById("wws-close");
       if (closeBtn) closeBtn.addEventListener("click", closeWithFriendSheet);
+      const addOpen = document.getElementById("wws-add-open");
+      if (addOpen) addOpen.addEventListener("click", () => { if (_wwsCtx) openWWAddPicker(_wwsCtx); });
+      const addBackdrop = document.getElementById("wws-add-backdrop");
+      if (addBackdrop) addBackdrop.addEventListener("click", e => { if (e.target === addBackdrop) closeWWAddPicker(); });
+      const addCancel = document.getElementById("wws-add-cancel");
+      if (addCancel) addCancel.addEventListener("click", closeWWAddPicker);
+      const addSearch = document.getElementById("wws-add-search");
+      if (addSearch) addSearch.addEventListener("input", e => renderWWAddList(e.target.value));
+      const addSave = document.getElementById("wws-add-save");
+      if (addSave) addSave.addEventListener("click", () => {
+        if (!_wwsAddCtx) { closeWWAddPicker(); return; }
+        const { uid, name } = _wwsAddCtx;
+        const checked = [...document.querySelectorAll("#wws-add-list input:checked")];
+        const myUid = window.__vaultUser && window.__vaultUser.uid;
+        const myName = (_myProfile && _myProfile.username) || (window.__vaultUser && window.__vaultUser.email) || "";
+        let added = 0;
+        checked.forEach(cb => {
+          const idx = cb.value.indexOf(":");
+          const mediaType = cb.value.slice(0, idx);
+          const id = parseInt(cb.value.slice(idx + 1), 10);
+          const key = keyOf(mediaType, id);
+          const rec = db.items[key];
+          if (!rec) return;
+          const m = getMeta(key);
+          const arr = Array.isArray(m.watchedWith) ? m.watchedWith : [];
+          if (arr.some(p => p.uid === uid)) return;   // schon drin
+          m.watchedWith = arr.concat([{ uid, name }]);
+          saveMeta(key, m);
+          added++;
+          if (myUid && window.__vaultSocial && window.__vaultSocial.pushNotification) {
+            window.__vaultSocial.pushNotification(uid, {
+              type: "watched_with", fromUid: myUid, fromUsername: myName,
+              itemTitle: rec.title || "", itemPoster: rec.poster || "",
+              itemType: rec.mediaType || "movie", tmdbId: rec.id || null
+            }).catch(() => {});
+          }
+        });
+        const reopen = _wwsCtx === uid;
+        closeWWAddPicker();
+        refreshDetailStatus();
+        renderWithFriends();
+        if (added && reopen) openWithFriendSheet(uid);
+        showToast(added
+          ? (added > 1 ? added + " Titel nachgetragen – " + name + " wird gefragt 👥" : "Nachgetragen – " + name + " wird gefragt 👥")
+          : "Nichts ausgewählt");
+      });
+      const undoBtn = document.getElementById("ww-remove-undo-btn");
+      if (undoBtn) undoBtn.addEventListener("click", () => {
+        if (_wwUndo) {
+          const { key, field, entry } = _wwUndo;
+          const m = getMeta(key);
+          m[field] = (Array.isArray(m[field]) ? m[field] : []).filter(p => p.uid !== entry.uid).concat([entry]);
+          saveMeta(key, m);
+          refreshDetailStatus();
+          renderWithFriends();
+          if (_wwsCtx === entry.uid) openWithFriendSheet(entry.uid);
+        }
+        document.getElementById("ww-remove-toast").hidden = true;
+        clearTimeout(_wwUndoTimer);
+        _wwUndo = null;
+      });
     })();
 
     // R21-#8/#5: the feed is now backed by the persistent "posts" collection
@@ -13042,12 +13230,37 @@
       const starHl    = feedStarHighlight(p);
       const cls       = `feed-card feed-cat-${feedCategory(p)}`
                         + (starHl === 5 ? " feed-star5" : starHl === 1 ? " feed-star1" : "");
-      const head = `<div class="feed-head">
+      // R46: Collab-Post — „Geschaut mit"-Partner erscheinen wie bei Instagram als
+      // überlappende Avatare + „Anna und Ben haben … geschaut" (bzw. „… und Du").
+      const _meUid = window.__vaultUser && window.__vaultUser.uid;
+      const wwPartners = (Array.isArray(p.watchedWith) ? p.watchedWith : [])
+        .filter(w => w && w.uid && w.uid !== ownerUid);
+      let head, actionText = feedActionLabel(p);
+      if (wwPartners.length) {
+        const avs = [{ uid: ownerUid, name: author }].concat(wwPartners).slice(0, 3).map(w =>
+          `<div class="feed-av" data-uid="${socialEsc(w.uid)}">${avatarHtml(w.uid, feedDisplayName(w.uid, w.name))}</div>`).join("");
+        // „Du" ans Ende, Rest mit Klarnamen; eigener Name wird zu „Du".
+        const partNames = wwPartners.map(w => (w.uid === _meUid)
+          ? '<span class="feed-author-part">Du</span>'
+          : `<span class="feed-author-part" data-uid="${socialEsc(w.uid)}">${socialEsc(feedDisplayName(w.uid, w.name || "Freund"))}</span>`);
+        const names = [`<span class="feed-author-part" data-uid="${socialEsc(ownerUid)}">${socialEsc(author)}</span>`].concat(partNames);
+        const nameLine = names.length > 2
+          ? names.slice(0, -1).join(", ") + " und " + names[names.length - 1]
+          : names.join(" und ");
+        head = `<div class="feed-head">
+            <div class="feed-av-stack">${avs}</div>
+            <div class="feed-author feed-author-multi">${nameLine}</div>
+            <div class="feed-time">${relativeTime(p.timestamp)}</div>
+          </div>`;
+        actionText = actionText.replace(/^hat /, "haben ");
+      } else {
+        head = `<div class="feed-head">
             <div class="feed-av" data-uid="${socialEsc(ownerUid)}">${avatarHtml(ownerUid, author)}</div>
             <div class="feed-author" data-uid="${socialEsc(ownerUid)}">${socialEsc(author)}</div>
             <div class="feed-time">${relativeTime(p.timestamp)}</div>
           </div>`;
-      const action = `<div class="feed-actionline">${feedActionLabel(p)}</div>`;
+      }
+      const action = `<div class="feed-actionline">${actionText}</div>`;
 
       // R27-#9: shared-list activity — no tmdb item, so a compact list card.
       if (p.type === "shared_list") {
@@ -13080,9 +13293,17 @@
       const titleLine  = [socialEsc(p.title || ""), mediaLabel].filter(Boolean).join(" · ");
       const inWl       = !!db.watchlist[key];
       const iWatched   = !!db.items[key];
-      // R23-#17: comments only attach to persistent posts (pseudo-posts have no doc id)
-      const canComment = !!(p.id && !p._pseudo);
-      const cmtCount   = canComment ? (_commentCounts[p.id] || 0) : 0;
+      // R23-#17/R46: Kommentare an jeder Post-Karte. Für watched/rated-Posts ist die
+      // Thread-ID DETERMINISTISCH (pw_uid_type_itemId) statt der Firestore-Doc-ID:
+      // derselbe Post rendert je nach Gerät mal als echter Post, mal als Pseudo-Post
+      // (posts-Collection kommt browser↔handy nicht zuverlässig an) — mit der Doc-ID
+      // würden die Kommentare in zwei getrennte Threads zerfallen. Andere Post-Typen
+      // (episode_shared …) existieren nur als echte Posts und behalten ihre Doc-ID.
+      const commentThreadId = /^(watched|rated)$/.test(p.type || "") && ownerUid && id
+        ? "pw_" + ownerUid + "_" + type + "_" + id
+        : (p._pseudo ? null : p.id || null);
+      const canComment = !!commentThreadId;
+      const cmtCount   = canComment ? (_commentCounts[commentThreadId] || 0) : 0;
       // R21-#2 / R27-#3: exclude the poster AND the current user (by real uid, never
       // just the self flag) from "Auch gesehen von", and list ALL matching friends.
       const _selfUid = (window.__vaultUser && window.__vaultUser.uid) || null;
@@ -13104,13 +13325,13 @@
             <div class="feed-icons">
               <button class="feed-icon-btn feed-bm${inWl ? " on" : ""}" data-id="${id}" data-type="${type}" data-title="${socialEsc(p.title || "")}" data-poster="${socialEsc(p.posterPath || "")}" data-owner="${socialEsc(ownerUid)}" data-ownername="${socialEsc(author)}" aria-label="Watchlist">${FEED_BOOKMARK}</button>
               <button class="feed-icon-btn feed-eye${iWatched ? " on" : ""}" data-id="${id}" data-type="${type}" data-title="${socialEsc(p.title || "")}" data-poster="${socialEsc(p.posterPath || "")}" data-owner="${socialEsc(ownerUid)}" data-ownername="${socialEsc(author)}" aria-label="Ich hab den auch gesehen">${FEED_EYE}</button>
-              ${canComment ? `<button class="feed-icon-btn feed-comment-btn" data-post="${socialEsc(p.id)}" data-owner="${socialEsc(ownerUid)}" data-ownername="${socialEsc(author)}" data-title="${socialEsc(p.title || "")}" data-poster="${socialEsc(p.posterPath || "")}" data-type="${type}" data-id="${id}" aria-label="Kommentare">${FEED_COMMENT}<span class="feed-cmt-count">${cmtCount > 0 ? cmtCount : ""}</span></button>` : ""}
+              ${canComment ? `<button class="feed-icon-btn feed-comment-btn" data-post="${socialEsc(commentThreadId)}" data-owner="${socialEsc(ownerUid)}" data-ownername="${socialEsc(author)}" data-title="${socialEsc(p.title || "")}" data-poster="${socialEsc(p.posterPath || "")}" data-type="${type}" data-id="${id}" aria-label="Kommentare">${FEED_COMMENT}<span class="feed-cmt-count">${cmtCount > 0 ? cmtCount : ""}</span></button>` : ""}
             </div>
           </div>
           ${p.note ? `<div class="feed-note">„${socialEsc(p.note)}"</div>` : ""}
           <div class="feed-titleline">${titleLine}</div>
           ${seenHtml}
-          ${canComment ? `<div class="feed-comments" data-post="${socialEsc(p.id)}" hidden></div>` : ""}
+          ${canComment ? `<div class="feed-comments" data-post="${socialEsc(commentThreadId)}" hidden></div>` : ""}
         </div>`;
     }
 
@@ -13253,6 +13474,7 @@
             itemId: it.id, mediaType: it.mediaType || "movie",
             title: it.title || "", posterPath: it.posterPath || null,
             bucket: it.bucket || null, note: it.note || "",
+            watchedWith: Array.isArray(it.watchedWith) ? it.watchedWith : [],   // R46: Collab-Kopf
             timestamp: it.watchedAt || 0, _ts: it.watchedAt || 0, _pseudo: true
           });
         });
@@ -13289,7 +13511,10 @@
         // Film-/Serien-Posts („Im Feed posten") bleiben IMMER eigene Karten — sonst
         // verschwindet ein bewusst geposteter Titel auf einem versteckten Slide.
         const isActorType = p.type === "actor_ranked" || p.type === "actor_number_one";
-        const canGroup = BINGE_TYPES.test(p.type || "") && (p._pseudo || isActorType);
+        // R46: Collab-Posts („Geschaut mit") nie in Swipe-Karten gruppieren — sonst
+        // verschwindet der Instagram-Kopf (Doppel-Avatar + „haben") auf einem Slide.
+        const isCollab = Array.isArray(p.watchedWith) && p.watchedWith.length > 0;
+        const canGroup = BINGE_TYPES.test(p.type || "") && (p._pseudo || isActorType) && !isCollab;
         const last = groups[groups.length - 1];
         if (canGroup && last && last.groupable && last.userId === p.userId && last.kind === kindOf(p) &&
             Math.abs(tsOf(last.items[last.items.length - 1]) - tsOf(p)) <= BINGE_WINDOW) {
@@ -13336,8 +13561,8 @@
       setupFeedInfiniteScroll(host, accepted);
 
       // wiring
-      host.querySelectorAll(".feed-av[data-uid], .feed-author[data-uid]").forEach(el =>
-        el.addEventListener("click", () => openFriendProfile(el.dataset.uid)));
+      host.querySelectorAll(".feed-av[data-uid], .feed-author[data-uid], .feed-author-part[data-uid]").forEach(el =>
+        el.addEventListener("click", e => { e.stopPropagation(); openFriendProfile(el.dataset.uid); }));
       host.querySelectorAll(".feed-poster-wrap[data-id]").forEach(el => {
         el.style.cursor = "pointer";
         el.addEventListener("click", () => openDetail(el.dataset.type, parseInt(el.dataset.id, 10)));
@@ -13894,13 +14119,22 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R45";
+    const APP_VERSION = "R46";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R46": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Gemeinsam geschaut — wie bei Instagram:</strong> Postest du einen Film, den du mit jemandem geschaut hast, zeigt der Feed jetzt beide Profilbilder überlappend und „Anna und Ben haben … geschaut“ (bzw. „… und Du“).",
+          "<strong>„Mit Freunden geschaut“ korrigierbar:</strong> Im Profil → Freund antippen: Jeder Titel hat jetzt ein ✕ zum Entfernen (mit Rückgängig), und über „+ Titel nachtragen“ kannst du vergessene Filme nachträglich vermerken — dein Freund bestätigt wie gewohnt per Popup.",
+          "<strong>Kommentare überall:</strong> Alle geposteten Filme und Serien im Feed sind jetzt kommentierbar — auch die, bei denen der Kommentar-Knopf bisher fehlte. Der Kommentar-Thread ist auf Handy und Browser derselbe.",
+          "<strong>Episoden-Bild auch im Popup:</strong> Bekommst du eine geteilte Folge, zeigt das Popup jetzt das Standbild genau dieser Folge statt des Serienposters."
+        ]
+      },
       "R44": {
         title: "Was ist neu",
         notes: [
