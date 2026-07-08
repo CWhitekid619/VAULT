@@ -12055,9 +12055,13 @@
             // like any other recommendation. "Zur Detailseite" stays available inside.
             const full = _notifCache.find(x => x.id === nid);
             if (full) { closeNotifCenter(); openSingleReco(full); }
-          } else if (el.dataset.type === "post_comment") {
-            // R23-#17: jump to the activity feed where the commented post lives.
+          } else if (el.dataset.type === "post_comment" || el.dataset.type === "post_comment_reply") {
+            // R23-#17/R47: jump to the activity feed, scroll to the commented post
+            // and open its comment thread (postId travels in the notification).
+            const full = _notifCache.find(x => x.id === nid);
             closeNotifCenter(); switchTab("social");
+            if (typeof switchSocialPane === "function") switchSocialPane("feed");
+            if (full && full.postId) scrollFeedToThread(full.postId, 0);
           } else if (el.dataset.type === "watched_with" || el.dataset.type === "watching_with") {
             // R41: Bestätigungs-Popup (wieder) öffnen — funktioniert auch für alte,
             // schon gelesene Anfragen; ein zweites „Ja" richtet keinen Schaden an.
@@ -12125,6 +12129,7 @@
       if (type === "feed_rerated")   return "⭐";
       if (type === "reco_reply")     return "💬";
       if (type === "post_comment")   return "💬";
+      if (type === "post_comment_reply") return "💬";
       if (type === "reco_watched")   return "👁️";
       if (type === "reco_seen")      return "👁️";
       if (type === "reco_added_list")return "📋";
@@ -12158,6 +12163,7 @@
       if (n.type === "feed_rerated")     return `${from} hat ${item} nochmal bewertet, nachdem du es geschaut hast`;
       if (n.type === "reco_reply")       return `${from} hat auf deine Empfehlung geantwortet: „${socialEsc(n.replyText || "")}“`;
       if (n.type === "post_comment")     return `${from} hat deinen Post${n.itemTitle ? " zu " + item : ""} kommentiert${n.commentText ? `: „${socialEsc(n.commentText)}“` : ""}`;
+      if (n.type === "post_comment_reply") return `${from} hat auch${n.itemTitle ? " zu " + item : ""} kommentiert${n.commentText ? `: „${socialEsc(n.commentText)}“` : ""}`;
       if (n.type === "reco_watched")     return `${from} hat ${item} geschaut`;
       if (n.type === "reco_seen")        return `${from} hat ${item} bereits gesehen`;
       if (n.type === "match")            return `Match mit ${from}! Ihr habt beide ${item} gesehen 🎬`;
@@ -13184,10 +13190,30 @@
         default:                  return "watched";
       }
     }
+    // R47: Für EIGENE Posts zählt das AKTUELL gespeicherte Rating, nicht der beim
+    // Posten eingefrorene Schnappschuss. Alte Posts (z. B. episode_watched aus früheren
+    // Versionen) zeigten sonst „Verriss"/1★, obwohl die Folge längst 5★ hat — Feed und
+    // Detailansicht widersprachen sich. Fremde Posts bleiben beim Schnappschuss (deren
+    // aktuelle Ratings kennen wir nicht). Liefert { bucket, epStars } fürs Rendern.
+    function feedEffectiveRating(p) {
+      let bucket = p.bucket || null, epStars = p.epRating || 0;
+      const myUid = window.__vaultUser && window.__vaultUser.uid;
+      if (myUid && p.userId === myUid && p.itemId != null) {
+        if ((p.mediaType || "movie") === "tv" && p.season != null && p.episode != null) {
+          const cur = getEpRating(keyOf("tv", p.itemId), p.season, p.episode);
+          if (cur) { bucket = null; epStars = FEED_STAR[cur] || 0; }
+        } else {
+          const it = db.items[keyOf(p.mediaType || "movie", p.itemId)];
+          if (it && it.bucket) bucket = it.bucket;
+        }
+      }
+      return { bucket, epStars };
+    }
     // R27-#9: notable 1★ / 5★ rating on a watched/series card → 5, 1, or 0.
     function feedStarHighlight(p) {
       if (!/^(watched|rated|series_watched|episode_watched|episode_rated)$/.test(p.type || "")) return 0;
-      const s = p.bucket ? (FEED_STAR[p.bucket] || 0) : (p.epRating || 0);
+      const r = feedEffectiveRating(p);   // R47: eigenes Rating live statt Schnappschuss
+      const s = r.bucket ? (FEED_STAR[r.bucket] || 0) : (r.epStars || 0);
       return s === 5 ? 5 : (s === 1 ? 1 : 0);
     }
 
@@ -13288,7 +13314,9 @@
       const posterInner = feedImg
         ? `<img class="feed-poster" src="${IMG_BASE}w500${feedImg}" alt="" loading="lazy">`
         : `<div class="feed-poster feed-poster-ph"><span>${socialEsc(p.title || "")}</span></div>`;
-      const stars      = p.bucket ? bucketToStars(p.bucket) : (p.epRating ? "★".repeat(Math.max(0, Math.min(5, p.epRating))) : "");
+      // R47: eigenes Rating live (feedEffectiveRating) statt eingefrorenem Schnappschuss
+      const _eff       = feedEffectiveRating(p);
+      const stars      = _eff.bucket ? bucketToStars(_eff.bucket) : (_eff.epStars ? "★".repeat(Math.max(0, Math.min(5, _eff.epStars))) : "");
       const mediaLabel = type === "tv" ? "Serie" : "Film";
       const titleLine  = [socialEsc(p.title || ""), mediaLabel].filter(Boolean).join(" · ");
       const inWl       = !!db.watchlist[key];
@@ -13371,7 +13399,9 @@
           const posterInner = slideImg
             ? `<img class="feed-poster" src="${IMG_BASE}w500${slideImg}" alt="" loading="lazy">`
             : `<div class="feed-poster feed-poster-ph"><span>${socialEsc(p.title || "")}</span></div>`;
-          const stars      = p.bucket ? bucketToStars(p.bucket) : (p.epRating ? "★".repeat(Math.max(0, Math.min(5, p.epRating))) : "");
+          // R47: auch in Binge-Slides das aktuelle eigene Rating statt Schnappschuss
+          const _eff       = feedEffectiveRating(p);
+          const stars      = _eff.bucket ? bucketToStars(_eff.bucket) : (_eff.epStars ? "★".repeat(Math.max(0, Math.min(5, _eff.epStars))) : "");
           const mediaLabel = type === "tv" ? "Serie" : "Film";
           const titleLine  = [socialEsc(p.title || ""), mediaLabel].filter(Boolean).join(" · ");
           const inWl       = !!db.watchlist[keyOf(type, id)];
@@ -13479,6 +13509,31 @@
           });
         });
       });
+      // R47: EIGENE Posts erscheinen jetzt auch im eigenen Feed (wie bei Instagram).
+      // Die posts-Collection synct nicht zuverlässig zwischen Geräten — deshalb werden
+      // eigene bewusst gepostete Titel (meta.posted) direkt aus der lokalen Bibliothek
+      // als Pseudo-Posts gebaut, in derselben Form wie die der Freunde. Echte eigene
+      // Posts gewinnen über die realKeys-Dedupe darunter.
+      if (myUid) {
+        const _rwEx = db.recentlyWatchedExcluded || {};
+        Object.values(db.items)
+          .filter(it => it.loggedAt && !_rwEx[it.mediaType + ":" + it.id])
+          .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0))
+          .slice(0, 20)
+          .forEach(it => {
+            const m = db.meta[it.mediaType + ":" + it.id];
+            if (!m || !m.posted) return;
+            pseudo.push({
+              type: it.bucket ? "rated" : "watched",
+              userId: myUid, username: myName,
+              itemId: it.id, mediaType: it.mediaType || "movie",
+              title: it.title || "", posterPath: it.poster || null,
+              bucket: it.bucket || null, note: m.note || "",
+              watchedWith: Array.isArray(m.watchedWith) ? m.watchedWith : [],
+              timestamp: it.loggedAt || 0, _ts: it.loggedAt || 0, _pseudo: true
+            });
+          });
+      }
       // Echte Posts gewinnen gegen einen Pseudo-Post für dasselbe (Nutzer, Titel).
       const realKeys = new Set(_feedPosts.map(idKey));
       // Nur echte, bewusst geteilte Aktivität im Feed — keine Ranking-/Schauspieler-
@@ -13603,6 +13658,34 @@
         }
         btn.addEventListener("click", () => toggleCommentSection(btn));
       });
+
+      // R47: Episoden-Posts aus der Zeit vor R44 tragen kein stillPath und zeigten
+      // deshalb weiter das Serienposter. Standbild der konkreten Folge nachladen
+      // (tmFetch ist gecacht), auf dem Post-Objekt merken und einmal neu malen.
+      // _stillTried verhindert Endlos-Refetches, wenn TMDB kein Standbild hat.
+      const needStill = merged.filter(p => !p.stillPath && !p._stillTried
+        && (p.mediaType || "") === "tv" && p.itemId != null
+        && p.season != null && p.episode != null);
+      if (needStill.length) {
+        Promise.all(needStill.map(async p => {
+          p._stillTried = true;
+          try {
+            const res = await tmFetch("https://api.themoviedb.org/3/tv/" + p.itemId +
+              "/season/" + p.season + "/episode/" + p.episode +
+              "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
+            if (res.ok) {
+              const d = await res.json();
+              if (d.still_path) { p.stillPath = d.still_path; return true; }
+            }
+          } catch (e) { /* Standbild ist optional — Feed darf nie daran scheitern */ }
+          return false;
+        })).then(flags => {
+          if (flags.some(Boolean)) {
+            repaintFeedIfOpen();
+            try { saveFeedCache(accepted); } catch (e) {}
+          }
+        });
+      }
     }
 
     // R23-#17: reflect a post's comment count on every visible badge for that post.
@@ -13615,6 +13698,22 @@
     // Minimal CSS.escape fallback (post ids are alnum+_ so this is just a guard).
     function cssEsc(s) {
       return (window.CSS && CSS.escape) ? CSS.escape(s) : String(s).replace(/["\\\]]/g, "\\$&");
+    }
+
+    // R47: Von der 💬-Benachrichtigung direkt zum kommentierten Post springen und
+    // den Thread aufklappen. Der Feed lädt asynchron — deshalb kurz pollen, bis die
+    // Karte im DOM ist (max. ~6 s), dann zentrieren und Kommentare öffnen.
+    function scrollFeedToThread(postId, tries) {
+      if (!postId) return;
+      const btn = document.querySelector(`.feed-comment-btn[data-post="${cssEsc(postId)}"]`);
+      if (!btn) {
+        if ((tries || 0) < 20) setTimeout(() => scrollFeedToThread(postId, (tries || 0) + 1), 300);
+        return;
+      }
+      const card = btn.closest(".feed-card");
+      if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
+      const section = card && card.querySelector(`.feed-comments[data-post="${cssEsc(postId)}"]`);
+      if (section && section.hidden) toggleCommentSection(btn);
     }
 
     async function toggleCommentSection(btn) {
@@ -13691,13 +13790,27 @@
         // als eigener Feed-Post erscheinen, sonst taucht der Post bei jedem Kommentar
         // erneut im Feed auf.
         // Notify the post owner — but never notify yourself.
+        // R47: postId reist mit, damit der Tap auf die Benachrichtigung direkt zum
+        // Post im Feed springt und den Kommentar-Thread öffnet (statt nur zum Tab).
         const ownerUid = btn.dataset.owner;
+        const _notifBase = {
+          fromUid: window.__vaultUser.uid, fromUsername: myName,
+          itemTitle: btn.dataset.title || "", itemPoster: btn.dataset.poster || "",
+          itemType: btn.dataset.type || "movie", tmdbId: parseInt(btn.dataset.id, 10) || null,
+          commentText: text, postId: postId || null
+        };
         if (ownerUid && ownerUid !== window.__vaultUser.uid && window.__vaultSocial.pushNotification) {
-          window.__vaultSocial.pushNotification(ownerUid, {
-            type: "post_comment", fromUid: window.__vaultUser.uid, fromUsername: myName,
-            itemTitle: btn.dataset.title || "", itemPoster: btn.dataset.poster || "",
-            itemType: btn.dataset.type || "movie", tmdbId: parseInt(btn.dataset.id, 10) || null,
-            commentText: text
+          window.__vaultSocial.pushNotification(ownerUid, { type: "post_comment", ..._notifBase });
+        }
+        // R47: wie bei Instagram auch die anderen Mitkommentierer im Thread
+        // benachrichtigen (außer mir selbst und dem Besitzer, der oben dran ist).
+        if (window.__vaultSocial.pushNotification) {
+          const _notified = new Set([window.__vaultUser.uid, ownerUid || ""]);
+          arr.forEach(c => {
+            const uid = c && c.userId;
+            if (!uid || _notified.has(uid)) return;
+            _notified.add(uid);
+            window.__vaultSocial.pushNotification(uid, { type: "post_comment_reply", ..._notifBase });
           });
         }
       } catch (e) {
@@ -14119,13 +14232,22 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R46";
+    const APP_VERSION = "R47";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R47": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Eigene Posts im Feed:</strong> Wie bei Instagram siehst du deine eigenen geposteten Filme und Serien jetzt auch in deinem eigenen Feed — inklusive Kommentar-Thread darunter.",
+          "<strong>Kommentar-Benachrichtigungen verbessert:</strong> Tippst du auf eine 💬-Benachrichtigung, springt die App direkt zum Post und öffnet die Kommentare. Außerdem werden jetzt auch alle Mitkommentierer benachrichtigt, wenn jemand im selben Thread antwortet.",
+          "<strong>Episoden-Standbilder überall:</strong> Auch ältere Episoden-Posts im Feed zeigen jetzt das Standbild der konkreten Folge statt des Serienposters — das Bild wird automatisch nachgeladen.",
+          "<strong>Sterne-Anzeige korrigiert:</strong> Eigene Posts zeigen immer deine AKTUELLE Bewertung. Eine Folge, die du inzwischen mit 5 Sternen bewertet hast, erscheint nicht mehr fälschlich als „Verriss“ mit 1 Stern."
+        ]
+      },
       "R46": {
         title: "Was ist neu",
         notes: [
