@@ -562,6 +562,9 @@
 
     /* ---------- Bottom action sheet ---------- */
     #picker-backdrop.over-reco { z-index: 210; }   /* R21-#10: raise list picker above the reco popup (z200) */
+    /* R48: „Neue Liste" wird auch aus dem Listen-Picker über dem Empfehlungs-Popup geöffnet —
+       ohne eigenes z-index läge der Dialog HINTER dem Popup (z200) und wäre unbedienbar. */
+    #newlist-backdrop { z-index: 220; }
     .sheet-backdrop {
       position: fixed; inset: 0; z-index: 170;   /* Fix #1: modal — above the bottom bar */
       background: rgba(0,0,0,.55);
@@ -1486,6 +1489,9 @@
     }
     .sheet-btn-primary:active { filter: brightness(.92); }
     .sheet-btn-primary:disabled { opacity: .4; cursor: default; }
+    /* R48: bereits gesehene Titel — „Watched" ist ausgegraut statt Gold (bleibt fürs
+       Neu-Bewerten antippbar, signalisiert aber klar den Gesehen-Status). */
+    .sheet-btn-primary.is-watched { background: var(--surface-2); color: var(--text-mute); }
 
     /* 2b: uniform labeled filter fields */
     .filter-field { display: flex; flex-direction: column; gap: 6px; }
@@ -2168,21 +2174,34 @@
     .reco-title { font-size: 17px; font-weight: 700; margin-bottom: 3px; }
     .reco-rating { color: var(--accent); font-size: 13px; margin-bottom: 5px; }
     .reco-episode { color: var(--text); font-size: 13px; font-weight: 600; margin-bottom: 5px; }
-    .reco-note { color: var(--text-dim); font-size: 13px; font-style: italic; margin-bottom: 12px; line-height: 1.4; }
-    .reco-incoming { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px 12px 12px 4px; padding: 9px 12px; margin-bottom: 12px; font-size: 13px; line-height: 1.4; color: var(--text); }
-    .reco-incoming-label { display: block; font-size: 11px; font-weight: 600; color: var(--text-mute); margin-bottom: 3px; }
-    .reco-actions { display: flex; gap: 10px; }
-    .reco-actions button { flex: 1; padding: 11px; border-radius: 12px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
-    .reco-watchlist-btn { background: var(--accent); color: #1a1206; }
-    .reco-detail-btn { background: var(--surface-2); color: var(--text); border: 1px solid var(--border) !important; }
-    .reco-actions-2 { margin-top: 8px; }
-    .reco-seen-btn, .reco-addlist-btn { background: var(--surface-2); color: var(--text); border: 1px solid var(--border) !important; font-size: 13px !important; }
+    /* R48: schlichte Icon-Leiste — Watchlist-Lesezeichen, Gesehen-Auge, Listen-Icon.
+       Gold = Status aktiv (auf Watchlist / schon gesehen), sonst neutral. */
+    .reco-iconbar { display: flex; align-items: center; gap: 10px; margin: 10px 0 2px; }
+    .reco-icon-btn {
+      width: 42px; height: 42px; flex: 0 0 auto; padding: 0;
+      border-radius: 50%; border: 1px solid var(--border);
+      background: var(--surface-2); color: var(--text-dim);
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .reco-icon-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .reco-icon-btn:active { filter: brightness(1.15); }
+    .reco-icon-btn.active { color: var(--accent); border-color: var(--accent); }
+    #reco-watchlist.active svg { fill: var(--accent); }
+    .reco-detail-link {
+      margin-left: auto; background: none; border: none; color: var(--accent);
+      font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 6px 0;
+    }
+    .reco-detail-link:active { opacity: .8; }
+    /* R48: Chat-Verlauf im WhatsApp-Stil — eigene Nachrichten links, Freund rechts. */
+    .reco-chat { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 2px; max-height: 200px; overflow-y: auto; }
+    .reco-msg { max-width: 84%; padding: 8px 12px; border-radius: 14px; font-size: 13px; line-height: 1.45; color: var(--text); overflow-wrap: break-word; }
+    .reco-msg.mine   { align-self: flex-start; background: var(--surface-2); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+    .reco-msg.theirs { align-self: flex-end;   background: var(--surface-2); border: 1px solid var(--accent); border-bottom-right-radius: 4px; }
     .reco-reply { display: flex; gap: 8px; margin-top: 10px; }
     .reco-reply-input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-family: inherit; font-size: 14px; }
     .reco-reply-input:focus { outline: none; border-color: var(--accent); }
     .reco-reply-send { flex: 0 0 auto; width: 40px; border-radius: 12px; border: none; background: var(--accent); color: #1a1206; cursor: pointer; display: flex; align-items: center; justify-content: center; }
     .reco-reply-send svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .reco-reply-done { margin-top: 8px; font-size: 13px; color: var(--accent); font-weight: 600; text-align: center; }
     .reco-skip-btn { width: 100%; padding: 10px; margin-top: 6px; border-radius: 12px; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; border: none; background: none; color: var(--text-mute); }
     .reco-nav { display: flex; gap: 8px; margin-top: 12px; }
     .reco-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.3); }
@@ -2996,13 +3015,14 @@
       <!-- Step 1: choose action -->
       <div id="sheet-step1">
         <button id="sheet-watched-btn" class="sheet-btn-primary" type="button">Watched</button>
-        <button id="sheet-share-btn" class="sheet-btn-ghost" type="button" hidden>
+        <!-- R48: Teilen geht jetzt auch VOR dem Schauen (nicht mehr hidden) -->
+        <button id="sheet-share-btn" class="sheet-btn-ghost" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/></svg>
           Mit Freunden teilen
         </button>
         <button id="sheet-watchlist-btn" class="sheet-btn-ghost" type="button">
           <svg viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></svg>
-          Watchlist
+          <span id="sheet-watchlist-label">Watchlist</span>
         </button>
         <button id="sheet-list-btn" class="sheet-btn-ghost" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
@@ -3184,7 +3204,8 @@
         </div>
       </div>
       <div id="share-friends-list" class="share-friends-list"></div>
-      <div class="sheet-section-label" style="margin-top:0">Bewertung (optional)</div>
+      <!-- R48: Bewertung nur bei geschauten Titeln — ungesehen kann man nichts bewerten -->
+      <div class="sheet-section-label" id="share-rating-label" style="margin-top:0">Bewertung (optional)</div>
       <div class="share-stars" id="share-stars"></div>
       <textarea class="share-note-input" id="share-note" placeholder="Notiz (optional) …" rows="2"></textarea>
       <button id="share-submit" class="sheet-btn-primary" type="button">Empfehlen</button>
@@ -3205,19 +3226,22 @@
         <!-- R25-#12: episode reference shown when this card is a shared single episode -->
         <div class="reco-episode" id="reco-episode" hidden></div>
         <div class="reco-rating" id="reco-rating"></div>
-        <div class="reco-note" id="reco-note"></div>
-        <!-- Fix #3: latest incoming reply when this card was opened from a reply notification -->
-        <div class="reco-incoming" id="reco-incoming" hidden></div>
-        <div class="reco-counter" id="reco-counter"></div>
-        <div class="reco-actions">
-          <button class="reco-watchlist-btn" id="reco-watchlist" type="button">Zur Watchlist</button>
-          <button class="reco-detail-btn" id="reco-detail-btn" type="button">Zur Detailseite</button>
+        <!-- R48: schlichte Icon-Leiste — Watchlist / Gesehen / Liste + dezenter Detail-Link.
+             Gold = Status aktiv (auf Watchlist bzw. schon gesehen). -->
+        <div class="reco-iconbar">
+          <button class="reco-icon-btn" id="reco-watchlist" type="button" aria-label="Watchlist">
+            <svg viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></svg>
+          </button>
+          <button class="reco-icon-btn" id="reco-seen-btn" type="button" aria-label="Als gesehen markieren">
+            <svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+          <button class="reco-icon-btn" id="reco-addlist-btn" type="button" aria-label="Zu Liste hinzufügen">
+            <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          </button>
+          <button class="reco-detail-link" id="reco-detail-btn" type="button">Zur Detailseite ›</button>
         </div>
-        <!-- R21-#10: inline actions on incoming recommendations -->
-        <div class="reco-actions reco-actions-2">
-          <button class="reco-seen-btn" id="reco-seen-btn" type="button">Als gesehen markieren</button>
-          <button class="reco-addlist-btn" id="reco-addlist-btn" type="button">Zu Liste hinzufügen</button>
-        </div>
+        <!-- R48: Chat-Verlauf (WhatsApp-Stil) — Original-Nachricht + alle Antworten -->
+        <div class="reco-chat" id="reco-chat" hidden></div>
         <!-- R21-#9: reply to the recommendation -->
         <div class="reco-reply">
           <input id="reco-reply-input" class="reco-reply-input" type="text" placeholder="Antworten …" maxlength="240" autocomplete="off" />
@@ -3225,8 +3249,8 @@
             <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           </button>
         </div>
-        <div class="reco-reply-done" id="reco-reply-done" hidden>Antwort gesendet ✓</div>
-        <button class="reco-skip-btn" id="reco-skip-btn" type="button">Überspringen</button>
+        <div class="reco-counter" id="reco-counter"></div>
+        <button class="reco-skip-btn" id="reco-skip-btn" type="button">Schließen</button>
       </div>
     </div>
     <div class="reco-nav" id="reco-nav"></div>
@@ -5873,11 +5897,17 @@
         sheetPoster.style.visibility = "hidden";
       }
 
-      // Fix #2: label reflects watched state ("Watch" = not seen yet, "Watched" = already seen).
-      // Fix #1: share button only when the title is already watched (needs a persisted record).
-      const watched = !!db.items[keyOf(r.media_type, r.id)];
-      document.getElementById("sheet-watched-btn").textContent = watched ? "Watched" : "Watch";
-      document.getElementById("sheet-share-btn").hidden = !watched;
+      // Fix #2 / R48: „Watch" (Gold) = noch nicht gesehen, „Watched ✓" (ausgegraut) = gesehen.
+      const sheetKey = keyOf(r.media_type, r.id);
+      const watched = !!db.items[sheetKey];
+      const watchedBtn = document.getElementById("sheet-watched-btn");
+      watchedBtn.textContent = watched ? "Watched ✓" : "Watch";
+      watchedBtn.classList.toggle("is-watched", watched);
+      // R48: Watchlist-Button spiegelt den Status (Gold + Häkchen, wenn schon drauf).
+      const wlBtn = document.getElementById("sheet-watchlist-btn");
+      const onWl = !!db.watchlist[sheetKey];
+      wlBtn.classList.toggle("active", onWl);
+      document.getElementById("sheet-watchlist-label").textContent = onWl ? "Auf Watchlist ✓" : "Watchlist";
 
       // „Tracken" direkt aus dem Suchergebnis — nur für Serien, spiegelt den Getrackt-Status.
       const trackBtn = document.getElementById("sheet-track-btn");
@@ -6275,18 +6305,29 @@
       if (!db.items[keyOf(r.media_type, r.id)]) logWatched(r);   // neu → als gesehen markieren
       openQuickRate(r);
     });
-    // Fix #1: share an already-watched title with friends (same flow as detail/feed/discover).
+    // R48: Teilen geht auch VOR dem Schauen — ohne gespeicherten Datensatz wird ein
+    // flüchtiger aus dem Suchergebnis gebaut (wird NICHT in db.items gespeichert).
     document.getElementById("sheet-share-btn").addEventListener("click", () => {
       if (!sheetItem) return;
-      const rec = db.items[keyOf(sheetItem.media_type, sheetItem.id)];
-      if (!rec) return;            // guard: button is only shown for watched titles
+      const rec = db.items[keyOf(sheetItem.media_type, sheetItem.id)] || recordFrom(sheetItem, null);
       closeSheet();
       openShareSheet(rec);
     });
+    // R48: Watchlist-Button toggelt — steht der Titel schon drauf, nimmt er ihn runter.
     document.getElementById("sheet-watchlist-btn").addEventListener("click", () => {
       if (!sheetItem) return;
       const r = sheetItem;
-      db.watchlist[keyOf(r.media_type, r.id)] = recordFrom(r, null);
+      const key = keyOf(r.media_type, r.id);
+      if (db.watchlist[key]) {
+        delete db.watchlist[key];
+        saveDB();
+        closeSheet();
+        showToast("Von Watchlist entfernt");
+        refreshResults();
+        refreshDetailStatus();
+        return;
+      }
+      db.watchlist[key] = recordFrom(r, null);
       saveDB();
       autoTagItem(r.media_type, r.id);   // R23-#23b: silent content auto-tagging
       closeSheet();
@@ -12041,7 +12082,12 @@
           el.classList.remove("unread");
           el.querySelector(".notif-unread-dot")?.remove();
           if (el.dataset.type === "friend_request" || el.dataset.type === "friend_accepted") {
+            // R48: direkt zur Freunde-Unterseite springen, wo Annehmen/Ablehnen liegt.
+            // _socialActivePane VOR switchTab setzen, weil initSocialTab() async lädt
+            // und am Ende switchSocialPane(_socialActivePane) aufruft — ein Aufruf
+            // NACH switchTab würde von diesem späteren Reset wieder überschrieben.
             closeNotifCenter();
+            _socialActivePane = "friends";
             switchTab("social");
           } else if (el.dataset.type === "item_shared" || el.dataset.type === "reco_reply") {
             // R21-#9: re-open the recommendation popup (works for any age).
@@ -12074,6 +12120,13 @@
       // R16-#1: tappable links inside notification text
       list.querySelectorAll(".notif-link").forEach(span => {
         span.addEventListener("click", e => {
+          // R48: bei Benachrichtigungen mit einer eindeutigen Ziel-Aktion (Freundschafts-
+          // anfrage bestätigen, Kommentar-Thread öffnen) soll ein Tap auf den fett
+          // hervorgehobenen Namen/Titel NICHT zum Profil bzw. zur Detailseite abzweigen,
+          // sondern wie der Rest der Zeile zur eigentlichen Aktion springen — sonst tippt
+          // man (naheliegend) genau auf den Namen und kommt nie dort an, wo man etwas tun kann.
+          const parentType = span.closest(".notif-item")?.dataset.type;
+          if (["friend_request", "friend_accepted", "post_comment", "post_comment_reply"].includes(parentType)) return;
           e.stopPropagation();
           const tap = span.dataset.ntap;
           if (tap === "user") {
@@ -12236,35 +12289,63 @@
         }
       }
       document.getElementById("reco-rating").textContent = n.bucket ? bucketToStars(n.bucket) : "";
-      document.getElementById("reco-note").textContent = n.note ? "„" + n.note + "“" : "";
-      document.getElementById("reco-note").hidden = !n.note;
-      // Fix #3: if opened from a reply notification, show the incoming message for chat context.
-      const incomingEl = document.getElementById("reco-incoming");
-      if (incomingEl) {
-        if (n.type === "reco_reply" && n.replyText) {
-          incomingEl.innerHTML = '<span class="reco-incoming-label">' +
-            socialEsc(n.fromUsername || "Jemand") + " schrieb</span>" + socialEsc(n.replyText);
-          incomingEl.hidden = false;
-        } else {
-          incomingEl.hidden = true;
-        }
-      }
       document.getElementById("reco-counter").textContent = _recoItems.length > 1 ? `${_recoCurrent + 1} / ${_recoItems.length}` : "";
       // nav dots
       const navEl = document.getElementById("reco-nav");
       navEl.innerHTML = _recoItems.length > 1 ? _recoItems.map((_, i) =>
         `<div class="reco-dot${i === _recoCurrent ? " active" : ""}"></div>`).join("") : "";
-      // R21-#9/#10: reset reply + action state for this card
+      // R21-#9: reset reply state for this card
       const replyInput = document.getElementById("reco-reply-input");
       if (replyInput) replyInput.value = "";
-      const replyDone = document.getElementById("reco-reply-done");
-      if (replyDone) replyDone.hidden = true;
-      const seenBtn = document.getElementById("reco-seen-btn");
-      if (seenBtn) {
-        const alreadyWatched = !!(n.tmdbId && n.itemType && db.items[n.itemType + ":" + n.tmdbId]);
-        seenBtn.disabled = alreadyWatched;
-        seenBtn.textContent = alreadyWatched ? "Schon gesehen ✓" : "Als gesehen markieren";
+      // R48: Icon-Status — Watchlist-Lesezeichen und Gesehen-Auge sind Gold, wenn aktiv.
+      const key = (n.tmdbId && n.itemType) ? n.itemType + ":" + n.tmdbId : null;
+      document.getElementById("reco-watchlist").classList.toggle("active", !!(key && db.watchlist[key]));
+      document.getElementById("reco-seen-btn").classList.toggle("active", !!(key && db.items[key]));
+      // R48: bei mehreren offenen Empfehlungen blättert der Fußknopf weiter, sonst schließt er.
+      document.getElementById("reco-skip-btn").textContent = _recoItems.length > 1 ? "Weiter" : "Schließen";
+      // R48: Chat-Verlauf (Original-Nachricht + Antworten) asynchron nachladen
+      renderRecoChat(n);
+    }
+    // R48: Empfehlungen sind jetzt Chats. Beide Seiten berechnen dieselbe deterministische
+    // Thread-ID (Paar-UIDs sortiert + Titel) — die Nachrichten leben als Kommentare unter
+    // posts/{threadId}/comments (Rules seit R21, Eltern-Doc muss nicht existieren, s. R46).
+    let _recoChatToken = 0;
+    function _recoThreadId(n) {
+      const me = window.__vaultUser && window.__vaultUser.uid;
+      if (!n || !me || !n.fromUid || !n.tmdbId) return null;
+      return "reco_" + [me, n.fromUid].sort().join("_") + "_" + (n.itemType || "movie") + "_" + n.tmdbId;
+    }
+    function _recoMsgHtml(m, myUid) {
+      return '<div class="reco-msg ' + (m.userId === myUid ? "mine" : "theirs") + '">' + socialEsc(m.text || "") + '</div>';
+    }
+    async function renderRecoChat(n) {
+      const box = document.getElementById("reco-chat");
+      if (!box) return;
+      const token = ++_recoChatToken;
+      const myUid = window.__vaultUser && window.__vaultUser.uid;
+      const msgs = [];
+      // Die Original-Nachricht des Absenders ist Teil der Empfehlung selbst.
+      if (n.note && (n.type === "item_shared" || n.type === "episode_shared")) {
+        msgs.push({ userId: n.fromUid, text: n.note, _seed: true });
       }
+      const tid = _recoThreadId(n);
+      let comments = [];
+      if (tid && window.__vaultSocial && window.__vaultSocial.getComments) {
+        try { comments = await window.__vaultSocial.getComments(tid); } catch (e) { /* offline → nur Seed */ }
+      }
+      if (token !== _recoChatToken) return;   // Karte wurde inzwischen gewechselt
+      comments.forEach(c => {
+        // Original-Notiz wird seit R48 auch als Kommentar gespeichert — nicht doppelt zeigen.
+        if (msgs.some(m => m._seed && m.userId === c.userId && m.text === c.text)) return;
+        msgs.push(c);
+      });
+      // Alt-Antworten (vor R48) stehen nur in der Benachrichtigung, nicht im Thread.
+      if (n.type === "reco_reply" && n.replyText && !msgs.some(m => m.userId === n.fromUid && m.text === n.replyText)) {
+        msgs.push({ userId: n.fromUid, text: n.replyText });
+      }
+      box.innerHTML = msgs.map(m => _recoMsgHtml(m, myUid)).join("");
+      box.hidden = msgs.length === 0;
+      box.scrollTop = box.scrollHeight;
     }
     // R21-#9/#10: current recommendation + helper to notify its sender
     function _currentReco() { return _recoItems[_recoCurrent] || null; }
@@ -12286,16 +12367,21 @@
         itemType: n.itemType || "movie", tmdbId: n.tmdbId || null, ...epCtx, ...payload
       });
     }
+    // R48: Watchlist-Icon spiegelt und toggelt den Status — das Popup bleibt offen (Chat).
     document.getElementById("reco-watchlist").addEventListener("click", () => {
       const n = _recoItems[_recoCurrent];
-      if (n && n.tmdbId && n.itemType) {
-        const key = n.itemType + ":" + n.tmdbId;
-        if (!db.watchlist[key]) {
-          db.watchlist[key] = { id: n.tmdbId, mediaType: n.itemType, title: n.itemTitle, poster: n.itemPoster, addedAt: Date.now() };
-          saveDB(); showToast("Auf Watchlist gespeichert");
-        }
+      if (!n || !n.tmdbId || !n.itemType) return;
+      const key = n.itemType + ":" + n.tmdbId;
+      const btn = document.getElementById("reco-watchlist");
+      if (db.watchlist[key]) {
+        delete db.watchlist[key];
+        saveDB(); btn.classList.remove("active");
+        showToast("Von Watchlist entfernt");
+      } else {
+        db.watchlist[key] = { id: n.tmdbId, mediaType: n.itemType, title: n.itemTitle, poster: n.itemPoster, addedAt: Date.now() };
+        saveDB(); btn.classList.add("active");
+        showToast("Auf Watchlist gespeichert");
       }
-      advanceReco();
     });
     document.getElementById("reco-skip-btn").addEventListener("click", advanceReco);
     // R16-#7c: "Zur Detailseite" opens the full detail overlay for the recommended item
@@ -12314,15 +12400,17 @@
       else renderRecoCard();
     }
 
-    // R21-#10: "Als gesehen markieren" — mark watched + notify the sender.
+    // R21-#10 / R48: Gesehen-Auge — Gold wenn gesehen; Antippen markiert als gesehen
+    // und benachrichtigt den Absender. Das Popup bleibt offen (Chat).
     document.getElementById("reco-seen-btn").addEventListener("click", () => {
       const n = _currentReco();
-      if (!n || !n.tmdbId || !n.itemType) { advanceReco(); return; }
+      if (!n || !n.tmdbId || !n.itemType) return;
       const r = _recoItemR(n);
       const key = n.itemType + ":" + n.tmdbId;
-      if (!db.items[key]) logWatched(r);   // R25-#22.4: logWatched now notifies the recommender ("hat geschaut")
+      if (db.items[key]) { showToast("Schon als gesehen markiert"); return; }
+      logWatched(r);   // R25-#22.4: logWatched now notifies the recommender ("hat geschaut")
+      document.getElementById("reco-seen-btn").classList.add("active");
       showToast("Als gesehen markiert");
-      advanceReco();
       // R21-#3: a recommended title is a prime match candidate
       if (typeof checkMatchAndShow === "function") {
         checkMatchAndShow({ id: n.tmdbId, mediaType: n.itemType, title: n.itemTitle || "", posterPath: n.itemPoster || null });
@@ -12339,16 +12427,28 @@
         showToast("Hinzugefügt zu " + (list ? list.name : "Liste"));
       });
     });
-    // R21-#9: reply to a recommendation — notify the sender with the reply text.
+    // R21-#9 / R48: reply to a recommendation — die Antwort landet im gemeinsamen
+    // Chat-Thread (beide Seiten sehen den Verlauf) UND als Benachrichtigung beim Absender.
     function sendRecoReply() {
       const n = _currentReco();
       const input = document.getElementById("reco-reply-input");
       const text = (input && input.value || "").trim();
       if (!n || !text) return;
+      const tid = _recoThreadId(n);
+      const me = window.__vaultUser;
+      if (tid && me && window.__vaultSocial && window.__vaultSocial.addComment) {
+        const myName = (_myProfile && _myProfile.username) || "";
+        window.__vaultSocial.addComment(tid, me.uid, myName, text).catch(() => {});
+      }
       _notifyRecoSender(n, { type: "reco_reply", replyText: text });
       if (input) input.value = "";
-      const done = document.getElementById("reco-reply-done");
-      if (done) done.hidden = false;
+      // Eigene Bubble sofort anhängen — kein Warten auf den Server-Roundtrip.
+      const box = document.getElementById("reco-chat");
+      if (box && me) {
+        box.insertAdjacentHTML("beforeend", _recoMsgHtml({ userId: me.uid, text }, me.uid));
+        box.hidden = false;
+        box.scrollTop = box.scrollHeight;
+      }
       showToast("Antwort gesendet");
     }
     document.getElementById("reco-reply-send").addEventListener("click", sendRecoReply);
@@ -14232,13 +14332,23 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R47";
+    const APP_VERSION = "R48";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R48": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Teilen ohne „geschaut“:</strong> Filme und Serien lassen sich jetzt direkt aus der Suche mit Freunden teilen — auch wenn du sie selbst noch nicht gesehen hast. Die Bewertungs-Sterne erscheinen beim Empfehlen nur noch, wenn du den Titel wirklich geschaut hast.",
+          "<strong>Empfehlungen sind jetzt Chats:</strong> Das Empfehlungs-Popup zeigt den kompletten Nachrichtenverlauf als Chat-Blasen (deine links, die des Freundes rechts) — Antworten bleiben sichtbar wie bei WhatsApp.",
+          "<strong>Schlichteres Popup:</strong> Statt großer Buttons gibt es jetzt die bekannten Icons — Watchlist-Lesezeichen und Gesehen-Auge leuchten gold, wenn der Titel schon drauf bzw. gesehen ist. „Zur Detailseite“ ist ein dezenter Link.",
+          "<strong>Buttons zeigen den Status:</strong> Im Schnell-Menü ist „Watched“ ausgegraut, wenn du den Titel schon gesehen hast, und der Watchlist-Button zeigt „Auf Watchlist ✓“ (und entfernt bei erneutem Tippen).",
+          "<strong>Fehler behoben:</strong> „Neue Liste“ öffnete sich hinter dem Empfehlungs-Popup und war nicht bedienbar."
+        ]
+      },
       "R47": {
         title: "Was ist neu",
         notes: [
@@ -14810,8 +14920,27 @@
         const idx = BUCKET_IDS.indexOf(_shareRating);
         stars.querySelectorAll(".share-star").forEach((s, j) => s.classList.toggle("active", j <= idx));
       }
+      // R48: Bewertungszeile nur zeigen, wenn der Titel geschaut wurde (bzw. bei Episoden-
+      // Teilen immer — da kommt die Bewertung aus dem Episoden-Sheet mit).
+      const shareWatched = !!_shareEpisode || !!db.items[(itemRecord.mediaType || "movie") + ":" + itemRecord.id];
+      document.getElementById("share-rating-label").hidden = !shareWatched;
+      document.getElementById("share-stars").hidden = !shareWatched;
+      if (!shareWatched) _shareRating = null;
       shareBackdrop.hidden = false;
       document.body.style.overflow = "hidden";
+    }
+
+    // R48: Empfehlungen sind Chats — die mitgeschickte Nachricht wird zusätzlich als erster
+    // Beitrag in den deterministischen Chat-Thread des Paars geschrieben (posts/{tid}/comments),
+    // damit beide Seiten später den vollen Verlauf sehen. Best-effort: Teilen scheitert nie daran.
+    function _seedRecoThreads(toUids, mediaType, tmdbId, note) {
+      const me = window.__vaultUser;
+      if (!note || !me || !window.__vaultSocial || !window.__vaultSocial.addComment) return;
+      const myName = (_myProfile && _myProfile.username) || "";
+      toUids.forEach(toUid => {
+        const tid = "reco_" + [me.uid, toUid].sort().join("_") + "_" + (mediaType || "movie") + "_" + tmdbId;
+        window.__vaultSocial.addComment(tid, me.uid, myName, note).catch(() => {});
+      });
     }
 
     let _shareSubmitting = false;
@@ -14853,6 +14982,7 @@
               season: ep.season, episode: ep.episode, episodeName: ep.episodeName || "",
               epRating: (typeof FEED_STAR !== "undefined" && FEED_STAR[_shareRating]) || null });
           }
+          _seedRecoThreads(toUids, "tv", _shareItem.id, note);   // R48: Chat-Verlauf
           closeShareSheet();
           showToast("Folge geteilt");
         } else {
@@ -14860,6 +14990,7 @@
             title: _shareItem.title, poster: _shareItem.poster,
             type: _shareItem.mediaType, id: _shareItem.id
           }, note, _shareRating);
+          _seedRecoThreads(toUids, _shareItem.mediaType, _shareItem.id, note);   // R48: Chat-Verlauf
           closeShareSheet();
           showToast("Empfehlung gesendet");
         }
