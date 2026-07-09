@@ -193,7 +193,9 @@
     }
     .lh-edit-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
     .lh-edit-btn.on { color: var(--accent); border-color: var(--accent); }
-    #lh-reorder { margin-bottom: 22px; display: flex; flex-direction: column; gap: 8px; }
+    #lh-reorder, #prof-reorder { margin-bottom: 22px; display: flex; flex-direction: column; gap: 8px; }
+    /* R53: „Anpassen"-Leiste ganz unten im Profil */
+    .prof-edit-bar { display: flex; justify-content: center; margin: 26px 0 14px; }
     .reorder-row {
       display: flex; align-items: center; justify-content: space-between; gap: 12px;
       padding: 10px 12px; border-radius: 12px;
@@ -4815,13 +4817,14 @@
             spotlight: (parsed.spotlight && typeof parsed.spotlight === "object") ? parsed.spotlight : null,  // R19-#6 Part C: {mediaType,id} of the spotlighted title, or null
             matchSeen: (parsed.matchSeen && typeof parsed.matchSeen === "object") ? parsed.matchSeen : {},  // R21-#3: item keys whose match popup was already shown
             autoTaggedKeys: (parsed.autoTaggedKeys && typeof parsed.autoTaggedKeys === "object") ? parsed.autoTaggedKeys : {},  // R23-#23b: item keys already evaluated for auto-tags
-            milestonePosted: (parsed.milestonePosted && typeof parsed.milestonePosted === "object") ? parsed.milestonePosted : {}  // R27-#9: item keys → best ranking milestone tier already posted to the feed
+            milestonePosted: (parsed.milestonePosted && typeof parsed.milestonePosted === "object") ? parsed.milestonePosted : {},  // R27-#9: item keys → best ranking milestone tier already posted to the feed
+            profileSections: Array.isArray(parsed.profileSections) ? parsed.profileSections : null  // R53: Reihenfolge/Auswahl der Profil-Reihen (wie homeSections)
           };
           migrateTags(out);
           return out;
         }
       } catch (e) { /* corrupted store — start fresh */ }
-      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, trackedSeries: {}, homeCustomSections: [], homeSections: null, people: {}, recoExcludeLists: {}, recoExcludeTags: {}, recoSnoozed: {}, manualRankOrder: {}, settings: {}, recentlyWatchedExcluded: {}, spotlight: null, matchSeen: {}, autoTaggedKeys: {}, milestonePosted: {} };
+      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, trackedSeries: {}, homeCustomSections: [], homeSections: null, people: {}, recoExcludeLists: {}, recoExcludeTags: {}, recoSnoozed: {}, manualRankOrder: {}, settings: {}, recentlyWatchedExcluded: {}, spotlight: null, matchSeen: {}, autoTaggedKeys: {}, milestonePosted: {}, profileSections: null };
     }
     let db = loadDB();
     // R38-#2: das lokale Speichern ist jetzt debounced — vorher lief
@@ -11472,6 +11475,8 @@
       }
 
       // ── Übersicht: horizontale Reihen ─────────────────────────────────
+      // R53: Reihen kommen aus db.profileSections (Reihenfolge/Auswahl anpassbar
+      // wie bei Home) — verschieben, entfernen, hinzufügen inkl. Genre/Tag/Liste.
       // Karte im Home-Reihen-Stil; sub darf HTML enthalten (Sterne in Gold).
       const card = (poster, title, subHtml, data, ranked, rankNum) => {
         const img = poster
@@ -11488,72 +11493,104 @@
           '<div class="hscroll">' + cardsHtml + '</div></div>'
         : '';
       const starsOf = it => it.bucket && FEED_STAR[it.bucket] ? "★".repeat(FEED_STAR[it.bucket]) : "";
+      const openCard = (it, sub, ranked, rankNum) =>
+        card(it.poster, dispTitleOf ? dispTitleOf(it) : (it.title || ""), sub,
+          'data-open="' + (it.mediaType || "movie") + ':' + it.id + '"', ranked, rankNum);
 
-      let html = "";
+      const sectionHtml = s => {
+        switch (s.type) {
+          case "posts": {
+            const archiveBtn = archived.length
+              ? '<button class="prof-archive-btn" type="button" id="prof-archive-open">' + ARCHIVE_ICON + 'Archiv (' + archived.length + ')</button>'
+              : '';
+            const postCards = live.slice(0, 15).map(p =>
+              card(p.it.poster, dispTitleOf ? dispTitleOf(p.it) : (p.it.title || ""),
+                (starsOf(p.it) ? '<span class="hcard-stars">' + starsOf(p.it) + '</span>' : '') + (p.m.note ? ' 💬' : ''),
+                'data-key="' + esc(p.key) + '"')).join("");
+            if (!live.length && !archived.length) return "";
+            return row("Letzte Posts", postCards, archiveBtn) ||
+              ('<div class="prof-row"><div class="prof-row-head"><span class="prof-row-title">Letzte Posts</span>' + archiveBtn + '</div><div class="prof-row-empty">Noch keine Posts.</div></div>');
+          }
+          case "progress": {   // Aktuelle Serien — Episoden-Stand + Ø-Bewertung
+            const cur = Object.keys(db.progress)
+              .filter(k => {
+                const p = db.progress[k]; const it = db.items[k];
+                if (!(it && it.mediaType === "tv" && p && Object.keys(p.eps).length > 0)) return false;
+                if (!db.trackedSeries || !db.trackedSeries[k]) return false;
+                const tot = seriesTotalCache[k];
+                if (tot != null && Object.keys(p.eps).length >= tot) return false;   // fertig geschaut
+                return true;
+              })
+              .map(k => ({ key: k, it: db.items[k] }))
+              .sort((a, b) => (b.it.loggedAt || 0) - (a.it.loggedAt || 0))
+              .slice(0, 6);
+            return row("Aktuelle Serien", cur.map(({ key, it }) => {
+              const last = lastWatched(key);
+              const avg = seriesAvgEpRating(key);
+              const sub = (last ? "S" + last.s + " E" + last.e : "") +
+                (avg ? (last ? " · " : "") + '<span class="hcard-stars">★</span> ' + avg.toFixed(1).replace(".", ",") : "");
+              return openCard(it, sub);
+            }).join(""));
+          }
+          case "recent": {   // alles Geloggte (eigene Ansicht; Freunde sehen nur Gepostetes)
+            const excluded = db.recentlyWatchedExcluded || {};
+            const recent = Object.values(db.items)
+              .filter(it => it.loggedAt && !excluded[(it.mediaType || "movie") + ":" + it.id])
+              .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0)).slice(0, 15);
+            return row("Zuletzt gesehen", recent.map(it =>
+              openCard(it, '<span class="hcard-stars">' + starsOf(it) + '</span>')).join(""));
+          }
+          case "watchlist": {
+            const wl = Object.values(db.watchlist).sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0)).slice(0, 15);
+            return row("Meine Watchlist", wl.map(it =>
+              openCard(it, it.mediaType === "tv" ? "Serie" : "Film")).join(""));
+          }
+          case "top-movies": case "top-series": {
+            const mt = s.type === "top-movies" ? "movie" : "tv";
+            const items = Object.values(db.items).filter(it => it.mediaType === mt && !it.unranked)
+              .sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10);
+            return row(mt === "movie" ? "Top Filme" : "Top Serien",
+              items.map((it, i) => openCard(it, it.year || "", true, i + 1)).join(""));
+          }
+          case "genre-film": case "genre-serie": {
+            const mt = s.type === "genre-film" ? "movie" : "tv";
+            const items = Object.values(db.items)
+              .filter(it => it.mediaType === mt && !it.unranked && (it.genreIds || []).includes(s.genreId))
+              .sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10);
+            return row(profSectionLabel(s), items.map((it, i) => openCard(it, it.year || "", true, i + 1)).join(""));
+          }
+          case "tag": {
+            const items = Object.values(db.items).filter(it => {
+              const m = db.meta[(it.mediaType || "movie") + ":" + it.id];
+              return m && (m.tags || []).includes(s.tag);
+            }).sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 12);
+            return row(s.tag, items.map(it => openCard(it, it.year || "")).join(""));
+          }
+          case "list": {
+            const lst = db.lists[s.listId];
+            if (!lst) return "";
+            const items = Object.values(lst.items || {}).reverse().slice(0, 15).map(r => ({
+              id: r.id, mediaType: r.media_type || r.mediaType || "movie",
+              title: r.title || r.name, poster: r.poster_path || r.poster,
+              year: String(r.release_date || r.first_air_date || r.year || "").slice(0, 4)
+            }));
+            return row(lst.name, items.map(it => openCard(it, it.year || "")).join(""));
+          }
+        }
+        return "";
+      };
 
-      // 1) Letzte Posts (Tap → Post-Sheet mit ⋯-Menü)
-      const archiveBtn = archived.length
-        ? '<button class="prof-archive-btn" type="button" id="prof-archive-open">' + ARCHIVE_ICON + 'Archiv (' + archived.length + ')</button>'
-        : '';
-      const postCards = live.slice(0, 15).map(p =>
-        card(p.it.poster, dispTitleOf ? dispTitleOf(p.it) : (p.it.title || ""),
-          (starsOf(p.it) ? '<span class="hcard-stars">' + starsOf(p.it) + '</span>' : '') + (p.m.note ? ' 💬' : ''),
-          'data-key="' + esc(p.key) + '"')).join("");
-      if (live.length || archived.length) {
-        html += row("Letzte Posts", postCards ||
-          '', archiveBtn) || ('<div class="prof-row"><div class="prof-row-head"><span class="prof-row-title">Letzte Posts</span>' + archiveBtn + '</div><div class="prof-row-empty">Noch keine Posts.</div></div>');
-      }
-
-      // 2) Aktuelle Serien (getrackt + angefangen) — Episoden-Stand + Ø-Bewertung
-      const currentSeries = Object.keys(db.progress)
-        .filter(k => {
-          const p = db.progress[k]; const it = db.items[k];
-          if (!(it && it.mediaType === "tv" && p && Object.keys(p.eps).length > 0)) return false;
-          if (!db.trackedSeries || !db.trackedSeries[k]) return false;
-          const tot = seriesTotalCache[k];
-          if (tot != null && Object.keys(p.eps).length >= tot) return false;   // fertig geschaut
-          return true;
-        })
-        .map(k => ({ key: k, it: db.items[k] }))
-        .sort((a, b) => (b.it.loggedAt || 0) - (a.it.loggedAt || 0))
-        .slice(0, 6);
-      html += row("Aktuelle Serien", currentSeries.map(({ key, it }) => {
-        const last = lastWatched(key);
-        const avg = seriesAvgEpRating(key);
-        const sub = (last ? "S" + last.s + " E" + last.e : "") +
-          (avg ? (last ? " · " : "") + '<span class="hcard-stars">★</span> ' + avg.toFixed(1).replace(".", ",") : "");
-        return card(it.poster, dispTitleOf ? dispTitleOf(it) : (it.title || ""), sub,
-          'data-open="tv:' + it.id + '"');
-      }).join(""));
-
-      // 3) Zuletzt gesehen — alles Geloggte (eigene Ansicht; Freunde sehen nur Gepostetes)
-      const excluded = db.recentlyWatchedExcluded || {};
-      const recent = Object.values(db.items)
-        .filter(it => it.loggedAt && !excluded[(it.mediaType || "movie") + ":" + it.id])
-        .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0)).slice(0, 15);
-      html += row("Zuletzt gesehen", recent.map(it =>
-        card(it.poster, dispTitleOf ? dispTitleOf(it) : (it.title || ""),
-          '<span class="hcard-stars">' + starsOf(it) + '</span>',
-          'data-open="' + (it.mediaType || "movie") + ':' + it.id + '"')).join(""));
-
-      // 4) Meine Watchlist
-      const wl = Object.values(db.watchlist).sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0)).slice(0, 15);
-      html += row("Meine Watchlist", wl.map(it =>
-        card(it.poster, dispTitleOf ? dispTitleOf(it) : (it.title || ""),
-          it.mediaType === "tv" ? "Serie" : "Film",
-          'data-open="' + (it.mediaType || "movie") + ':' + it.id + '"')).join(""));
-
-      // 5+6) Top Filme / Top Serien — angezeigte Ranking-Reihenfolge, mit Rang-Nummer
-      ["movie", "tv"].forEach(mt => {
-        const items = Object.values(db.items).filter(it => it.mediaType === mt && !it.unranked)
-          .sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10);
-        html += row(mt === "movie" ? "Top Filme" : "Top Serien", items.map((it, i) =>
-          card(it.poster, dispTitleOf ? dispTitleOf(it) : (it.title || ""), it.year || "",
-            'data-open="' + mt + ':' + it.id + '"', true, i + 1)).join(""));
-      });
-
-      host.innerHTML = html ||
+      let rowsHtml = "";
+      getProfileSections().forEach(s => { rowsHtml += sectionHtml(s); });
+      if (!rowsHtml) rowsHtml =
         '<div class="prof-posts-empty">Noch keine Posts.<br>Bewerte einen Titel und tippe auf „Posten" — er erscheint dann hier und im Feed deiner Freunde.</div>';
+
+      // R53: „Anpassen" ganz unten — öffnet das Reihen-Panel (wie Home-Bearbeiten)
+      host.innerHTML = rowsHtml +
+        '<div class="prof-edit-bar"><button class="lh-edit-btn' + (_profEditMode ? ' on' : '') + '" id="prof-edit-toggle" type="button">' +
+        '<svg viewBox="0 0 24 24"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="9" cy="8" r="2"/><circle cx="15" cy="16" r="2"/></svg>' +
+        '<span>' + (_profEditMode ? "Fertig" : "Anpassen") + '</span></button></div>' +
+        '<div class="lh-reorder" id="prof-reorder"' + (_profEditMode ? '' : ' hidden') + '></div>';
 
       const openBtn = document.getElementById("prof-archive-open");
       if (openBtn) openBtn.addEventListener("click", () => { _profPostsArchive = true; renderProfilePosts(); });
@@ -11564,6 +11601,133 @@
           const [mt, id] = el.dataset.open.split(":");
           openDetail(mt, parseInt(id, 10));
         }));
+      const editBtn = document.getElementById("prof-edit-toggle");
+      if (editBtn) editBtn.addEventListener("click", () => {
+        _profEditMode = !_profEditMode;
+        document.getElementById("prof-reorder").hidden = !_profEditMode;
+        editBtn.classList.toggle("on", _profEditMode);
+        editBtn.querySelector("span").textContent = _profEditMode ? "Fertig" : "Anpassen";
+        if (_profEditMode) renderProfReorderPanel();
+      });
+      if (_profEditMode) renderProfReorderPanel();
+    }
+
+    // ---------- R53: Profil-Reihen anpassen (Muster = Home-Abschnitte) ----------
+    let _profEditMode = false;
+    const PROF_DEFAULT_SECTIONS = [
+      { type: "posts" }, { type: "progress" }, { type: "recent" },
+      { type: "watchlist" }, { type: "top-movies" }, { type: "top-series" }
+    ];
+    function getProfileSections() {
+      if (Array.isArray(db.profileSections)) return db.profileSections;
+      db.profileSections = PROF_DEFAULT_SECTIONS.map(s => ({ ...s }));
+      saveDB();
+      return db.profileSections;
+    }
+    function profSectionLabel(s) {
+      if (s.type === "posts") return "Letzte Posts";
+      return sectionLabel(s);   // progress/recent/watchlist/top-*/genre-*/tag/list wie Home
+    }
+    function renderProfReorderPanel() {
+      const panel = document.getElementById("prof-reorder");
+      if (!panel) return;
+      const secs = getProfileSections();
+      panel.innerHTML = "";
+      secs.forEach((s, idx) => {
+        const rowEl = document.createElement("div"); rowEl.className = "reorder-row";
+        const name = document.createElement("span"); name.className = "reorder-name"; name.textContent = profSectionLabel(s);
+        const ctrls = document.createElement("div"); ctrls.className = "reorder-ctrls";
+        const mk = (label, svg, disabled, fn) => {
+          const b = document.createElement("button"); b.type = "button"; b.className = "reorder-arrow";
+          b.setAttribute("aria-label", label); b.innerHTML = svg; b.disabled = !!disabled;
+          b.addEventListener("click", fn); return b;
+        };
+        ctrls.appendChild(mk("Nach oben", CHEVRON_UP, idx === 0, () => moveProfSection(idx, -1)));
+        ctrls.appendChild(mk("Nach unten", CHEVRON_DOWN, idx === secs.length - 1, () => moveProfSection(idx, +1)));
+        const rmv = mk("Entfernen", X_ICON, false, () => {
+          secs.splice(idx, 1); db.profileSections = secs; saveDB();
+          renderProfilePosts();
+        });
+        rmv.classList.add("reorder-remove-btn");
+        ctrls.appendChild(rmv);
+        rowEl.appendChild(name); rowEl.appendChild(ctrls);
+        panel.appendChild(rowEl);
+      });
+      panel.appendChild(buildProfAddPicker());
+    }
+    function moveProfSection(idx, dir) {
+      const secs = getProfileSections();
+      const j = idx + dir;
+      if (j < 0 || j >= secs.length) return;
+      const tmp = secs[idx]; secs[idx] = secs[j]; secs[j] = tmp;
+      db.profileSections = secs; saveDB();
+      renderProfilePosts();
+    }
+    // „+ Abschnitt hinzufügen" — gleiche Auswahl wie Home, plus „Letzte Posts".
+    function buildProfAddPicker() {
+      const wrap = document.createElement("div"); wrap.className = "reorder-add-row";
+      const addBtn = document.createElement("button"); addBtn.type = "button"; addBtn.className = "reorder-add-btn";
+      addBtn.textContent = "+ Abschnitt hinzufügen";
+      const host = document.createElement("div");
+      const mkItem = (label, onClick) => {
+        const b = document.createElement("button"); b.type = "button"; b.className = "reorder-pick-item";
+        b.textContent = label; b.addEventListener("click", onClick); return b;
+      };
+      const mkPicker = () => { const p = document.createElement("div"); p.className = "reorder-picker"; return p; };
+      const add = desc => {
+        const secs = getProfileSections();
+        secs.push(desc); db.profileSections = secs; saveDB();
+        renderProfilePosts();
+      };
+      function showTypes() {
+        host.innerHTML = "";
+        const p = mkPicker();
+        const secs = getProfileSections();
+        const has = t => secs.some(s => s.type === t);
+        [["posts", "Letzte Posts"], ["recent", "Zuletzt gesehen"], ["watchlist", "Meine Watchlist"], ["progress", "Aktuelle Serien"], ["top-movies", "Top Filme"], ["top-series", "Top Serien"]]
+          .forEach(([t, lbl]) => { if (!has(t)) p.appendChild(mkItem(lbl, () => add({ type: t }))); });
+        p.appendChild(mkItem("Genre · Film …",  () => showGenres("genre-film")));
+        p.appendChild(mkItem("Genre · Serie …", () => showGenres("genre-serie")));
+        p.appendChild(mkItem("Tag …",           showTags));
+        p.appendChild(mkItem("Liste …",         showLists));
+        host.appendChild(p);
+      }
+      function showGenres(type) {
+        host.innerHTML = "";
+        const p = mkPicker();
+        const media = type === "genre-film" ? "movie" : "tv";
+        const gids = new Set();
+        Object.values(db.items).filter(it => it.mediaType === media && !it.unranked)
+          .forEach(it => (it.genreIds || []).forEach(g => gids.add(g)));
+        const secs = getProfileSections();
+        const list = [...gids].map(g => [g, (genreMapById && genreMapById[g]) || ("Genre " + g)])
+          .filter(([g]) => !secs.some(s => s.type === type && s.genreId === g))
+          .sort((a, b) => a[1].localeCompare(b[1]));
+        if (!list.length) p.appendChild(mkItem("Keine Genres verfügbar", () => {}));
+        list.forEach(([g, name]) => p.appendChild(mkItem("Beste " + name, () => add({ type, genreId: g }))));
+        host.appendChild(p);
+      }
+      function showTags() {
+        host.innerHTML = "";
+        const p = mkPicker();
+        const secs = getProfileSections();
+        const tags = (db.tagDefs || []).filter(t => !secs.some(s => s.type === "tag" && s.tag === t));
+        if (!tags.length) p.appendChild(mkItem("Keine Tags verfügbar", () => {}));
+        tags.forEach(t => p.appendChild(mkItem(t, () => add({ type: "tag", tag: t }))));
+        host.appendChild(p);
+      }
+      function showLists() {
+        host.innerHTML = "";
+        const p = mkPicker();
+        const secs = getProfileSections();
+        const lists = Object.values(db.lists).filter(l => !secs.some(s => s.type === "list" && s.listId === l.id));
+        if (!lists.length) p.appendChild(mkItem("Keine Listen verfügbar", () => {}));
+        lists.forEach(l => p.appendChild(mkItem(l.name, () => add({ type: "list", listId: l.id }))));
+        host.appendChild(p);
+      }
+      addBtn.addEventListener("click", () => { if (host.childElementCount) host.innerHTML = ""; else showTypes(); });
+      wrap.appendChild(addBtn); wrap.appendChild(host);
+      return wrap;
     }
 
     let _myPostKey = null;
@@ -15080,13 +15244,21 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R52";
+    const APP_VERSION = "R53";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R53": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Profil anpassen:</strong> Ganz unten im Profil gibt es jetzt „Anpassen“ — Reihen verschieben, entfernen oder neue hinzufügen (auch Genre-, Tag- und Listen-Reihen), genau wie auf der Home-Seite.",
+          "<strong>Freundesprofile zeigen mehr:</strong> Der Posts-Reiter eines Freundes ist jetzt wie dein eigenes Profil aufgebaut — Letzte Posts, <strong>Zuletzt gesehen</strong> (alles, was er geschaut hat), <strong>Ihr habt beide gesehen</strong> sowie seine Top Filme und Top Serien.",
+          "<strong>Gemeinsam geschaut sofort sichtbar:</strong> Im „Mit Freunden geschaut“-Reiter eines Freundes erscheinen jetzt auch die Titel, die DU mit ihm vermerkt hast — vorher blieb der Reiter leer, bis der Freund die Titel selbst bestätigt hatte."
+        ]
+      },
       "R52": {
         title: "Was ist neu",
         notes: [
@@ -15497,44 +15669,62 @@
         </button>
       </div>`;
 
-      // ── Reiter 1: Posts (bewusst gepostete Titel aus dem Snapshot) ──
-      // posted===undefined (alter Snapshot vor R35) bleibt sichtbar, damit
-      // Freundes-Profile mit altem Datenstand nicht komplett leer wirken.
-      const watched = (profile.recentlyWatched || []).filter(it => it.posted !== false)
-        .slice().sort((a, b) => (b.watchedAt || 0) - (a.watchedAt || 0));
+      // ── Reiter 1: Reihen wie im eigenen Profil (R53) ────────────
+      // Letzte Posts (nur bewusst Gepostetes → Post-Sheet), Zuletzt gesehen
+      // (ALLE Snapshot-Titel — R53: vorher wirkten Profile fast leer, wenn der
+      // Freund selten postet), Ihr habt beide gesehen, Top Filme, Top Serien.
+      // posted===undefined (alter Snapshot vor R35) zählt als Post, damit
+      // Freundes-Profile mit altem Datenstand nicht leer wirken.
+      const allRecent = (profile.recentlyWatched || []).slice()
+        .sort((a, b) => (b.watchedAt || 0) - (a.watchedAt || 0));
+      const watched = allRecent.filter(it => it.posted !== false);
       _fprofPosts = watched;
+      const fpCard = (it, subHtml, extraAttr, ranked, rankNum) => {
+        const img = it.posterPath
+          ? '<img loading="lazy" src="' + IMG_BASE + 'w185' + it.posterPath + '" alt="">'
+          : '<div class="hc-empty">' + socialEsc(it.title || "") + '</div>';
+        return '<div class="hcard' + (ranked ? ' ranked' : '') + '" ' + (extraAttr || '') + '>' +
+          '<div class="hcard-poster">' + img +
+            (ranked ? '<div class="hcard-rank">' + rankNum + '</div>' : '') + '</div>' +
+          '<div class="hcard-title">' + socialEsc(it.title || "") + '</div>' +
+          (subHtml ? '<div class="hcard-sub">' + subHtml + '</div>' : '') + '</div>';
+      };
+      const fpRow = (title, cardsHtml) => cardsHtml
+        ? '<div class="prof-row"><div class="prof-row-head"><span class="prof-row-title">' + title + '</span></div>' +
+          '<div class="hscroll">' + cardsHtml + '</div></div>'
+        : '';
+      const fpStarsOf = it => {
+        const st = FPROF_BUCKET_STARS[it.bucket] || "";
+        return st ? '<span class="hcard-stars">' + st + '</span>' : '';
+      };
+
       html += '<div class="prof-pane" id="fprof-pane-posts">';
       if (p.shareWatched === false) {
         html += fprofPrivateBox();
-      } else if (!watched.length) {
-        html += '<div class="prof-posts-empty">Noch keine Posts.</div>';
       } else {
-        html += '<div class="prof-posts-grid">' + watched.map((it, i) => {
-          const stars = FPROF_BUCKET_STARS[it.bucket] || "";
-          const badges = (stars || it.note)
-            ? '<div class="prof-post-badges">' +
-                (stars ? '<span class="prof-post-stars">' + stars + '</span>' : '') +
-                (it.note ? '<span class="prof-post-note-ic">💬</span>' : '') + '</div>'
-            : '';
-          const img = it.posterPath
-            ? '<img loading="lazy" src="' + IMG_BASE + 'w342' + it.posterPath + '" alt="">'
-            : '<span class="prof-post-tile-ph">' + socialEsc(it.title || "") + '</span>';
-          return '<button class="prof-post-tile" type="button" data-fpidx="' + i + '">' + img + badges + '</button>';
-        }).join("") + '</div>';
+        // Letzte Posts → Post-Sheet mit Sternen/Datum/Notiz
+        html += fpRow("Letzte Posts", watched.slice(0, 15).map((it, i) =>
+          fpCard(it, fpStarsOf(it) + (it.note ? ' 💬' : ''), 'data-fpidx="' + i + '"')).join(""));
+        // Zuletzt gesehen → alles aus dem Snapshot, Tap = Detailseite
+        html += fpRow("Zuletzt gesehen", allRecent.slice(0, 15).map(it =>
+          fpCard(it, fpStarsOf(it), 'data-fpopen="' + socialEsc(it.mediaType || "movie") + ':' + it.id + '"')).join(""));
+        // Ihr habt beide gesehen → Schnittmenge mit der eigenen Bibliothek
+        const both = allRecent.filter(it => db.items[(it.mediaType || "movie") + ":" + it.id]);
+        html += fpRow("Ihr habt beide gesehen", both.slice(0, 15).map(it =>
+          fpCard(it, fpStarsOf(it), 'data-fpopen="' + socialEsc(it.mediaType || "movie") + ':' + it.id + '"')).join(""));
       }
-      // Top Filme / Top Serien behalten ihren Platz unter dem Posts-Grid
+      // Top Filme / Top Serien
       const topRanked = profile.topRanked || [];
       const topMovies = topRanked.filter(it => it.mediaType === "movie");
       const topSeries = topRanked.filter(it => it.mediaType === "tv");
-      if (p.shareRanking !== false && topMovies.length) {
-        html += '<div class="fprof-section"><div class="fprof-section-head"><span class="fprof-section-title">Top Filme</span></div><div class="fprof-hscroll">';
-        topMovies.forEach((it, i) => html += fprofPosterCard(it, i + 1, true));
-        html += '</div></div>';
+      if (p.shareRanking !== false) {
+        html += fpRow("Top Filme", topMovies.slice(0, 10).map((it, i) =>
+          fpCard(it, "", 'data-fpopen="movie:' + it.id + '"', true, i + 1)).join(""));
+        html += fpRow("Top Serien", topSeries.slice(0, 10).map((it, i) =>
+          fpCard(it, "", 'data-fpopen="tv:' + it.id + '"', true, i + 1)).join(""));
       }
-      if (p.shareRanking !== false && topSeries.length) {
-        html += '<div class="fprof-section"><div class="fprof-section-head"><span class="fprof-section-title">Top Serien</span></div><div class="fprof-hscroll">';
-        topSeries.forEach((it, i) => html += fprofPosterCard(it, i + 1, true));
-        html += '</div></div>';
+      if (p.shareWatched !== false && !allRecent.length && !topMovies.length && !topSeries.length) {
+        html += '<div class="prof-posts-empty">Noch nichts zu sehen — sobald ' + uname + ' etwas schaut oder postet, erscheint es hier.</div>';
       }
       html += '</div>';
 
@@ -15546,7 +15736,29 @@
           (fpGroups[w.uid] = fpGroups[w.uid] || { uid: w.uid, name: w.name || "Freund", items: [] }).items.push(it);
         });
       });
-      const fpGroupArr = Object.values(fpGroups).sort((a, b) => b.items.length - a.items.length);
+      // R53: MEINE eigenen „mit diesem Freund geschaut"-Einträge einmischen.
+      // Der Snapshot des Freundes kennt gemeinsame Titel erst, wenn ER sie
+      // bestätigt hat — meine lokalen meta.watchedWith/watchingWith-Vermerke
+      // zeigen die gemeinsamen Filme/Serien deshalb sofort (Dedupe per Key).
+      if (myUid) {
+        for (const key in db.meta) {
+          const m = db.meta[key];
+          if (!m) continue;
+          const together = [...(Array.isArray(m.watchedWith) ? m.watchedWith : []),
+                            ...(Array.isArray(m.watchingWith) ? m.watchingWith : [])]
+            .some(w => w && w.uid === friendUid);
+          if (!together) continue;
+          const rec = db.items[key] || db.watchlist[key];
+          if (!rec) continue;
+          const g = fpGroups[myUid] = fpGroups[myUid] || { uid: myUid, name: "Du", items: [] };
+          if (!g.items.some(x => (x.mediaType || "movie") + ":" + x.id === key)) {
+            g.items.push({ id: rec.id, title: rec.title || "", posterPath: rec.poster || null,
+                           mediaType: rec.mediaType || "movie", bucket: rec.bucket || null });
+          }
+        }
+      }
+      const fpGroupArr = Object.values(fpGroups).sort((a, b) =>
+        (a.uid === myUid ? -1 : b.uid === myUid ? 1 : b.items.length - a.items.length));
       html += '<div class="prof-pane" id="fprof-pane-friends" hidden>';
       if (!fpGroupArr.length) {
         html += '<div class="prof-posts-empty">Noch nichts gemeinsam geschaut vermerkt.</div>';
@@ -15612,11 +15824,19 @@
           });
         }));
 
-      // Posts-Kacheln → read-only Post-Sheet (Sterne, Datum, Notiz des Freundes)
-      content.querySelectorAll(".prof-post-tile[data-fpidx]").forEach(btn =>
+      // Post-Karten → read-only Post-Sheet (Sterne, Datum, Notiz des Freundes)
+      content.querySelectorAll(".hcard[data-fpidx]").forEach(btn =>
         btn.addEventListener("click", () => {
           const it = _fprofPosts[parseInt(btn.dataset.fpidx, 10)];
           if (it) openFriendPostSheet(it, profile.username || "Freund");
+        }));
+
+      // R53: Karten der übrigen Reihen → Detailseite ÜBER dem Profil
+      content.querySelectorAll(".hcard[data-fpopen]").forEach(el =>
+        el.addEventListener("click", () => {
+          const [mt, id] = el.dataset.fpopen.split(":");
+          detailEl.classList.add("over-profile");
+          openDetail(mt, parseInt(id, 10));
         }));
 
       // „Mit Freunden"-Zeilen → read-only Titel-Sheet
