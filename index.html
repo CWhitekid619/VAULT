@@ -14383,7 +14383,7 @@
         case "rated":           return `hat ${title} bewertet`;
         case "ranked":          return `hat ${title}${p.rank ? " auf Platz " + p.rank : ""} gerankt`;
         case "episode_watched": return `hat ${epRef} geschaut`;
-        case "episode_rated":   return `hat eine Folge bewertet`;
+        case "episode_rated":   return `hat ${epRef}${title ? " von " + title : ""} bewertet`;
         case "episode_shared":  return `hat ${epRef}${title ? " von " + title : ""} geteilt`;
         case "actor_ranked":    return `hat ${socialEsc(p.actorName || "")} ins Ranking geschickt`;
         case "actor_number_one":return `${socialEsc(p.actorName || "")}s Film ${title} ist jetzt Nr. 1 im Duell`;
@@ -15527,13 +15527,19 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R56";
+    const APP_VERSION = "R56.1";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R56.1": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Fix: Folgen-Post ohne Kontext:</strong> Ein geposteter Folgen-Beitrag zeigte nur „hat eine Folge bewertet“ — jetzt steht dort, welche Staffel und Folge es war (z. B. „hat S1E1 – Pilot von Breaking Bad bewertet“)."
+        ]
+      },
       "R56": {
         title: "Was ist neu",
         notes: [
