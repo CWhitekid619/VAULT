@@ -3934,6 +3934,14 @@
       <div class="sheet-section-label" id="ep-rate-title">Episode bewerten</div>
       <div class="bucket-list" id="ep-rate-buckets"></div>
       <button id="ep-rate-more" class="ep-more-link" type="button">Mehr Details ›</button>
+      <div class="qr-share-row" id="ep-rate-post-row">
+        <span class="qr-share-label">Im Feed posten</span>
+        <label class="qr-toggle">
+          <input type="checkbox" id="ep-rate-post-toggle">
+          <span class="qr-toggle-track"><span class="qr-toggle-thumb"></span></span>
+        </label>
+      </div>
+      <textarea id="ep-rate-note" class="qr-note-input" placeholder="Optional: deine Notiz zur Folge …" rows="2" hidden></textarea>
       <div class="qr-share-row" id="ep-rate-share-row" hidden>
         <span class="qr-share-label">Mit Freunden teilen</span>
         <label class="qr-toggle">
@@ -4847,6 +4855,7 @@
             progress: parsed.progress || {},
             meta: parsed.meta || {},
             epRatings: parsed.epRatings || {},
+            epMeta: (parsed.epMeta && typeof parsed.epMeta === "object") ? parsed.epMeta : {},   // Notiz+posted je Folge (Parität zu meta bei Filmen)
             tagDefs: parsed.tagDefs || null,
             homeOrder: Array.isArray(parsed.homeOrder) ? parsed.homeOrder : null,
             homeSections: Array.isArray(parsed.homeSections) ? parsed.homeSections : null,   // R18-B2: curated, persistent home rows
@@ -4873,7 +4882,7 @@
           return out;
         }
       } catch (e) { /* corrupted store — start fresh */ }
-      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, trackedSeries: {}, homeCustomSections: [], homeSections: null, people: {}, recoExcludeLists: {}, recoExcludeTags: {}, recoSnoozed: {}, manualRankOrder: {}, settings: {}, recentlyWatchedExcluded: {}, spotlight: null, matchSeen: {}, autoTaggedKeys: {}, milestonePosted: {}, profileSections: null };
+      return { items: {}, watchlist: {}, lists: {}, listSeq: 0, progress: {}, meta: {}, epRatings: {}, epMeta: {}, tagDefs: DEFAULT_TAGS.slice(), hideWatched: true, hideWatchlist: false, blocklist: {}, hiddenSeries: {}, trackedSeries: {}, homeCustomSections: [], homeSections: null, people: {}, recoExcludeLists: {}, recoExcludeTags: {}, recoSnoozed: {}, manualRankOrder: {}, settings: {}, recentlyWatchedExcluded: {}, spotlight: null, matchSeen: {}, autoTaggedKeys: {}, milestonePosted: {}, profileSections: null };
     }
     let db = loadDB();
     // R38-#2: das lokale Speichern ist jetzt debounced — vorher lief
@@ -10093,6 +10102,50 @@
       saveDB();
     }
 
+    // Notiz + „gepostet"-Status je Folge — Parität zu getMeta/saveMeta bei Filmen.
+    function getEpMeta(tvId, s, e) {
+      const r = db.epMeta[tvId];
+      const m = r && r[epKey(s, e)];
+      return { note: (m && m.note) || "", posted: !!(m && m.posted) };
+    }
+    function saveEpMeta(tvId, s, e, note, posted) {
+      if (!db.epMeta[tvId]) db.epMeta[tvId] = {};
+      const k = epKey(s, e);
+      if (!note && !posted) delete db.epMeta[tvId][k];
+      else db.epMeta[tvId][k] = { note: note || "", posted: !!posted };
+      if (Object.keys(db.epMeta[tvId]).length === 0) delete db.epMeta[tvId];
+      saveDB();
+    }
+
+    // Analog zu postWatchToFeed (Filme): bewusster Feed-Post nach dem Bewerten einer Folge,
+    // ausgelöst über den „Im Feed posten"-Schalter im Bewerten-Sheet/der Episodendetailseite.
+    async function postEpisodeWatchToFeed(tvId, s, e, bucket, note, data, epName) {
+      const seriesId = (data && data.id) || parseInt(String(tvId).split(":")[1], 10);
+      const seriesTitle = (data && (data.name || data.title)) || "";
+      const poster = (data && data.poster_path) || "";
+      const noteTrim = (note || "").trim();
+      saveEpMeta(tvId, s, e, noteTrim, true);
+      // Standbild der konkreten Folge mitschicken (wie beim DM-Teilen, R44/R48) —
+      // best-effort, ohne Bild fällt renderFeedCard automatisch aufs Serienposter zurück.
+      let epStill = null;
+      try {
+        const stillRes = await tmFetch("https://api.themoviedb.org/3/tv/" + seriesId +
+          "/season/" + s + "/episode/" + e +
+          "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
+        if (stillRes.ok) { const epd = await stillRes.json(); epStill = epd.still_path || null; }
+      } catch (err) { /* Bild ist optional — Posten darf nie daran scheitern */ }
+      if (typeof addFeedPost !== "function") return;
+      addFeedPost({
+        type: "episode_rated", itemId: seriesId, mediaType: "tv",
+        title: seriesTitle, posterPath: poster || null, stillPath: epStill,
+        season: s, episode: e, episodeName: epName || "",
+        bucket: bucket || null, note: noteTrim,
+        epRating: (typeof FEED_STAR !== "undefined" && FEED_STAR[bucket]) || null
+      }).then(ok => showToast(ok === false
+        ? "Feed-Post fehlgeschlagen – bitte erneut versuchen"
+        : "Im Feed gepostet"));
+    }
+
     // mini rating sheet
     let epRateCtx = null;
     const epRateBackdrop = document.getElementById("ep-rate-backdrop");
@@ -10110,6 +10163,22 @@
       if (shareToggle) shareToggle.checked = false;
       const shareRow = document.getElementById("ep-rate-share-row");
       if (shareRow) shareRow.hidden = false;   // R23.3: always visible — no login/friend gating
+      // „Im Feed posten" — genau wie beim Film (R30: standardmäßig AN, Opt-out), mit
+      // vorhandener Notiz vorbelegt.
+      const postToggle = document.getElementById("ep-rate-post-toggle");
+      const postNoteField = document.getElementById("ep-rate-note");
+      const existingEpMeta = getEpMeta(tvId, s, e);
+      if (postToggle) postToggle.checked = true;
+      if (postNoteField) { postNoteField.value = existingEpMeta.note; postNoteField.hidden = false; }
+      if (postToggle && postNoteField) {
+        postToggle.onchange = () => {
+          postNoteField.hidden = !postToggle.checked;
+          if (postToggle.checked) {
+            if (!postNoteField.value) postNoteField.value = existingEpMeta.note;
+            setTimeout(() => postNoteField.focus(), 50);
+          }
+        };
+      }
       epRateBucketsEl.innerHTML = "";
       BUCKETS.forEach((b, i) => {
         const btn = document.createElement("button");
@@ -10124,7 +10193,12 @@
           refreshEpGridCell(tvId, s, e, b.id);  // sync grid colors when rated from the list
           refreshEpDots(tvId, s, e, b.id);
           if (epRateCtx && epRateCtx.onChange) epRateCtx.onChange();
-          // R28: kein automatischer Feed-Post für bewertete Folgen mehr.
+          // „Im Feed posten" — genau wie beim Film: Schalter an → Post in den Feed
+          // (mit Notiz), sonst bleibt die Notiz nur lokal gespeichert.
+          const posting = document.getElementById("ep-rate-post-toggle")?.checked;
+          const postNote = (document.getElementById("ep-rate-note")?.value || "").trim();
+          if (posting) postEpisodeWatchToFeed(tvId, s, e, b.id, postNote, data, epName);
+          else saveEpMeta(tvId, s, e, postNote, false);
           // R23-#6: if the share toggle is on, open the share sheet (episode mode).
           const sharing = document.getElementById("ep-rate-share-toggle")?.checked;
           if (sharing) {
@@ -10225,9 +10299,14 @@
           refreshEpGridCell(ctx.tvId, ctx.s, ctx.e, b.id);
           refreshEpDots(ctx.tvId, ctx.s, ctx.e, b.id);
           if (ctx.onChange) ctx.onChange();
-          // R28: kein automatischer Feed-Post für bewertete Folgen mehr.
+          // „Im Feed posten" — genau wie beim Film (siehe openEpRateSheet).
+          const posting = document.getElementById("ep-detail-post-toggle")?.checked;
+          const postNote = (document.getElementById("ep-detail-note")?.value || "").trim();
+          if (posting) postEpisodeWatchToFeed(ctx.tvId, ctx.s, ctx.e, b.id, postNote, ctx.data, ctx.epName);
+          else saveEpMeta(ctx.tvId, ctx.s, ctx.e, postNote, false);
           renderEpDetailRating(ctx, host);   // reflect the new selection in place
-          showToast("Bewertet: " + b.label);
+          // postEpisodeWatchToFeed meldet den Post-Erfolg selbst per Toast (async).
+          if (!posting) showToast("Bewertet: " + b.label);
         });
         host.appendChild(btn);
       });
@@ -10257,6 +10336,7 @@
       }
 
       const title = ep.name || ("Episode " + ctx.e);
+      ctx.epName = title;   // frisch geladener Name für den Feed-Post (kann genauer sein als der übergebene)
       const facts = [se];
       if (ep.air_date) facts.push(fmtDateDe(ep.air_date));
       if (typeof ep.vote_average === "number" && ep.vote_average > 0) facts.push("★ " + ep.vote_average.toFixed(1));
@@ -10269,6 +10349,12 @@
       html += '<div class="ep-detail-sub">' + esc(facts.join("  ·  ")) + "</div>";
       html += '<div class="ep-detail-rate-label">Deine Bewertung</div>';
       html += '<div class="bucket-list" id="ep-detail-buckets"></div>';
+      html += '<div class="qr-share-row" id="ep-detail-post-row">'
+        + '<span class="qr-share-label">Im Feed posten</span>'
+        + '<label class="qr-toggle"><input type="checkbox" id="ep-detail-post-toggle">'
+        + '<span class="qr-toggle-track"><span class="qr-toggle-thumb"></span></span></label>'
+        + '</div>';
+      html += '<textarea id="ep-detail-note" class="qr-note-input" placeholder="Optional: deine Notiz zur Folge …" rows="2" hidden></textarea>';
       html += '<div class="detail-section"><h3>Handlung</h3><p class="detail-overview">' +
         esc(ep.overview || "Keine Beschreibung verfügbar.") + "</p></div>";
 
@@ -10294,6 +10380,19 @@
       epDetailBody.innerHTML = html;
       epDetailBody.scrollTop = 0; epDetailBackdrop.scrollTop = 0;
       renderEpDetailRating(ctx, document.getElementById("ep-detail-buckets"));
+
+      // „Im Feed posten" — Vorbelegung wie im Bewerten-Sheet (Toggle an, Notiz vorausgefüllt).
+      const dPostToggle = document.getElementById("ep-detail-post-toggle");
+      const dPostNote = document.getElementById("ep-detail-note");
+      const dExistingMeta = getEpMeta(ctx.tvId, ctx.s, ctx.e);
+      if (dPostToggle) dPostToggle.checked = true;
+      if (dPostNote) { dPostNote.value = dExistingMeta.note; dPostNote.hidden = false; }
+      if (dPostToggle && dPostNote) {
+        dPostToggle.onchange = () => {
+          dPostNote.hidden = !dPostToggle.checked;
+          if (dPostToggle.checked && !dPostNote.value) dPostNote.value = dExistingMeta.note;
+        };
+      }
 
       // Cast → person page. R26 follow-up: register the episode in the nav stack (unless
       // it already is) and hide the overlay WITHOUT unwinding it, so Back from the actor
@@ -15428,13 +15527,19 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R55.1";
+    const APP_VERSION = "R56";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R56": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Folgen posten wie Filme:</strong> Beim Bewerten einer Episode gibt es jetzt denselben „Im Feed posten“-Schalter mit Notizfeld wie bei Filmen — die Folge erscheint dann als eigener Beitrag im Feed deiner Freunde, inklusive Standbild der Folge. Gilt sowohl im schnellen Bewerten-Sheet als auch in der ausführlichen Episoden-Detailansicht."
+        ]
+      },
       "R55.1": {
         title: "Was ist neu",
         notes: [
