@@ -193,9 +193,36 @@
     }
     .lh-edit-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
     .lh-edit-btn.on { color: var(--accent); border-color: var(--accent); }
-    #lh-reorder, #prof-reorder { margin-bottom: 22px; display: flex; flex-direction: column; gap: 8px; }
-    /* R53: „Anpassen"-Leiste ganz unten im Profil */
+    #lh-reorder { margin-bottom: 22px; display: flex; flex-direction: column; gap: 8px; }
+    /* R53/R54: „Anpassen"-Leiste ganz unten im Profil */
     .prof-edit-bar { display: flex; justify-content: center; margin: 26px 0 14px; }
+    /* R54: Reorder-Panel im Popup + Reihen-Verwaltung */
+    #prof-reorder { display: flex; flex-direction: column; gap: 8px; max-height: 58vh; overflow-y: auto; margin-bottom: 12px; }
+    .prof-row-title-mng {
+      display: inline-flex; align-items: center; gap: 6px; background: none; border: none;
+      padding: 0; font: inherit; color: inherit; cursor: pointer;
+    }
+    .prof-row-edit { width: 13px; height: 13px; stroke: var(--text-mute); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .prof-row-title-mng:active { opacity: .6; }
+    #row-manage-body { max-height: 60vh; overflow-y: auto; margin-bottom: 8px; }
+    .rm-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .rm-thumb { width: 38px; height: 57px; border-radius: 6px; object-fit: cover; flex: 0 0 auto; background: var(--surface-2); }
+    .rm-thumb-ph { background: var(--surface-2); }
+    .rm-title { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rm-btn {
+      flex: 0 0 auto; background: none; border: 1px solid var(--border); border-radius: 9px;
+      padding: 6px 12px; font-family: inherit; font-size: 12px; font-weight: 600; color: var(--text); cursor: pointer;
+    }
+    .rm-btn:active { background: var(--surface-2); }
+    .rm-sub { font-size: 12px; color: var(--text-mute); margin: 14px 0 4px; }
+    .rm-empty { font-size: 13px; color: var(--text-mute); padding: 12px 0; }
+    /* R54: ⋯-Menü im Bewerten-Sheet */
+    .qr-sheet { position: relative; }
+    .qr-menu-btn { position: absolute; top: 8px; right: 10px; z-index: 6; }
+    .qr-menu { position: absolute; top: 40px; right: 10px; z-index: 6; min-width: 210px; }
+    .qr-menu button { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .qr-check { color: var(--accent); font-weight: 700; }
+    .qr-check.off { visibility: hidden; }
     .reorder-row {
       display: flex; align-items: center; justify-content: space-between; gap: 12px;
       padding: 10px 12px; border-radius: 12px;
@@ -3224,6 +3251,13 @@
   <div id="qr-backdrop" class="sheet-backdrop" hidden>
     <div class="sheet qr-sheet" role="dialog" aria-modal="true" aria-label="Bewerten">
       <div class="sheet-handle"></div>
+      <!-- R54: ⋯-Menü oben rechts — steuert, ob der Titel in „Zuletzt gesehen" erscheint -->
+      <button id="qr-menu-btn" class="mypost-menu-btn qr-menu-btn" type="button" aria-label="Optionen">
+        <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+      </button>
+      <div class="mypost-menu qr-menu" id="qr-menu" hidden>
+        <button id="qr-recent-toggle" type="button"><span>In „Zuletzt gesehen“ zeigen</span><span class="qr-check" id="qr-recent-check">✓</span></button>
+      </div>
       <!-- Step 1: Bewerten (R36: nur bewerten — die Post-Entscheidung kommt in Schritt 2) -->
       <div id="qr-step1">
         <!-- R41: „Geschaut mit" — Partner auswählen, der Film landet nach Bestätigung auch bei ihm -->
@@ -3477,6 +3511,26 @@
       <div id="wws-list" class="wws-list"></div>
       <button id="wws-add-open" class="sheet-btn-ghost" type="button">+ Titel nachtragen</button>
       <button id="wws-close" class="sheet-btn-cancel" type="button">Schließen</button>
+    </div>
+  </div>
+
+  <!-- ============ R54: PROFIL ANPASSEN — Reihenfolge/Auswahl als Popup ============ -->
+  <div id="prof-edit-backdrop" class="sheet-backdrop" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Profil anpassen">
+      <div class="sheet-handle"></div>
+      <div class="sheet-section-label">Reihen anpassen</div>
+      <div class="lh-reorder" id="prof-reorder"></div>
+      <button id="prof-edit-done" class="sheet-btn-cancel" type="button">Fertig</button>
+    </div>
+  </div>
+
+  <!-- ============ R54: EINZELNE FILME einer Profil-Reihe ein-/ausblenden ============ -->
+  <div id="row-manage-backdrop" class="sheet-backdrop" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Reihe verwalten">
+      <div class="sheet-handle"></div>
+      <div class="sheet-section-label" id="row-manage-title">Reihe verwalten</div>
+      <div id="row-manage-body"></div>
+      <button id="row-manage-close" class="sheet-btn-cancel" type="button">Fertig</button>
     </div>
   </div>
 
@@ -6441,6 +6495,10 @@
         });
         qrBuckets.appendChild(el);
       });
+      // R54: ⋯-Menü zurücksetzen + „Zuletzt gesehen"-Häkchen aus dem aktuellen
+      // Ausschluss-Zustand ableiten (Titel sichtbar = nicht ausgeschlossen).
+      document.getElementById("qr-menu").hidden = true;
+      _syncQrRecentCheck();
       // A3: if opened from a friend-profile stacked detail, raise z-index above it
       const detailOverlay = document.getElementById("detail");
       if (detailOverlay && detailOverlay.classList.contains("over-profile")) {
@@ -6451,10 +6509,18 @@
       qrBackdrop.hidden = false;
       document.body.style.overflow = "hidden";
     }
+    // R54: „Zuletzt gesehen"-Häkchen im ⋯-Menü mit dem Ausschluss-Status synchronisieren.
+    function _syncQrRecentCheck() {
+      if (!qrItem) return;
+      const key = keyOf(qrItem.media_type, qrItem.id);
+      const excluded = !!(db.recentlyWatchedExcluded && db.recentlyWatchedExcluded[key]);
+      document.getElementById("qr-recent-check").classList.toggle("off", excluded);
+    }
     function closeQuickRate() {
       // R41: „Geschaut mit"-Auswahl übernehmen + neue Partner benachrichtigen,
       // bevor der Kontext (qrItem) verloren geht.
       try { _commitWatchedWith(); } catch (e) {}
+      document.getElementById("qr-menu").hidden = true;   // R54
       qrBackdrop.hidden = true;
       qrBackdrop.classList.remove("over-profile");
       qrItem = null;
@@ -6464,6 +6530,29 @@
     // Tap outside the sheet → close
     qrBackdrop.addEventListener("click", e => { if (e.target === qrBackdrop) closeQuickRate(); });
     document.getElementById("qr-skip").addEventListener("click", closeQuickRate);
+    // R54: ⋯-Menü öffnen/schließen + „Zuletzt gesehen"-Umschalter.
+    document.getElementById("qr-menu-btn").addEventListener("click", e => {
+      e.stopPropagation();
+      const menu = document.getElementById("qr-menu");
+      menu.hidden = !menu.hidden;
+      if (!menu.hidden) _syncQrRecentCheck();
+    });
+    document.querySelector("#qr-backdrop .qr-sheet").addEventListener("click", e => {
+      const menu = document.getElementById("qr-menu");
+      if (menu.hidden) return;
+      if (e.target.closest("#qr-menu") || e.target.closest("#qr-menu-btn")) return;
+      menu.hidden = true;
+    });
+    document.getElementById("qr-recent-toggle").addEventListener("click", () => {
+      if (!qrItem) return;
+      const key = keyOf(qrItem.media_type, qrItem.id);
+      db.recentlyWatchedExcluded = db.recentlyWatchedExcluded || {};
+      if (db.recentlyWatchedExcluded[key]) delete db.recentlyWatchedExcluded[key];
+      else db.recentlyWatchedExcluded[key] = true;
+      saveDB();
+      _syncQrRecentCheck();
+      if (typeof _republishProfileSnapshot === "function") _republishProfileSnapshot();
+    });
     // R31: Teilen-Icon in der Bewerten-Zeile → Empfehlungs-Sheet an einzelne Freunde.
     document.getElementById("qr-share-friends").addEventListener("click", () => {
       if (!qrItem) return;
@@ -11488,8 +11577,16 @@
           '<div class="hcard-title">' + esc(title || "") + '</div>' +
           (subHtml ? '<div class="hcard-sub">' + subHtml + '</div>' : '') + '</div>';
       };
-      const row = (title, cardsHtml, headExtra) => cardsHtml
-        ? '<div class="prof-row"><div class="prof-row-head"><span class="prof-row-title">' + title + '</span>' + (headExtra || '') + '</div>' +
+      // R54: manageKey macht die Überschrift antippbar → Film-Verwaltungs-Sheet
+      // (einzelne Titel ausblenden/wieder einblenden). Nur „Letzte Posts" und
+      // „Zuletzt gesehen" — die übrigen Reihen füllen sich rein automatisch.
+      const EDIT_PENCIL = '<svg class="prof-row-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+      const row = (title, cardsHtml, headExtra, manageKey) => cardsHtml
+        ? '<div class="prof-row"><div class="prof-row-head">' +
+          (manageKey
+            ? '<button class="prof-row-title prof-row-title-mng" type="button" data-manage="' + manageKey + '">' + title + EDIT_PENCIL + '</button>'
+            : '<span class="prof-row-title">' + title + '</span>') +
+          (headExtra || '') + '</div>' +
           '<div class="hscroll">' + cardsHtml + '</div></div>'
         : '';
       const starsOf = it => it.bucket && FEED_STAR[it.bucket] ? "★".repeat(FEED_STAR[it.bucket]) : "";
@@ -11508,7 +11605,7 @@
                 (starsOf(p.it) ? '<span class="hcard-stars">' + starsOf(p.it) + '</span>' : '') + (p.m.note ? ' 💬' : ''),
                 'data-key="' + esc(p.key) + '"')).join("");
             if (!live.length && !archived.length) return "";
-            return row("Letzte Posts", postCards, archiveBtn) ||
+            return row("Letzte Posts", postCards, archiveBtn, "posts") ||
               ('<div class="prof-row"><div class="prof-row-head"><span class="prof-row-title">Letzte Posts</span>' + archiveBtn + '</div><div class="prof-row-empty">Noch keine Posts.</div></div>');
           }
           case "progress": {   // Aktuelle Serien — Episoden-Stand + Ø-Bewertung
@@ -11538,7 +11635,7 @@
               .filter(it => it.loggedAt && !excluded[(it.mediaType || "movie") + ":" + it.id])
               .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0)).slice(0, 15);
             return row("Zuletzt gesehen", recent.map(it =>
-              openCard(it, '<span class="hcard-stars">' + starsOf(it) + '</span>')).join(""));
+              openCard(it, '<span class="hcard-stars">' + starsOf(it) + '</span>')).join(""), "", "recent");
           }
           case "watchlist": {
             const wl = Object.values(db.watchlist).sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0)).slice(0, 15);
@@ -11585,12 +11682,12 @@
       if (!rowsHtml) rowsHtml =
         '<div class="prof-posts-empty">Noch keine Posts.<br>Bewerte einen Titel und tippe auf „Posten" — er erscheint dann hier und im Feed deiner Freunde.</div>';
 
-      // R53: „Anpassen" ganz unten — öffnet das Reihen-Panel (wie Home-Bearbeiten)
+      // R53/R54: „Anpassen" ganz unten — öffnet das Reihen-Popup (R54: als Overlay
+      // statt inline). Reihenfolge/Auswahl wie bei Home-Bearbeiten.
       host.innerHTML = rowsHtml +
-        '<div class="prof-edit-bar"><button class="lh-edit-btn' + (_profEditMode ? ' on' : '') + '" id="prof-edit-toggle" type="button">' +
+        '<div class="prof-edit-bar"><button class="lh-edit-btn" id="prof-edit-toggle" type="button">' +
         '<svg viewBox="0 0 24 24"><line x1="4" y1="8" x2="20" y2="8"/><line x1="4" y1="16" x2="20" y2="16"/><circle cx="9" cy="8" r="2"/><circle cx="15" cy="16" r="2"/></svg>' +
-        '<span>' + (_profEditMode ? "Fertig" : "Anpassen") + '</span></button></div>' +
-        '<div class="lh-reorder" id="prof-reorder"' + (_profEditMode ? '' : ' hidden') + '></div>';
+        '<span>Anpassen</span></button></div>';
 
       const openBtn = document.getElementById("prof-archive-open");
       if (openBtn) openBtn.addEventListener("click", () => { _profPostsArchive = true; renderProfilePosts(); });
@@ -11601,16 +11698,111 @@
           const [mt, id] = el.dataset.open.split(":");
           openDetail(mt, parseInt(id, 10));
         }));
+      // R54: Überschrift von „Letzte Posts"/„Zuletzt gesehen" → Film-Verwaltung
+      host.querySelectorAll(".prof-row-title-mng[data-manage]").forEach(btn =>
+        btn.addEventListener("click", () => openRowManageSheet(btn.dataset.manage)));
       const editBtn = document.getElementById("prof-edit-toggle");
-      if (editBtn) editBtn.addEventListener("click", () => {
-        _profEditMode = !_profEditMode;
-        document.getElementById("prof-reorder").hidden = !_profEditMode;
-        editBtn.classList.toggle("on", _profEditMode);
-        editBtn.querySelector("span").textContent = _profEditMode ? "Fertig" : "Anpassen";
-        if (_profEditMode) renderProfReorderPanel();
-      });
-      if (_profEditMode) renderProfReorderPanel();
+      if (editBtn) editBtn.addEventListener("click", openProfEditSheet);
     }
+
+    // ---------- R54: Profil-Reihen anpassen — Popup ----------
+    function openProfEditSheet() {
+      renderProfReorderPanel();
+      document.getElementById("prof-edit-backdrop").hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+    function closeProfEditSheet() {
+      document.getElementById("prof-edit-backdrop").hidden = true;
+      if (document.querySelectorAll(".sheet-backdrop:not([hidden])").length === 0) document.body.style.overflow = "";
+    }
+    document.getElementById("prof-edit-done").addEventListener("click", closeProfEditSheet);
+    document.getElementById("prof-edit-backdrop").addEventListener("click", e => {
+      if (e.target.id === "prof-edit-backdrop") closeProfEditSheet();
+    });
+
+    // ---------- R54: einzelne Filme einer Reihe aus-/einblenden ----------
+    // „Zuletzt gesehen" nutzt db.recentlyWatchedExcluded (Titel bleibt in der
+    // Bibliothek, verschwindet nur aus der Reihe + aus dem Freundes-Snapshot).
+    // „Letzte Posts" nutzt meta.archived (wie das Archiv im Post-Sheet).
+    let _rowManageKey = null;
+    function _rowManageData(kind) {
+      const shown = [], hidden = [];
+      if (kind === "recent") {
+        const excl = db.recentlyWatchedExcluded || {};
+        Object.values(db.items).filter(it => it.loggedAt)
+          .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0))
+          .forEach(it => {
+            const key = (it.mediaType || "movie") + ":" + it.id;
+            (excl[key] ? hidden : shown).push({ key, title: dispTitleOf ? dispTitleOf(it) : (it.title || ""), poster: it.poster });
+          });
+      } else if (kind === "posts") {
+        for (const key in db.meta) {
+          const m = db.meta[key]; if (!m || !m.posted) continue;
+          const it = db.items[key]; if (!it) continue;
+          (m.archived ? hidden : shown).push({ key, title: dispTitleOf ? dispTitleOf(it) : (it.title || ""), poster: it.poster, ts: it.loggedAt || 0 });
+        }
+        shown.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+        hidden.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      }
+      return { shown, hidden };
+    }
+    function _rowManageToggle(kind, key, hide) {
+      if (kind === "recent") {
+        db.recentlyWatchedExcluded = db.recentlyWatchedExcluded || {};
+        if (hide) db.recentlyWatchedExcluded[key] = true;
+        else delete db.recentlyWatchedExcluded[key];
+        saveDB();
+      } else if (kind === "posts") {
+        const m = getMeta(key);
+        m.archived = hide;
+        saveMeta(key, m);
+        if (hide && typeof _deleteMyCloudPosts === "function") _deleteMyCloudPosts(key);
+      }
+      _republishProfileSnapshot();
+    }
+    function renderRowManage() {
+      const kind = _rowManageKey;
+      const body = document.getElementById("row-manage-body");
+      const { shown, hidden } = _rowManageData(kind);
+      const thumb = r => r.poster
+        ? '<img class="rm-thumb" loading="lazy" src="' + IMG_BASE + 'w92' + r.poster + '" alt="">'
+        : '<div class="rm-thumb rm-thumb-ph"></div>';
+      const rowHtml = (r, hide) =>
+        '<div class="rm-row">' + thumb(r) +
+        '<div class="rm-title">' + esc(r.title) + '</div>' +
+        '<button class="rm-btn" type="button" data-key="' + esc(r.key) + '" data-hide="' + (hide ? "1" : "0") + '">' +
+        (hide ? "Ausblenden" : "Einblenden") + '</button></div>';
+      let html = "";
+      html += shown.length ? shown.map(r => rowHtml(r, true)).join("")
+                           : '<div class="rm-empty">Nichts in dieser Reihe.</div>';
+      if (hidden.length) {
+        html += '<div class="rm-sub">Ausgeblendet</div>' + hidden.map(r => rowHtml(r, false)).join("");
+      }
+      body.innerHTML = html;
+      body.querySelectorAll(".rm-btn").forEach(b =>
+        b.addEventListener("click", () => {
+          _rowManageToggle(kind, b.dataset.key, b.dataset.hide === "1");
+          renderRowManage();
+          renderProfilePosts();
+        }));
+    }
+    function openRowManageSheet(kind) {
+      _rowManageKey = kind;
+      document.getElementById("row-manage-title").textContent =
+        kind === "posts" ? "Letzte Posts verwalten" : "Zuletzt gesehen verwalten";
+      renderRowManage();
+      document.getElementById("row-manage-backdrop").hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+    function closeRowManageSheet() {
+      document.getElementById("row-manage-backdrop").hidden = true;
+      _rowManageKey = null;
+      if (document.querySelectorAll(".sheet-backdrop:not([hidden])").length === 0) document.body.style.overflow = "";
+    }
+    document.getElementById("row-manage-close").addEventListener("click", closeRowManageSheet);
+    document.getElementById("row-manage-backdrop").addEventListener("click", e => {
+      if (e.target.id === "row-manage-backdrop") closeRowManageSheet();
+    });
 
     // ---------- R53: Profil-Reihen anpassen (Muster = Home-Abschnitte) ----------
     let _profEditMode = false;
@@ -11646,7 +11838,7 @@
         ctrls.appendChild(mk("Nach unten", CHEVRON_DOWN, idx === secs.length - 1, () => moveProfSection(idx, +1)));
         const rmv = mk("Entfernen", X_ICON, false, () => {
           secs.splice(idx, 1); db.profileSections = secs; saveDB();
-          renderProfilePosts();
+          renderProfReorderPanel(); renderProfilePosts();   // R54: Popup bleibt offen
         });
         rmv.classList.add("reorder-remove-btn");
         ctrls.appendChild(rmv);
@@ -11661,7 +11853,7 @@
       if (j < 0 || j >= secs.length) return;
       const tmp = secs[idx]; secs[idx] = secs[j]; secs[j] = tmp;
       db.profileSections = secs; saveDB();
-      renderProfilePosts();
+      renderProfReorderPanel(); renderProfilePosts();   // R54: Popup bleibt offen
     }
     // „+ Abschnitt hinzufügen" — gleiche Auswahl wie Home, plus „Letzte Posts".
     function buildProfAddPicker() {
@@ -11677,7 +11869,7 @@
       const add = desc => {
         const secs = getProfileSections();
         secs.push(desc); db.profileSections = secs; saveDB();
-        renderProfilePosts();
+        renderProfReorderPanel(); renderProfilePosts();   // R54: Popup bleibt offen
       };
       function showTypes() {
         host.innerHTML = "";
@@ -15244,13 +15436,22 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R53";
+    const APP_VERSION = "R54";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R54": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Reihen genauer steuern:</strong> Tippe im Profil auf die Überschrift „Letzte Posts“ oder „Zuletzt gesehen“ (kleines Stift-Symbol) — dort kannst du einzelne Filme aus der Reihe ausblenden und jederzeit wieder einblenden.",
+          "<strong>Anpassen als Popup:</strong> Der „Anpassen“-Knopf unten öffnet die Reihen-Bearbeitung jetzt als übersichtliches Fenster statt am Seitenende.",
+          "<strong>„Zuletzt gesehen“ bestimmen:</strong> Beim Bewerten gibt es oben rechts ein Drei-Punkte-Menü. Damit legst du fest, ob ein Titel in „Zuletzt gesehen“ auftaucht — praktisch für Filme, die du nur nachträglich in deine Bibliothek einträgst.",
+          "<strong>Freundesprofil aufgeräumt:</strong> Die Zeile „Ihr habt beide gesehen“ ist wieder weg — gemeinsame Titel findest du weiterhin im Reiter „Mit Freunden geschaut“."
+        ]
+      },
       "R53": {
         title: "Was ist neu",
         notes: [
@@ -15708,10 +15909,8 @@
         // Zuletzt gesehen → alles aus dem Snapshot, Tap = Detailseite
         html += fpRow("Zuletzt gesehen", allRecent.slice(0, 15).map(it =>
           fpCard(it, fpStarsOf(it), 'data-fpopen="' + socialEsc(it.mediaType || "movie") + ':' + it.id + '"')).join(""));
-        // Ihr habt beide gesehen → Schnittmenge mit der eigenen Bibliothek
-        const both = allRecent.filter(it => db.items[(it.mediaType || "movie") + ":" + it.id]);
-        html += fpRow("Ihr habt beide gesehen", both.slice(0, 15).map(it =>
-          fpCard(it, fpStarsOf(it), 'data-fpopen="' + socialEsc(it.mediaType || "movie") + ':' + it.id + '"')).join(""));
+        // R54: „Ihr habt beide gesehen" wieder entfernt — der Freund gestaltet sein
+        // Profil selbst, und gemeinsame Titel stehen bereits im Reiter „Mit Freunden".
       }
       // Top Filme / Top Serien
       const topRanked = profile.topRanked || [];
