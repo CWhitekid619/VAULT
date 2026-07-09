@@ -216,13 +216,6 @@
     .rm-btn:active { background: var(--surface-2); }
     .rm-sub { font-size: 12px; color: var(--text-mute); margin: 14px 0 4px; }
     .rm-empty { font-size: 13px; color: var(--text-mute); padding: 12px 0; }
-    /* R54: ⋯-Menü im Bewerten-Sheet */
-    .qr-sheet { position: relative; }
-    .qr-menu-btn { position: absolute; top: 8px; right: 10px; z-index: 6; }
-    .qr-menu { position: absolute; top: 40px; right: 10px; z-index: 6; min-width: 210px; }
-    .qr-menu button { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .qr-check { color: var(--accent); font-weight: 700; }
-    .qr-check.off { visibility: hidden; }
     .reorder-row {
       display: flex; align-items: center; justify-content: space-between; gap: 12px;
       padding: 10px 12px; border-radius: 12px;
@@ -3251,19 +3244,21 @@
   <div id="qr-backdrop" class="sheet-backdrop" hidden>
     <div class="sheet qr-sheet" role="dialog" aria-modal="true" aria-label="Bewerten">
       <div class="sheet-handle"></div>
-      <!-- R54: ⋯-Menü oben rechts — steuert, ob der Titel in „Zuletzt gesehen" erscheint -->
-      <button id="qr-menu-btn" class="mypost-menu-btn qr-menu-btn" type="button" aria-label="Optionen">
-        <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
-      </button>
-      <div class="mypost-menu qr-menu" id="qr-menu" hidden>
-        <button id="qr-recent-toggle" type="button"><span>In „Zuletzt gesehen“ zeigen</span><span class="qr-check" id="qr-recent-check">✓</span></button>
-      </div>
       <!-- Step 1: Bewerten (R36: nur bewerten — die Post-Entscheidung kommt in Schritt 2) -->
       <div id="qr-step1">
         <!-- R41: „Geschaut mit" — Partner auswählen, der Film landet nach Bestätigung auch bei ihm -->
         <div id="qr-with-row" class="qr-with-row" hidden>
           <div class="qr-with-label">Geschaut mit</div>
           <div id="qr-with-chips" class="qr-with-chips"></div>
+        </div>
+        <!-- R55: „Zuletzt gesehen"-Umschalter als eigene Zeile (statt ⋯-Menü); merkt sich
+             die zuletzt benutzte Einstellung als Vorgabe für neue Titel. -->
+        <div class="qr-share-row" id="qr-recent-row">
+          <span class="qr-share-label">Zuletzt gesehen</span>
+          <label class="qr-toggle">
+            <input type="checkbox" id="qr-recent-toggle">
+            <span class="qr-toggle-track"><span class="qr-toggle-thumb"></span></span>
+          </label>
         </div>
         <div class="sheet-section-label">Wie war's?</div>
         <div id="qr-buckets" class="bucket-list"></div>
@@ -6495,9 +6490,14 @@
         });
         qrBuckets.appendChild(el);
       });
-      // R54: ⋯-Menü zurücksetzen + „Zuletzt gesehen"-Häkchen aus dem aktuellen
-      // Ausschluss-Zustand ableiten (Titel sichtbar = nicht ausgeschlossen).
-      document.getElementById("qr-menu").hidden = true;
+      // R55: neue Titel (noch nie bewertet, kein expliziter Zustand) übernehmen die
+      // zuletzt benutzte „Zuletzt gesehen"-Einstellung als Vorgabe, statt immer
+      // sichtbar zu starten. Titel mit eigenem, bereits gesetztem Zustand bleiben unberührt.
+      const _recentKey = keyOf(r.media_type, r.id);
+      db.recentlyWatchedExcluded = db.recentlyWatchedExcluded || {};
+      if (!existing && !(_recentKey in db.recentlyWatchedExcluded) && db.settings && db.settings.recentDefaultHidden) {
+        db.recentlyWatchedExcluded[_recentKey] = true;
+      }
       _syncQrRecentCheck();
       // A3: if opened from a friend-profile stacked detail, raise z-index above it
       const detailOverlay = document.getElementById("detail");
@@ -6509,18 +6509,18 @@
       qrBackdrop.hidden = false;
       document.body.style.overflow = "hidden";
     }
-    // R54: „Zuletzt gesehen"-Häkchen im ⋯-Menü mit dem Ausschluss-Status synchronisieren.
+    // R55: „Zuletzt gesehen"-Toggle mit dem Ausschluss-Status synchronisieren.
     function _syncQrRecentCheck() {
       if (!qrItem) return;
       const key = keyOf(qrItem.media_type, qrItem.id);
       const excluded = !!(db.recentlyWatchedExcluded && db.recentlyWatchedExcluded[key]);
-      document.getElementById("qr-recent-check").classList.toggle("off", excluded);
+      const input = document.getElementById("qr-recent-toggle");
+      if (input) input.checked = !excluded;
     }
     function closeQuickRate() {
       // R41: „Geschaut mit"-Auswahl übernehmen + neue Partner benachrichtigen,
       // bevor der Kontext (qrItem) verloren geht.
       try { _commitWatchedWith(); } catch (e) {}
-      document.getElementById("qr-menu").hidden = true;   // R54
       qrBackdrop.hidden = true;
       qrBackdrop.classList.remove("over-profile");
       qrItem = null;
@@ -6530,27 +6530,17 @@
     // Tap outside the sheet → close
     qrBackdrop.addEventListener("click", e => { if (e.target === qrBackdrop) closeQuickRate(); });
     document.getElementById("qr-skip").addEventListener("click", closeQuickRate);
-    // R54: ⋯-Menü öffnen/schließen + „Zuletzt gesehen"-Umschalter.
-    document.getElementById("qr-menu-btn").addEventListener("click", e => {
-      e.stopPropagation();
-      const menu = document.getElementById("qr-menu");
-      menu.hidden = !menu.hidden;
-      if (!menu.hidden) _syncQrRecentCheck();
-    });
-    document.querySelector("#qr-backdrop .qr-sheet").addEventListener("click", e => {
-      const menu = document.getElementById("qr-menu");
-      if (menu.hidden) return;
-      if (e.target.closest("#qr-menu") || e.target.closest("#qr-menu-btn")) return;
-      menu.hidden = true;
-    });
-    document.getElementById("qr-recent-toggle").addEventListener("click", () => {
+    // R55: „Zuletzt gesehen"-Umschalter — merkt sich die Einstellung als Vorgabe für neue Titel.
+    document.getElementById("qr-recent-toggle").addEventListener("change", e => {
       if (!qrItem) return;
       const key = keyOf(qrItem.media_type, qrItem.id);
+      const shown = e.target.checked;
       db.recentlyWatchedExcluded = db.recentlyWatchedExcluded || {};
-      if (db.recentlyWatchedExcluded[key]) delete db.recentlyWatchedExcluded[key];
+      if (shown) delete db.recentlyWatchedExcluded[key];
       else db.recentlyWatchedExcluded[key] = true;
+      db.settings = db.settings || {};
+      db.settings.recentDefaultHidden = !shown;
       saveDB();
-      _syncQrRecentCheck();
       if (typeof _republishProfileSnapshot === "function") _republishProfileSnapshot();
     });
     // R31: Teilen-Icon in der Bewerten-Zeile → Empfehlungs-Sheet an einzelne Freunde.
@@ -15436,13 +15426,20 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R54";
+    const APP_VERSION = "R55";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R55": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>„Zuletzt gesehen“ direkt beim Bewerten:</strong> Statt im Drei-Punkte-Menü steht jetzt eine eigene Zeile „Zuletzt gesehen“ mit Schalter direkt neben „Geschaut mit“ — an- oder austippen genügt.",
+          "<strong>Merkt sich deine Einstellung:</strong> Wie du den Schalter zuletzt gelassen hast, gilt als Vorgabe für den nächsten neuen Titel — kein wiederholtes Umschalten mehr nötig."
+        ]
+      },
       "R54": {
         title: "Was ist neu",
         notes: [
