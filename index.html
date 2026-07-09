@@ -622,10 +622,10 @@
 
     .sheet-btn-ghost {
       display: flex; align-items: center; justify-content: center; gap: 8px;
-      width: 100%; padding: 13px;
+      width: 100%; padding: 11px;
       background: none; border: 1px solid var(--border);
       border-radius: 12px; color: var(--text);
-      font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+      font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
       margin-bottom: 8px;
     }
     .sheet-btn-ghost svg {
@@ -636,8 +636,8 @@
     .sheet-btn-ghost.active { border-color: var(--accent); color: var(--accent); }
     .sheet-btn-ghost.active svg { stroke: var(--accent); }
     .sheet-btn-cancel {
-      width: 100%; padding: 13px; background: none; border: none;
-      color: var(--text-mute); font-family: inherit; font-size: 15px; cursor: pointer;
+      width: 100%; padding: 11px; background: none; border: none;
+      color: var(--text-mute); font-family: inherit; font-size: 14px; cursor: pointer;
     }
 
     /* ---------- R1: Auth (login / register) ---------- */
@@ -1482,10 +1482,11 @@
     .modal-input:focus, .modal-select:focus { border-color: var(--accent); }
     .modal-select { appearance: none; -webkit-appearance: none; }
 
+    /* R52: Minimalismus-Pass — Sheet-Buttons kompakter und ruhiger */
     .sheet-btn-primary {
-      width: 100%; padding: 14px; margin-bottom: 8px;
+      width: 100%; padding: 12px; margin-bottom: 8px;
       background: var(--accent); color: #1a1206; border: none; border-radius: 12px;
-      font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
+      font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
     }
     .sheet-btn-primary:active { filter: brightness(.92); }
     .sheet-btn-primary:disabled { opacity: .4; cursor: default; }
@@ -1809,7 +1810,7 @@
     .mypost-poster { flex: 0 0 64px; width: 64px; height: 96px; border-radius: 8px; object-fit: cover; }
     .mypost-poster-ph { background: var(--surface-2); }
     .mypost-head-body { flex: 1; min-width: 0; }
-    .mypost-title { font-size: 16px; font-weight: 800; letter-spacing: -.01em; line-height: 1.25; }
+    .mypost-title { font-size: 15px; font-weight: 700; letter-spacing: -.01em; line-height: 1.25; }
     .mypost-stars { color: var(--accent); font-size: 15px; letter-spacing: 2px; margin-top: 5px; }
     .mypost-date { font-size: 12px; color: var(--text-mute); margin-top: 5px; }
     .mypost-note {
@@ -1817,6 +1818,60 @@
       padding: 10px 13px; font-size: 14px; line-height: 1.5; color: var(--text); margin-bottom: 12px;
       white-space: pre-wrap; word-wrap: break-word;
     }
+
+    /* R52: ⋯-Menü im Post-Sheet (Bearbeiten / Archivieren / Löschen) */
+    .mypost-top { display: flex; align-items: center; position: relative; margin-bottom: 4px; }
+    .mypost-top .sheet-section-label { flex: 1; margin-bottom: 0; }
+    .mypost-menu-btn {
+      background: none; border: none; padding: 6px; cursor: pointer; color: var(--text-mute);
+      display: flex; align-items: center; justify-content: center; border-radius: 8px;
+    }
+    .mypost-menu-btn svg { width: 20px; height: 20px; fill: currentColor; stroke: none; }
+    .mypost-menu-btn:active { background: var(--surface-2); }
+    .mypost-menu {
+      position: absolute; top: 30px; right: 0; z-index: 5; min-width: 200px;
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
+      overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,.35);
+    }
+    .mypost-menu button {
+      display: block; width: 100%; text-align: left; padding: 11px 14px;
+      background: none; border: none; border-bottom: 1px solid var(--border);
+      color: var(--text); font-family: inherit; font-size: 13px; cursor: pointer;
+    }
+    .mypost-menu button:last-child { border-bottom: none; }
+    .mypost-menu button:active { background: var(--surface); }
+    .mypost-menu button.danger { color: var(--danger, #ef4444); }
+    .mypost-menu button.danger.armed { font-weight: 700; }
+
+    /* R52: Beschreibung im Sheet bearbeiten */
+    .mypost-edit-input {
+      width: 100%; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
+      padding: 10px 13px; font-family: inherit; font-size: 14px; line-height: 1.5; color: var(--text);
+      resize: vertical; margin-bottom: 8px;
+    }
+    .mypost-edit-actions { display: flex; gap: 14px; margin-bottom: 12px; }
+    .mypost-edit-save, .mypost-edit-cancel {
+      background: none; border: none; padding: 6px 0; cursor: pointer;
+      font-family: inherit; font-size: 13px; font-weight: 600;
+    }
+    .mypost-edit-save { color: var(--accent); }
+    .mypost-edit-cancel { color: var(--text-mute); }
+
+    /* R52: „Details ansehen" als dezenter Textlink statt großem Button */
+    .mypost-detail-link {
+      display: block; width: 100%; text-align: left; background: none; border: none;
+      color: var(--accent); font-family: inherit; font-size: 13px; font-weight: 600;
+      padding: 4px 0 10px; cursor: pointer;
+    }
+    .mypost-detail-link:active { opacity: .8; }
+
+    /* R52: Profil-Übersicht — horizontale Reihen statt 3×3-Grid */
+    .prof-row { margin-top: 20px; }
+    .prof-row:first-child { margin-top: 8px; }
+    .prof-row-head { display: flex; align-items: baseline; margin-bottom: 10px; }
+    .prof-row-title { flex: 1; font-size: 13px; font-weight: 600; color: var(--text-mute); letter-spacing: .02em; }
+    .prof-row .hcard-stars { color: var(--accent); letter-spacing: 1px; }
+    .prof-row-empty { font-size: 12px; color: var(--text-mute); }
 
     /* R51: Freundesprofil im gleichen Layout wie das eigene Profil.
        Die fprof-Sektionen (hscroll/lists/boxen) bringen eigenes var(--pad)-Padding
@@ -1832,9 +1887,9 @@
 
     /* R50: Archiv im Posts-Reiter + Lösch-Button im Post-Sheet */
     .sheet-btn-danger {
-      width: 100%; padding: 13px; border-radius: 12px; margin-top: 8px;
+      width: 100%; padding: 11px; border-radius: 12px; margin-top: 8px;
       background: transparent; border: 1px solid rgba(229,72,77,.45);
-      color: #e5484d; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
+      color: #e5484d; font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
     }
     .sheet-btn-danger:active, .sheet-btn-danger.armed { background: rgba(229,72,77,.12); border-color: #e5484d; }
     .prof-posts-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; min-height: 30px; }
@@ -3439,7 +3494,20 @@
   <div id="mypost-backdrop" class="sheet-backdrop" hidden>
     <div class="sheet" role="dialog" aria-modal="true" aria-label="Post">
       <div class="sheet-handle"></div>
-      <div class="sheet-section-label" id="mypost-label">Dein Post</div>
+      <!-- R52: ⋯-Menü oben rechts (wie Instagram) — Bearbeiten / Archivieren / Löschen -->
+      <div class="mypost-top">
+        <div class="sheet-section-label" id="mypost-label">Dein Post</div>
+        <button id="mypost-menu-btn" class="mypost-menu-btn" type="button" aria-label="Optionen">
+          <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+        </button>
+        <div class="mypost-menu" id="mypost-menu" hidden>
+          <button id="mypost-edit" type="button">Beschreibung bearbeiten</button>
+          <!-- R50: Post archivieren (versteckt überall, wiederherstellbar) bzw. wiederherstellen -->
+          <button id="mypost-archive" type="button">Archivieren</button>
+          <!-- R50: Post löschen (zweistufig) — der Titel + Bewertung bleiben in der Bibliothek -->
+          <button id="mypost-delete" class="danger" type="button">Post löschen</button>
+        </div>
+      </div>
       <div class="mypost-head">
         <img id="mypost-poster" class="mypost-poster" alt="" hidden>
         <div class="mypost-poster mypost-poster-ph" id="mypost-poster-ph" hidden></div>
@@ -3450,11 +3518,15 @@
         </div>
       </div>
       <div class="mypost-note" id="mypost-note" hidden></div>
-      <button id="mypost-detail" class="sheet-btn-primary" type="button">Details ansehen</button>
-      <!-- R50: Post archivieren (versteckt überall, wiederherstellbar) bzw. wiederherstellen -->
-      <button id="mypost-archive" class="sheet-btn-ghost" type="button">Archivieren</button>
-      <!-- R50: Post löschen (zweistufig) — der Titel + Bewertung bleiben in der Bibliothek -->
-      <button id="mypost-delete" class="sheet-btn-danger" type="button">Post löschen</button>
+      <!-- R52: Beschreibung nachträglich bearbeiten (übers ⋯-Menü) -->
+      <div id="mypost-edit-box" hidden>
+        <textarea id="mypost-edit-input" class="mypost-edit-input" rows="3" placeholder="Beschreibung …"></textarea>
+        <div class="mypost-edit-actions">
+          <button id="mypost-edit-save" class="mypost-edit-save" type="button">Speichern</button>
+          <button id="mypost-edit-cancel" class="mypost-edit-cancel" type="button">Abbrechen</button>
+        </div>
+      </div>
+      <button id="mypost-detail" class="mypost-detail-link" type="button">Details ansehen ›</button>
       <button id="mypost-close" class="sheet-btn-cancel" type="button">Schließen</button>
     </div>
   </div>
@@ -4429,15 +4501,19 @@
       // Reset scroll to top of the newly shown view
       const active = document.querySelector(".view.active");
       if (active) active.scrollTop = 0;
-      // Keep the Log tab focus-ready for fast logging
+      // Keep the Log tab focus-ready for fast logging.
+      // R52-Perf: auf Touch-Geräten NICHT mehr automatisch fokussieren — sonst
+      // schiebt sich bei jedem Home-Besuch die Tastatur hoch (fühlt sich wie
+      // eine hängende App an). Am Desktop bleibt der Schnell-Fokus.
       if (target === "log") {
         const input = document.getElementById("log-search");
-        if (input) setTimeout(() => input.focus(), 60);
-        if (!searchInput.value.trim()) renderLogHome();
+        if (input && !window.matchMedia("(pointer: coarse)").matches) setTimeout(() => input.focus(), 60);
+        if (!searchInput.value.trim()) _deferRender(renderLogHome);
       }
       // Rebuild the leaderboard each time it is opened (with filter dropdowns)
+      // R52-Perf: erst den Tab-Wechsel malen lassen, dann die (große) Liste bauen.
       if (target === "ranking" && typeof renderRanking === "function") {
-        populateRankFilters().then(renderRanking);
+        _deferRender(() => populateRankFilters().then(renderRanking));
       }
       // Discover loads its curated content once
       if (target === "discover" && typeof initDiscover === "function") {
@@ -4452,10 +4528,19 @@
       if (target === "social" && typeof initSocialTab === "function") initSocialTab();
       // Profile recomputes stats each open — and (R37) shows the merged Listen section
       if (target === "profile") {
-        if (typeof renderProfile === "function") renderProfile();
-        if (typeof showListsOverview === "function") showListsOverview();
-        if (typeof syncSharedLists === "function") syncSharedLists();   // R13-#6 phase 2: pick up newly-shared lists
+        _deferRender(() => {   // R52-Perf: Tab-Wechsel zuerst malen
+          if (typeof renderProfile === "function") renderProfile();
+          if (typeof showListsOverview === "function") showListsOverview();
+          if (typeof syncSharedLists === "function") syncSharedLists();   // R13-#6 phase 2: pick up newly-shared lists
+        });
       }
+    }
+    // R52-Perf: schwere Tab-Renders erst NACH dem nächsten Paint ausführen, damit
+    // der Nav-Tap sofort sichtbar reagiert. In Hintergrund-Tabs pausiert rAF
+    // (R37-Lektion) → dort direkt per setTimeout rendern.
+    function _deferRender(fn) {
+      if (document.hidden) { setTimeout(fn, 0); return; }
+      requestAnimationFrame(() => setTimeout(fn, 0));
     }
 
     // Fix #1 (R20-G2): the bottom bar now sits ABOVE all navigation overlays, so a tab
@@ -6709,11 +6794,15 @@
       const ranked   = items.filter(it => !it.unranked).sort((a, b) => b.score - a.score || getName(a).localeCompare(getName(b)));
       const unranked = items.filter(it =>  it.unranked).sort((a, b) => (b.addedAt || b.loggedAt || 0) - (a.addedAt || a.loggedAt || 0));
 
-      const frag = document.createDocumentFragment();
+      // R52-Perf: Zeilen werden in Chunks gerendert — die ersten sofort, der Rest
+      // in setTimeout-Häppchen. Bei 400+ Titeln blockiert der Tab-Wechsel so nicht
+      // mehr den Main-Thread (Tap auf die Nav reagiert sofort).
+      let curFrag = document.createDocumentFragment();
+      const queue = [];
 
       // R19-#6 Part D: one-time rating/ranking consistency banner (top of the list)
       const consistencyBar = buildConsistencyBanner(rankMedia);
-      if (consistencyBar) frag.appendChild(consistencyBar);
+      if (consistencyBar) queue.push(() => curFrag.appendChild(consistencyBar));
 
       const addRow = (it, num, reorder) => {
         const row = document.createElement("div");
@@ -6798,7 +6887,7 @@
           if (isPerson) openPerson(it.id, it.name);
           else openDetail(it.mediaType, it.id);
         });
-        frag.appendChild(row);
+        curFrag.appendChild(row);
       };
 
       const addZoneLabel = (text, n) => {
@@ -6806,7 +6895,7 @@
         const name = document.createElement("span"); name.textContent = text;
         const count = document.createElement("span"); count.className = "zone-count"; count.textContent = n;
         lbl.appendChild(name); lbl.appendChild(count);
-        frag.appendChild(lbl);
+        curFrag.appendChild(lbl);
       };
 
       // R10-P3: manual order overrides Elo order for display when present.
@@ -6817,7 +6906,7 @@
         // manual order is silently respected — no banner, no reset button
         const ordered = orderedRankedItems(ranked, rankMedia);
         ordered.forEach((it, idx) =>
-          addRow(it, idx + 1, filterActive ? null : { isFirst: idx === 0, isLast: idx === ordered.length - 1 }));
+          queue.push(() => addRow(it, idx + 1, filterActive ? null : { isFirst: idx === 0, isLast: idx === ordered.length - 1 })));
       } else {
         const counts = {};
         ranked.forEach(it => { const z = deriveBucket(it.score); counts[z] = (counts[z] || 0) + 1; });
@@ -6825,18 +6914,32 @@
         for (let idx = 0; idx < ranked.length; idx++) {
           const it = ranked[idx];
           const zone = deriveBucket(it.score);
-          if (zone !== lastZone) { lastZone = zone; addZoneLabel(bucketLabel(zone), counts[zone]); }
+          if (zone !== lastZone) { lastZone = zone; queue.push(() => addZoneLabel(bucketLabel(zone), counts[zone])); }
           rank++;
-          addRow(it, rank, filterActive ? null : { isFirst: idx === 0, isLast: idx === ranked.length - 1 });
+          const num = rank, i = idx;
+          queue.push(() => addRow(it, num, filterActive ? null : { isFirst: i === 0, isLast: i === ranked.length - 1 }));
         }
       }
       if (unranked.length) {
-        addZoneLabel("Ungerankt", unranked.length);
-        unranked.forEach(it => addRow(it, "–", null));   // Ungerankt zone is not reorderable
+        queue.push(() => addZoneLabel("Ungerankt", unranked.length));
+        unranked.forEach(it => queue.push(() => addRow(it, "–", null)));   // Ungerankt zone is not reorderable
       }
 
-      rankListEl.appendChild(frag);
+      // Erste ~100 Zeilen sofort (füllt den Bildschirm mehrfach), Rest gestückelt.
+      // Ein neuer renderRanking-Aufruf entwertet laufende Chunks über das Token.
+      const tok = ++_rankRenderToken;
+      const CHUNK = 100;
+      const runChunk = start => {
+        if (tok !== _rankRenderToken) return;   // von neuerem Render überholt
+        curFrag = document.createDocumentFragment();
+        const end = Math.min(start + CHUNK, queue.length);
+        for (let i = start; i < end; i++) queue[i]();
+        rankListEl.appendChild(curFrag);
+        if (end < queue.length) setTimeout(() => runChunk(end), 0);
+      };
+      runChunk(0);
     }
+    let _rankRenderToken = 0;   // R52-Perf: bricht veraltete Chunk-Renders ab
 
     // R10-P3: manual ranking order helpers. db.manualRankOrder[mediaType] = [id, …].
     function rankedPool(media) {
@@ -11308,11 +11411,22 @@
     document.querySelectorAll("#prof-tabs .prof-tab").forEach(b =>
       b.addEventListener("click", () => switchProfTab(b.dataset.ptab)));
 
-    // Reiter 1: bewusst gepostete Titel (meta.posted) als 3er-Poster-Grid — Tippen
-    // öffnet das „Dein Post"-Sheet mit Sternen, Datum und der eigenen Notiz.
-    // R50: dazu eine Archiv-Ansicht (meta.archived) — archivierte Posts sind überall
+    // R52: Reiter 1 ist jetzt eine Übersicht aus horizontalen Reihen (wie die
+    // Home-Reihen): Letzte Posts, Aktuelle Serien, Zuletzt gesehen, Watchlist,
+    // Top Filme, Top Serien. Die 3×3-Grid-Ansicht bleibt nur fürs Archiv.
+    // R50: Archiv-Ansicht (meta.archived) — archivierte Posts sind überall
     // versteckt (Feed, Freunde, „Zuletzt gesehen"), aber hier wiederherstellbar.
-    let _profPostsArchive = false;   // false = Posts, true = Archiv-Ansicht
+    let _profPostsArchive = false;   // false = Übersicht, true = Archiv-Ansicht
+
+    // Durchschnitt der Episoden-Bewertungen einer Serie (1–5), null wenn keine.
+    function seriesAvgEpRating(key) {
+      const r = db.epRatings[key];
+      if (!r) return null;
+      let sum = 0, n = 0;
+      for (const k in r) { const v = FEED_STAR[r[k]]; if (v) { sum += v; n++; } }
+      return n ? sum / n : null;
+    }
+
     function renderProfilePosts() {
       const host = document.getElementById("profile-posts");
       if (!host) return;
@@ -11328,44 +11442,128 @@
       live.sort(bySeen); archived.sort(bySeen);
       if (_profPostsArchive && !archived.length) _profPostsArchive = false;   // letzter Post wiederhergestellt/gelöscht
 
-      const tile = p => {
-        const stars = p.it.bucket && FEED_STAR[p.it.bucket] ? "★".repeat(FEED_STAR[p.it.bucket]) : "";
-        const badges = (stars || p.m.note)
-          ? '<div class="prof-post-badges">' +
-              (stars ? '<span class="prof-post-stars">' + stars + '</span>' : '') +
-              (p.m.note ? '<span class="prof-post-note-ic">💬</span>' : '') + '</div>'
-          : '';
-        const img = p.it.poster
-          ? '<img loading="lazy" src="' + IMG_BASE + 'w342' + p.it.poster + '" alt="">'
-          : '<span class="prof-post-tile-ph">' + esc(dispTitleOf ? dispTitleOf(p.it) : (p.it.title || "")) + '</span>';
-        return '<button class="prof-post-tile' + (p.m.archived ? ' archived' : '') + '" type="button" data-key="' + esc(p.key) + '">' + img + badges + '</button>';
-      };
       const ARCHIVE_ICON = '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>';
 
-      let html = "";
+      // ── Archiv-Ansicht: unverändert als Grid ──────────────────────────
       if (_profPostsArchive) {
-        html += '<div class="prof-posts-head">' +
+        const tile = p => {
+          const stars = p.it.bucket && FEED_STAR[p.it.bucket] ? "★".repeat(FEED_STAR[p.it.bucket]) : "";
+          const badges = (stars || p.m.note)
+            ? '<div class="prof-post-badges">' +
+                (stars ? '<span class="prof-post-stars">' + stars + '</span>' : '') +
+                (p.m.note ? '<span class="prof-post-note-ic">💬</span>' : '') + '</div>'
+            : '';
+          const img = p.it.poster
+            ? '<img loading="lazy" src="' + IMG_BASE + 'w342' + p.it.poster + '" alt="">'
+            : '<span class="prof-post-tile-ph">' + esc(dispTitleOf ? dispTitleOf(p.it) : (p.it.title || "")) + '</span>';
+          return '<button class="prof-post-tile archived" type="button" data-key="' + esc(p.key) + '">' + img + badges + '</button>';
+        };
+        host.innerHTML = '<div class="prof-posts-head">' +
           '<button class="prof-archive-btn" type="button" id="prof-archive-back"><svg viewBox="0 0 24 24"><polyline points="15 5 8 12 15 19"/></svg>Posts</button>' +
-          '<span class="prof-posts-head-label">Archiv (' + archived.length + ')</span></div>';
-        html += archived.length
-          ? '<div class="prof-posts-grid">' + archived.map(tile).join("") + '</div>'
-          : '<div class="prof-posts-empty">Dein Archiv ist leer.</div>';
-      } else {
-        if (archived.length) {
-          html += '<div class="prof-posts-head"><span class="prof-posts-head-label"></span>' +
-            '<button class="prof-archive-btn" type="button" id="prof-archive-open">' + ARCHIVE_ICON + 'Archiv (' + archived.length + ')</button></div>';
-        }
-        html += live.length
-          ? '<div class="prof-posts-grid">' + live.map(tile).join("") + '</div>'
-          : '<div class="prof-posts-empty">Noch keine Posts.<br>Bewerte einen Titel und tippe auf „Posten" — er erscheint dann hier und im Feed deiner Freunde.</div>';
+          '<span class="prof-posts-head-label">Archiv (' + archived.length + ')</span></div>' +
+          (archived.length
+            ? '<div class="prof-posts-grid">' + archived.map(tile).join("") + '</div>'
+            : '<div class="prof-posts-empty">Dein Archiv ist leer.</div>');
+        const backBtn = document.getElementById("prof-archive-back");
+        if (backBtn) backBtn.addEventListener("click", () => { _profPostsArchive = false; renderProfilePosts(); });
+        host.querySelectorAll(".prof-post-tile").forEach(btn =>
+          btn.addEventListener("click", () => openMyPostSheet(btn.dataset.key)));
+        return;
       }
-      host.innerHTML = html;
+
+      // ── Übersicht: horizontale Reihen ─────────────────────────────────
+      // Karte im Home-Reihen-Stil; sub darf HTML enthalten (Sterne in Gold).
+      const card = (poster, title, subHtml, data, ranked, rankNum) => {
+        const img = poster
+          ? '<img loading="lazy" src="' + IMG_BASE + 'w185' + poster + '" alt="">'
+          : '<div class="hc-empty">' + esc(title || "") + '</div>';
+        return '<div class="hcard' + (ranked ? ' ranked' : '') + '" ' + data + '>' +
+          '<div class="hcard-poster">' + img +
+            (ranked ? '<div class="hcard-rank">' + rankNum + '</div>' : '') + '</div>' +
+          '<div class="hcard-title">' + esc(title || "") + '</div>' +
+          (subHtml ? '<div class="hcard-sub">' + subHtml + '</div>' : '') + '</div>';
+      };
+      const row = (title, cardsHtml, headExtra) => cardsHtml
+        ? '<div class="prof-row"><div class="prof-row-head"><span class="prof-row-title">' + title + '</span>' + (headExtra || '') + '</div>' +
+          '<div class="hscroll">' + cardsHtml + '</div></div>'
+        : '';
+      const starsOf = it => it.bucket && FEED_STAR[it.bucket] ? "★".repeat(FEED_STAR[it.bucket]) : "";
+
+      let html = "";
+
+      // 1) Letzte Posts (Tap → Post-Sheet mit ⋯-Menü)
+      const archiveBtn = archived.length
+        ? '<button class="prof-archive-btn" type="button" id="prof-archive-open">' + ARCHIVE_ICON + 'Archiv (' + archived.length + ')</button>'
+        : '';
+      const postCards = live.slice(0, 15).map(p =>
+        card(p.it.poster, dispTitleOf ? dispTitleOf(p.it) : (p.it.title || ""),
+          (starsOf(p.it) ? '<span class="hcard-stars">' + starsOf(p.it) + '</span>' : '') + (p.m.note ? ' 💬' : ''),
+          'data-key="' + esc(p.key) + '"')).join("");
+      if (live.length || archived.length) {
+        html += row("Letzte Posts", postCards ||
+          '', archiveBtn) || ('<div class="prof-row"><div class="prof-row-head"><span class="prof-row-title">Letzte Posts</span>' + archiveBtn + '</div><div class="prof-row-empty">Noch keine Posts.</div></div>');
+      }
+
+      // 2) Aktuelle Serien (getrackt + angefangen) — Episoden-Stand + Ø-Bewertung
+      const currentSeries = Object.keys(db.progress)
+        .filter(k => {
+          const p = db.progress[k]; const it = db.items[k];
+          if (!(it && it.mediaType === "tv" && p && Object.keys(p.eps).length > 0)) return false;
+          if (!db.trackedSeries || !db.trackedSeries[k]) return false;
+          const tot = seriesTotalCache[k];
+          if (tot != null && Object.keys(p.eps).length >= tot) return false;   // fertig geschaut
+          return true;
+        })
+        .map(k => ({ key: k, it: db.items[k] }))
+        .sort((a, b) => (b.it.loggedAt || 0) - (a.it.loggedAt || 0))
+        .slice(0, 6);
+      html += row("Aktuelle Serien", currentSeries.map(({ key, it }) => {
+        const last = lastWatched(key);
+        const avg = seriesAvgEpRating(key);
+        const sub = (last ? "S" + last.s + " E" + last.e : "") +
+          (avg ? (last ? " · " : "") + '<span class="hcard-stars">★</span> ' + avg.toFixed(1).replace(".", ",") : "");
+        return card(it.poster, dispTitleOf ? dispTitleOf(it) : (it.title || ""), sub,
+          'data-open="tv:' + it.id + '"');
+      }).join(""));
+
+      // 3) Zuletzt gesehen — alles Geloggte (eigene Ansicht; Freunde sehen nur Gepostetes)
+      const excluded = db.recentlyWatchedExcluded || {};
+      const recent = Object.values(db.items)
+        .filter(it => it.loggedAt && !excluded[(it.mediaType || "movie") + ":" + it.id])
+        .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0)).slice(0, 15);
+      html += row("Zuletzt gesehen", recent.map(it =>
+        card(it.poster, dispTitleOf ? dispTitleOf(it) : (it.title || ""),
+          '<span class="hcard-stars">' + starsOf(it) + '</span>',
+          'data-open="' + (it.mediaType || "movie") + ':' + it.id + '"')).join(""));
+
+      // 4) Meine Watchlist
+      const wl = Object.values(db.watchlist).sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0)).slice(0, 15);
+      html += row("Meine Watchlist", wl.map(it =>
+        card(it.poster, dispTitleOf ? dispTitleOf(it) : (it.title || ""),
+          it.mediaType === "tv" ? "Serie" : "Film",
+          'data-open="' + (it.mediaType || "movie") + ':' + it.id + '"')).join(""));
+
+      // 5+6) Top Filme / Top Serien — angezeigte Ranking-Reihenfolge, mit Rang-Nummer
+      ["movie", "tv"].forEach(mt => {
+        const items = Object.values(db.items).filter(it => it.mediaType === mt && !it.unranked)
+          .sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 10);
+        html += row(mt === "movie" ? "Top Filme" : "Top Serien", items.map((it, i) =>
+          card(it.poster, dispTitleOf ? dispTitleOf(it) : (it.title || ""), it.year || "",
+            'data-open="' + mt + ':' + it.id + '"', true, i + 1)).join(""));
+      });
+
+      host.innerHTML = html ||
+        '<div class="prof-posts-empty">Noch keine Posts.<br>Bewerte einen Titel und tippe auf „Posten" — er erscheint dann hier und im Feed deiner Freunde.</div>';
+
       const openBtn = document.getElementById("prof-archive-open");
       if (openBtn) openBtn.addEventListener("click", () => { _profPostsArchive = true; renderProfilePosts(); });
-      const backBtn = document.getElementById("prof-archive-back");
-      if (backBtn) backBtn.addEventListener("click", () => { _profPostsArchive = false; renderProfilePosts(); });
-      host.querySelectorAll(".prof-post-tile").forEach(btn =>
-        btn.addEventListener("click", () => openMyPostSheet(btn.dataset.key)));
+      host.querySelectorAll(".hcard[data-key]").forEach(el =>
+        el.addEventListener("click", () => openMyPostSheet(el.dataset.key)));
+      host.querySelectorAll(".hcard[data-open]").forEach(el =>
+        el.addEventListener("click", () => {
+          const [mt, id] = el.dataset.open.split(":");
+          openDetail(mt, parseInt(id, 10));
+        }));
     }
 
     let _myPostKey = null;
@@ -11387,6 +11585,9 @@
       const noteEl = document.getElementById("mypost-note");
       if (note) { noteEl.textContent = "„" + note + "“"; noteEl.hidden = false; }
       else noteEl.hidden = true;
+      // R52: Menü + Edit-Box immer frisch zu
+      document.getElementById("mypost-menu").hidden = true;
+      document.getElementById("mypost-edit-box").hidden = true;
       _disarmMyPostDelete();
       document.getElementById("mypost-backdrop").hidden = false;
       document.body.style.overflow = "hidden";
@@ -11396,11 +11597,9 @@
       if (!it) return;
       const m = db.meta[key] || {};
       _fillPostSheet("Dein Post", it.poster, dispTitleOf ? dispTitleOf(it) : (it.title || ""), it.bucket, it.loggedAt, it.mediaType, m.note);
-      // R50: Archiv-Button spiegelt den Zustand; eigene Posts haben Archiv + Löschen
-      const archBtn = document.getElementById("mypost-archive");
-      archBtn.hidden = false;
-      archBtn.textContent = m.archived ? "Wiederherstellen" : "Archivieren";
-      document.getElementById("mypost-delete").hidden = false;
+      // R50/R52: eigenes Post-Sheet hat das ⋯-Menü (Bearbeiten/Archivieren/Löschen)
+      document.getElementById("mypost-menu-btn").hidden = false;
+      document.getElementById("mypost-archive").textContent = m.archived ? "Wiederherstellen" : "Archivieren";
       _myPostKey = key;
       _sheetDetailTarget = { type: it.mediaType, id: it.id, overProfile: false };
     }
@@ -11408,8 +11607,7 @@
     function openFriendPostSheet(post, ownerName) {
       if (!post) return;
       _fillPostSheet("Post von " + (ownerName || "Freund"), post.posterPath, post.title || "", post.bucket, post.watchedAt, post.mediaType, post.note);
-      document.getElementById("mypost-archive").hidden = true;   // fremde Posts: nur ansehen
-      document.getElementById("mypost-delete").hidden = true;
+      document.getElementById("mypost-menu-btn").hidden = true;   // fremde Posts: nur ansehen
       _myPostKey = null;
       _sheetDetailTarget = { type: post.mediaType || "movie", id: post.id, overProfile: true };
     }
@@ -11432,6 +11630,58 @@
       if (!t || !t.id) return;
       if (t.overProfile) detailEl.classList.add("over-profile");   // Detail ÜBER dem Freundesprofil
       openDetail(t.type, t.id);
+    });
+
+    // ---------- R52: ⋯-Menü (Bearbeiten / Archivieren / Löschen) ----------
+    document.getElementById("mypost-menu-btn").addEventListener("click", e => {
+      e.stopPropagation();
+      const menu = document.getElementById("mypost-menu");
+      menu.hidden = !menu.hidden;
+      if (menu.hidden) _disarmMyPostDelete();   // zugeklappt = Löschen wieder entschärfen
+    });
+    // Tap irgendwo sonst im Sheet schließt das Menü
+    document.querySelector("#mypost-backdrop .sheet").addEventListener("click", e => {
+      const menu = document.getElementById("mypost-menu");
+      if (menu.hidden) return;
+      if (e.target.closest("#mypost-menu") || e.target.closest("#mypost-menu-btn")) return;
+      menu.hidden = true;
+      _disarmMyPostDelete();
+    });
+
+    // R52: Beschreibung nachträglich bearbeiten — schreibt meta.note (fließt über
+    // den Profil-Snapshot auch zu den Freunden) und aktualisiert Feed + Profil.
+    document.getElementById("mypost-edit").addEventListener("click", () => {
+      const key = _myPostKey;
+      if (!key) return;
+      document.getElementById("mypost-menu").hidden = true;
+      const m = db.meta[key] || {};
+      document.getElementById("mypost-note").hidden = true;
+      const box = document.getElementById("mypost-edit-box");
+      const input = document.getElementById("mypost-edit-input");
+      input.value = m.note || "";
+      box.hidden = false;
+      input.focus();
+    });
+    document.getElementById("mypost-edit-cancel").addEventListener("click", () => {
+      document.getElementById("mypost-edit-box").hidden = true;
+      const key = _myPostKey;
+      const m = key ? (db.meta[key] || {}) : {};
+      const noteEl = document.getElementById("mypost-note");
+      if (m.note) { noteEl.textContent = "„" + m.note + "“"; noteEl.hidden = false; }
+    });
+    document.getElementById("mypost-edit-save").addEventListener("click", () => {
+      const key = _myPostKey;
+      if (!key) return;
+      const val = document.getElementById("mypost-edit-input").value.trim();
+      const m = getMeta(key);
+      m.note = val;
+      saveMeta(key, m);
+      document.getElementById("mypost-edit-box").hidden = true;
+      const noteEl = document.getElementById("mypost-note");
+      if (val) { noteEl.textContent = "„" + val + "“"; noteEl.hidden = false; }
+      else noteEl.hidden = true;
+      showToast("Beschreibung gespeichert");
+      _refreshAfterPostChange();
     });
 
     // ---------- R50: Post archivieren / wiederherstellen / löschen ----------
@@ -14830,13 +15080,22 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R51";
+    const APP_VERSION = "R52";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R52": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Profil als Übersicht:</strong> Der Posts-Reiter zeigt jetzt horizontale Reihen zum Durchwischen — Letzte Posts, Aktuelle Serien (mit Episoden-Stand und Ø-Bewertung), Zuletzt gesehen, deine Watchlist sowie Top Filme und Top Serien.",
+          "<strong>⋯-Menü am Post:</strong> Einen Post antippen → oben rechts auf die drei Punkte. Dort kannst du die Beschreibung nachträglich bearbeiten, den Post archivieren oder löschen — wie bei Instagram.",
+          "<strong>Aufgeräumter:</strong> Buttons und Schriften in den Sheets sind kleiner und ruhiger, „Details ansehen“ ist jetzt ein dezenter Link.",
+          "<strong>Schneller:</strong> Tab-Wechsel reagieren sofort — große Listen (z.&nbsp;B. das Ranking) bauen sich im Hintergrund auf. Auf dem Handy springt die Tastatur nicht mehr automatisch auf, wenn du auf Home gehst."
+        ]
+      },
       "R51": {
         title: "Was ist neu",
         notes: [
