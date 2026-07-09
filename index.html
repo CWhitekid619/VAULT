@@ -14377,13 +14377,19 @@
     // R21-#5: human-readable "X hat …" line per post type.
     function feedActionLabel(p) {
       const title = socialEsc(p.title || "");
-      const epRef = `S${p.season}E${p.episode}` + (p.episodeName ? " – " + socialEsc(p.episodeName) : "");
+      // Generische TMDB-Platzhalternamen ("Folge 3"/"Episode 3") sind redundant zu S1E3
+      // und werden nicht mit angezeigt.
+      const epNameReal = p.episodeName && !/^(folge|episode)\s*\d+$/i.test(p.episodeName.trim())
+        ? p.episodeName : "";
+      const epRef = `S${p.season}E${p.episode}` + (epNameReal ? " – " + socialEsc(epNameReal) : "");
       switch (p.type) {
         case "watched":         return `hat ${title} geschaut`;
         case "rated":           return `hat ${title} bewertet`;
         case "ranked":          return `hat ${title}${p.rank ? " auf Platz " + p.rank : ""} gerankt`;
         case "episode_watched": return `hat ${epRef} geschaut`;
-        case "episode_rated":   return `hat ${epRef}${title ? " von " + title : ""} bewertet`;
+        // R56.2: nur einmal (unten in der Titelzeile) den Serientitel zeigen, oben nur
+        // die Folgen-Referenz; „geschaut" statt „bewertet" — die Sterne zeigen die Wertung.
+        case "episode_rated":   return `hat ${epRef} geschaut`;
         case "episode_shared":  return `hat ${epRef}${title ? " von " + title : ""} geteilt`;
         case "actor_ranked":    return `hat ${socialEsc(p.actorName || "")} ins Ranking geschickt`;
         case "actor_number_one":return `${socialEsc(p.actorName || "")}s Film ${title} ist jetzt Nr. 1 im Duell`;
@@ -15527,13 +15533,19 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R56.1";
+    const APP_VERSION = "R56.2";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R56.2": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Folgen-Post aufgeräumt:</strong> Die Aktionszeile eines Folgen-Posts zeigt jetzt „hat S1E3 geschaut“ statt „hat S1E3 – Folge 3 von „Titel“ bewertet“ — kein redundanter Platzhaltername, kein doppelter Serientitel (der steht weiterhin unten in der Kartenzeile) und „geschaut“ statt „bewertet“, weil die Sterne die Wertung ohnehin zeigen."
+        ]
+      },
       "R56.1": {
         title: "Was ist neu",
         notes: [
