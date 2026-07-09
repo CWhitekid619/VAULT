@@ -6490,12 +6490,14 @@
         });
         qrBuckets.appendChild(el);
       });
-      // R55: neue Titel (noch nie bewertet, kein expliziter Zustand) übernehmen die
-      // zuletzt benutzte „Zuletzt gesehen"-Einstellung als Vorgabe, statt immer
-      // sichtbar zu starten. Titel mit eigenem, bereits gesetztem Zustand bleiben unberührt.
+      // R55.1: Titel OHNE eigenen, bereits gesetzten Zustand übernehmen die zuletzt
+      // benutzte „Zuletzt gesehen"-Einstellung als Vorgabe, statt immer sichtbar zu
+      // starten. WICHTIG: nicht auf `!existing` prüfen — logWatched() legt den
+      // db.items-Eintrag schon VOR openQuickRate() an (Watched-Button-Flow), da wäre
+      // `existing` hier immer schon gesetzt und die Vorgabe würde nie greifen.
       const _recentKey = keyOf(r.media_type, r.id);
       db.recentlyWatchedExcluded = db.recentlyWatchedExcluded || {};
-      if (!existing && !(_recentKey in db.recentlyWatchedExcluded) && db.settings && db.settings.recentDefaultHidden) {
+      if (!(_recentKey in db.recentlyWatchedExcluded) && db.settings && db.settings.recentDefaultHidden) {
         db.recentlyWatchedExcluded[_recentKey] = true;
       }
       _syncQrRecentCheck();
@@ -15426,18 +15428,18 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R55";
+    const APP_VERSION = "R55.1";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
-      "R55": {
+      "R55.1": {
         title: "Was ist neu",
         notes: [
           "<strong>„Zuletzt gesehen“ direkt beim Bewerten:</strong> Statt im Drei-Punkte-Menü steht jetzt eine eigene Zeile „Zuletzt gesehen“ mit Schalter direkt neben „Geschaut mit“ — an- oder austippen genügt.",
-          "<strong>Merkt sich deine Einstellung:</strong> Wie du den Schalter zuletzt gelassen hast, gilt als Vorgabe für den nächsten neuen Titel — kein wiederholtes Umschalten mehr nötig."
+          "<strong>Merkt sich deine Einstellung jetzt wirklich:</strong> Der Fix aus R55 griff beim Antippen von „Watched“ nicht — die Vorgabe kam nie an, weil der Titel zu dem Zeitpunkt schon als „gesehen“ vermerkt war. Jetzt übernimmt jeder neu bewertete Titel zuverlässig deine zuletzt benutzte Einstellung."
         ]
       },
       "R54": {
