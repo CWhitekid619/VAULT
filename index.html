@@ -1765,14 +1765,74 @@
     .note-input:focus { border-color: var(--accent); }
     .note-input::placeholder { color: var(--text-mute); }
 
-    /* ---------- Profile stats ---------- */
-    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    /* ---------- Profile stats (R49: kompakt, 4 in einer Reihe, Insta-Stil) ---------- */
+    .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
     .stat-card {
       background: var(--surface); border: 1px solid var(--border);
-      border-radius: 16px; padding: 22px 16px; text-align: center;
+      border-radius: 12px; padding: 12px 4px; text-align: center;
     }
-    .stat-num { font-size: 34px; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
-    .stat-label { font-size: 13px; color: var(--text-dim); margin-top: 8px; letter-spacing: .02em; }
+    .stat-num { font-size: 20px; font-weight: 800; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+    .stat-label { font-size: 11px; color: var(--text-dim); margin-top: 5px; letter-spacing: .02em; }
+
+    /* ---------- R49: Instagram-Reiter auf dem Profil ---------- */
+    .prof-tabs { display: flex; border-bottom: 1px solid var(--border); margin: 18px 0 14px; }
+    .prof-tab {
+      flex: 1; background: none; border: none; border-bottom: 2px solid transparent;
+      padding: 10px 0 9px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      margin-bottom: -1px;
+    }
+    .prof-tab svg { width: 22px; height: 22px; stroke: var(--text-mute); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .prof-tab.active { border-bottom-color: var(--accent); }
+    .prof-tab.active svg { stroke: var(--text); }
+    .prof-pane { min-height: 120px; }
+
+    /* R49: Posts-Grid (3 Spalten, wie Instagram) */
+    .prof-posts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
+    .prof-post-tile {
+      position: relative; aspect-ratio: 2 / 3; border: none; padding: 0; cursor: pointer;
+      background: var(--surface-2); border-radius: 4px; overflow: hidden;
+    }
+    .prof-post-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .prof-post-tile:active { opacity: .85; }
+    .prof-post-badges {
+      position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 4px;
+      padding: 14px 6px 5px; font-size: 11px; font-weight: 700; color: #fff;
+      background: linear-gradient(transparent, rgba(0,0,0,.72));
+    }
+    .prof-post-stars { color: var(--accent); letter-spacing: .5px; }
+    .prof-post-note-ic { margin-left: auto; font-size: 12px; }
+    .prof-post-tile-ph { width: 100%; height: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; color: var(--text-mute); font-size: 11px; padding: 6px; text-align: center; }
+    .prof-posts-empty { padding: 28px 12px; text-align: center; color: var(--text-mute); font-size: 13px; line-height: 1.5; }
+
+    /* R49: „Dein Post"-Sheet */
+    .mypost-head { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 12px; }
+    .mypost-poster { flex: 0 0 64px; width: 64px; height: 96px; border-radius: 8px; object-fit: cover; }
+    .mypost-poster-ph { background: var(--surface-2); }
+    .mypost-head-body { flex: 1; min-width: 0; }
+    .mypost-title { font-size: 16px; font-weight: 800; letter-spacing: -.01em; line-height: 1.25; }
+    .mypost-stars { color: var(--accent); font-size: 15px; letter-spacing: 2px; margin-top: 5px; }
+    .mypost-date { font-size: 12px; color: var(--text-mute); margin-top: 5px; }
+    .mypost-note {
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
+      padding: 10px 13px; font-size: 14px; line-height: 1.5; color: var(--text); margin-bottom: 12px;
+      white-space: pre-wrap; word-wrap: break-word;
+    }
+
+    /* R49: @-Mentions in Kommentaren */
+    .cmt-mention { color: var(--accent); font-weight: 700; cursor: pointer; }
+    .feed-cmt-form { position: relative; }
+    .cmt-mention-box {
+      position: absolute; left: 0; right: 44px; bottom: calc(100% + 6px); z-index: 5;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      box-shadow: 0 10px 28px rgba(0,0,0,.45); overflow: hidden; max-height: 210px; overflow-y: auto;
+    }
+    .cmt-mention-item {
+      display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 12px;
+      background: none; border: none; cursor: pointer; text-align: left; color: var(--text);
+      font-family: inherit; font-size: 14px; font-weight: 600;
+    }
+    .cmt-mention-item:active, .cmt-mention-item:hover { background: var(--surface-2); }
+    .cmt-mention-item .feed-cmt-av { pointer-events: none; }
     .profile-note { font-size: 12px; color: var(--text-mute); text-align: center; margin-top: 18px; line-height: 1.5; }
     .export-section { margin-top: 28px; display: flex; justify-content: center; }
     .export-btn { display: flex; align-items: center; gap: 8px; padding: 11px 22px;
@@ -2884,23 +2944,45 @@
             <svg viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
           </button>
         </div>
-        <!-- Statistiken (Filme / Serien / Stunden / Episoden) -->
+        <!-- Statistiken (Filme / Serien / Stunden / Episoden) — R49: kompakt + Count-up -->
         <div id="profile-stats" class="stat-grid"></div>
         <div id="profile-note" class="profile-note"></div>
-        <!-- R42: „Mit Freunden geschaut" — Statistik aus watchedWith/watchingWith -->
-        <div id="profile-with-friends"></div>
       </div>
 
-      <!-- Listen (aus dem alten Listen-Tab hierher gezogen, R37) -->
-      <div id="lists-overview">
-        <div class="prof-section-head">
-          <h2>Deine Listen</h2>
+      <!-- R49: Instagram-Reiter — Posts / Mit Freunden geschaut / Deine Listen -->
+      <div id="prof-tabs-wrap">
+        <div class="prof-tabs" id="prof-tabs" role="tablist">
+          <button class="prof-tab active" data-ptab="posts" type="button" role="tab" aria-label="Posts">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          </button>
+          <button class="prof-tab" data-ptab="friends" type="button" role="tab" aria-label="Mit Freunden geschaut">
+            <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </button>
+          <button class="prof-tab" data-ptab="lists" type="button" role="tab" aria-label="Deine Listen">
+            <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>
+          </button>
         </div>
-        <div id="lists-cards" class="lists-cards"></div>
-        <button id="new-list-btn" class="new-list-btn" type="button">
-          <svg viewBox="0 0 24 24"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></svg>
-          Neue Liste
-        </button>
+
+        <!-- Reiter 1: eigene Posts -->
+        <div id="prof-pane-posts" class="prof-pane">
+          <div id="profile-posts"></div>
+        </div>
+
+        <!-- Reiter 2: „Mit Freunden geschaut" (R42, aus dem Kopf hierher gezogen) -->
+        <div id="prof-pane-friends" class="prof-pane" hidden>
+          <div id="profile-with-friends"></div>
+        </div>
+
+        <!-- Reiter 3: Listen (aus dem alten Listen-Tab hierher gezogen, R37) -->
+        <div id="prof-pane-lists" class="prof-pane" hidden>
+          <div id="lists-overview">
+            <div id="lists-cards" class="lists-cards"></div>
+            <button id="new-list-btn" class="new-list-btn" type="button">
+              <svg viewBox="0 0 24 24"><line x1="12" y1="6" x2="12" y2="18"/><line x1="6" y1="12" x2="18" y2="12"/></svg>
+              Neue Liste
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Detail: Inhalt einer Liste -->
@@ -3321,6 +3403,26 @@
       <div id="wws-add-list" class="wws-add-list"></div>
       <button id="wws-add-save" class="sheet-btn-primary" type="button">Hinzufügen</button>
       <button id="wws-add-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
+    </div>
+  </div>
+
+  <!-- ============ R49: EIGENER POST — Detail-Sheet (Profil → Posts-Grid) ============ -->
+  <div id="mypost-backdrop" class="sheet-backdrop" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Dein Post">
+      <div class="sheet-handle"></div>
+      <div class="sheet-section-label">Dein Post</div>
+      <div class="mypost-head">
+        <img id="mypost-poster" class="mypost-poster" alt="" hidden>
+        <div class="mypost-poster mypost-poster-ph" id="mypost-poster-ph" hidden></div>
+        <div class="mypost-head-body">
+          <div class="mypost-title" id="mypost-title"></div>
+          <div class="mypost-stars" id="mypost-stars"></div>
+          <div class="mypost-date" id="mypost-date"></div>
+        </div>
+      </div>
+      <div class="mypost-note" id="mypost-note" hidden></div>
+      <button id="mypost-detail" class="sheet-btn-primary" type="button">Details ansehen</button>
+      <button id="mypost-close" class="sheet-btn-cancel" type="button">Schließen</button>
     </div>
   </div>
 
@@ -9026,6 +9128,8 @@
       listsOverview.hidden = false;
       const pTop = document.getElementById("profile-top");   // R37: Kopf wieder einblenden
       if (pTop) pTop.hidden = false;
+      const pTabs = document.getElementById("prof-tabs-wrap");   // R49: Reiter wieder einblenden
+      if (pTabs) pTabs.hidden = false;
       renderListsCards();
     }
 
@@ -9097,6 +9201,8 @@
       listDetail.scrollTop = 0;
       const pTop = document.getElementById("profile-top");   // R37: Kopf ausblenden, Liste im Fokus
       if (pTop) pTop.hidden = true;
+      const pTabs = document.getElementById("prof-tabs-wrap");   // R49: Reiter ausblenden
+      if (pTabs) { pTabs.hidden = true; switchProfTab("lists"); }   // beim Zurück landet man auf dem Listen-Reiter
       document.getElementById("list-detail-name").textContent = listName(listId);
       const delBtn = document.getElementById("delete-list");
       delBtn.hidden = (listId === WATCHLIST_ID);
@@ -11091,17 +11197,132 @@
       for (const k in db.progress) n += Object.keys(db.progress[k].eps).length;
       return n;
     }
-    function paintStats(movies, series, hours, eps) {
-      const cards = [
-        { n: movies, l: "Filme" },
-        { n: series, l: "Serien" },
-        { n: hours == null ? "…" : hours, l: "Stunden" },
-        { n: eps, l: "Episoden" }
-      ];
-      document.getElementById("profile-stats").innerHTML = cards.map(c =>
-        '<div class="stat-card"><div class="stat-num">' + c.n + '</div><div class="stat-label">' + c.l + "</div></div>"
-      ).join("");
+    // R49: Die Zahlen zählen sichtbar hoch (Count-up), statt einfach dazustehen.
+    // dataset.cur hält den aktuell angezeigten Wert; ein Token pro Element bricht
+    // eine noch laufende Animation ab, wenn ein neuer Zielwert kommt.
+    function animateStatNum(el, target) {
+      const from = parseInt(el.dataset.cur || "0", 10) || 0;
+      el.dataset.cur = String(target);
+      if (from === target) { el.textContent = String(target); return; }
+      const token = (el._statTok = (el._statTok || 0) + 1);
+      const dur = 900, t0 = performance.now();
+      (function step(now) {
+        if (el._statTok !== token) return;
+        const p = Math.min(1, (now - t0) / dur);
+        const eased = 1 - Math.pow(1 - p, 3);   // easeOutCubic — schnell los, weich ankommen
+        el.textContent = String(Math.round(from + (target - from) * eased));
+        if (p < 1) requestAnimationFrame(step);
+      })(t0);
     }
+    function paintStats(movies, series, hours, eps, restart) {
+      const host = document.getElementById("profile-stats");
+      const defs = [
+        { k: "movies", n: movies, l: "Filme" },
+        { k: "series", n: series, l: "Serien" },
+        { k: "hours",  n: hours,  l: "Stunden" },
+        { k: "eps",    n: eps,    l: "Episoden" }
+      ];
+      if (!host.dataset.built) {
+        host.dataset.built = "1";
+        host.innerHTML = defs.map(d =>
+          '<div class="stat-card"><div class="stat-num" data-stat="' + d.k + '">0</div><div class="stat-label">' + d.l + "</div></div>"
+        ).join("");
+      }
+      defs.forEach(d => {
+        const el = host.querySelector('[data-stat="' + d.k + '"]');
+        if (!el) return;
+        if (d.n == null) { el.textContent = "…"; el.dataset.cur = "0"; return; }   // Stunden werden noch berechnet
+        if (restart) el.dataset.cur = "0";
+        animateStatNum(el, d.n);
+      });
+    }
+
+    // ====================================================================
+    //  R49: Instagram-Reiter auf dem Profil — Posts / Mit Freunden / Listen
+    // ====================================================================
+    let _profTab = "posts";
+    function switchProfTab(t) {
+      _profTab = t;
+      document.querySelectorAll("#prof-tabs .prof-tab").forEach(b => b.classList.toggle("active", b.dataset.ptab === t));
+      document.getElementById("prof-pane-posts").hidden   = t !== "posts";
+      document.getElementById("prof-pane-friends").hidden = t !== "friends";
+      document.getElementById("prof-pane-lists").hidden   = t !== "lists";
+      if (t === "posts") renderProfilePosts();
+      if (t === "friends") renderWithFriends();
+      if (t === "lists") renderListsCards();
+    }
+    document.querySelectorAll("#prof-tabs .prof-tab").forEach(b =>
+      b.addEventListener("click", () => switchProfTab(b.dataset.ptab)));
+
+    // Reiter 1: bewusst gepostete Titel (meta.posted) als 3er-Poster-Grid — Tippen
+    // öffnet das „Dein Post"-Sheet mit Sternen, Datum und der eigenen Notiz.
+    function renderProfilePosts() {
+      const host = document.getElementById("profile-posts");
+      if (!host) return;
+      const posts = [];
+      for (const k in db.meta) {
+        const m = db.meta[k];
+        if (!m || !m.posted) continue;
+        const it = db.items[k];
+        if (!it) continue;
+        posts.push({ key: k, it, m });
+      }
+      posts.sort((a, b) => (b.it.loggedAt || 0) - (a.it.loggedAt || 0));
+      if (!posts.length) {
+        host.innerHTML = '<div class="prof-posts-empty">Noch keine Posts.<br>Bewerte einen Titel und tippe auf „Posten" — er erscheint dann hier und im Feed deiner Freunde.</div>';
+        return;
+      }
+      host.innerHTML = '<div class="prof-posts-grid">' + posts.map(p => {
+        const stars = p.it.bucket && FEED_STAR[p.it.bucket] ? "★".repeat(FEED_STAR[p.it.bucket]) : "";
+        const badges = (stars || p.m.note)
+          ? '<div class="prof-post-badges">' +
+              (stars ? '<span class="prof-post-stars">' + stars + '</span>' : '') +
+              (p.m.note ? '<span class="prof-post-note-ic">💬</span>' : '') + '</div>'
+          : '';
+        const img = p.it.poster
+          ? '<img loading="lazy" src="' + IMG_BASE + 'w342' + p.it.poster + '" alt="">'
+          : '<span class="prof-post-tile-ph">' + esc(dispTitleOf ? dispTitleOf(p.it) : (p.it.title || "")) + '</span>';
+        return '<button class="prof-post-tile" type="button" data-key="' + esc(p.key) + '">' + img + badges + '</button>';
+      }).join("") + '</div>';
+      host.querySelectorAll(".prof-post-tile").forEach(btn =>
+        btn.addEventListener("click", () => openMyPostSheet(btn.dataset.key)));
+    }
+
+    let _myPostKey = null;
+    function openMyPostSheet(key) {
+      const it = db.items[key];
+      if (!it) return;
+      const m = db.meta[key] || {};
+      const img = document.getElementById("mypost-poster");
+      const ph  = document.getElementById("mypost-poster-ph");
+      if (it.poster) { img.src = IMG_BASE + "w185" + it.poster; img.hidden = false; ph.hidden = true; }
+      else { img.hidden = true; ph.hidden = false; }
+      document.getElementById("mypost-title").textContent = dispTitleOf ? dispTitleOf(it) : (it.title || "");
+      const stars = it.bucket && FEED_STAR[it.bucket] ? FEED_STAR[it.bucket] : 0;
+      document.getElementById("mypost-stars").textContent = stars ? "★".repeat(stars) + "☆".repeat(5 - stars) : "";
+      const d = it.loggedAt ? new Date(it.loggedAt) : null;
+      document.getElementById("mypost-date").textContent =
+        (it.mediaType === "tv" ? "Serie" : "Film") +
+        (d ? " · gepostet am " + d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }) : "");
+      const noteEl = document.getElementById("mypost-note");
+      if (m.note) { noteEl.textContent = "„" + m.note + "“"; noteEl.hidden = false; }
+      else noteEl.hidden = true;
+      _myPostKey = key;
+      document.getElementById("mypost-backdrop").hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+    function closeMyPostSheet() {
+      document.getElementById("mypost-backdrop").hidden = true;
+      document.body.style.overflow = "";
+      _myPostKey = null;
+    }
+    document.getElementById("mypost-close").addEventListener("click", closeMyPostSheet);
+    document.getElementById("mypost-backdrop").addEventListener("click", e => { if (e.target.id === "mypost-backdrop") closeMyPostSheet(); });
+    document.getElementById("mypost-detail").addEventListener("click", () => {
+      const it = _myPostKey ? db.items[_myPostKey] : null;
+      closeMyPostSheet();
+      if (it) openDetail(it.mediaType, it.id);
+    });
 
     // point 12 / R9-P6a: blocked titles are hidden behind a tap so unwanted content
     // isn't visible at a glance. The list collapses by default and reveals on tap.
@@ -11730,19 +11951,21 @@
       renderPrivacy();      // R3: Datenschutz (without Listen-Freigaben in R17)
       renderListShares();   // R17-A2: Listen-Freigaben as separate accordion (#9)
       renderWithFriends();  // R42: „Mit Freunden geschaut"-Statistik
+      renderProfilePosts(); // R49: Posts-Reiter aktuell halten
       const noteEl = document.getElementById("profile-note");
       const items = Object.values(db.items);
       const movies = items.filter(i => i.mediaType === "movie");
       const series = items.filter(i => i.mediaType === "tv");
 
       if (!items.length) {
-        paintStats(0, 0, 0, 0);
+        paintStats(0, 0, 0, 0, true);
         noteEl.textContent = "Noch nichts eingetragen — fang im Log-Tab an.";
         return;
       }
 
       const needPrep = items.some(i => !i.enriched);
-      paintStats(movies.length, series.length, null, episodesWatchedTotal());
+      // restart=true: bei jedem Profil-Öffnen zählen die Zahlen von 0 hoch (R49)
+      paintStats(movies.length, series.length, null, episodesWatchedTotal(), true);
       noteEl.textContent = needPrep ? "Stunden werden berechnet …" : "";
 
       await enrichItems(items);
@@ -11750,7 +11973,7 @@
       let mins = 0;
       movies.forEach(m => { if (m.runtime) mins += m.runtime; });
       series.forEach(s => { const w = watchedCount(keyOf("tv", s.id)); if (s.runtime) mins += w * s.runtime; });
-      paintStats(movies.length, series.length, Math.round(mins / 60), episodesWatchedTotal());
+      paintStats(movies.length, series.length, Math.round(mins / 60), episodesWatchedTotal(), false);
       noteEl.textContent = "";   // R44: Hinweis „Serien-Stunden zählen nur abgehakte Episoden" entfernt (Nutzerwunsch)
     }
 
@@ -12101,7 +12324,7 @@
             // like any other recommendation. "Zur Detailseite" stays available inside.
             const full = _notifCache.find(x => x.id === nid);
             if (full) { closeNotifCenter(); openSingleReco(full); }
-          } else if (el.dataset.type === "post_comment" || el.dataset.type === "post_comment_reply") {
+          } else if (el.dataset.type === "post_comment" || el.dataset.type === "post_comment_reply" || el.dataset.type === "comment_mention") {
             // R23-#17/R47: jump to the activity feed, scroll to the commented post
             // and open its comment thread (postId travels in the notification).
             const full = _notifCache.find(x => x.id === nid);
@@ -12126,7 +12349,7 @@
           // sondern wie der Rest der Zeile zur eigentlichen Aktion springen — sonst tippt
           // man (naheliegend) genau auf den Namen und kommt nie dort an, wo man etwas tun kann.
           const parentType = span.closest(".notif-item")?.dataset.type;
-          if (["friend_request", "friend_accepted", "post_comment", "post_comment_reply"].includes(parentType)) return;
+          if (["friend_request", "friend_accepted", "post_comment", "post_comment_reply", "comment_mention"].includes(parentType)) return;
           e.stopPropagation();
           const tap = span.dataset.ntap;
           if (tap === "user") {
@@ -12183,6 +12406,7 @@
       if (type === "reco_reply")     return "💬";
       if (type === "post_comment")   return "💬";
       if (type === "post_comment_reply") return "💬";
+      if (type === "comment_mention") return "📣";
       if (type === "reco_watched")   return "👁️";
       if (type === "reco_seen")      return "👁️";
       if (type === "reco_added_list")return "📋";
@@ -12217,6 +12441,7 @@
       if (n.type === "reco_reply")       return `${from} hat auf deine Empfehlung geantwortet: „${socialEsc(n.replyText || "")}“`;
       if (n.type === "post_comment")     return `${from} hat deinen Post${n.itemTitle ? " zu " + item : ""} kommentiert${n.commentText ? `: „${socialEsc(n.commentText)}“` : ""}`;
       if (n.type === "post_comment_reply") return `${from} hat auch${n.itemTitle ? " zu " + item : ""} kommentiert${n.commentText ? `: „${socialEsc(n.commentText)}“` : ""}`;
+      if (n.type === "comment_mention")  return `${from} hat dich in einem Kommentar${n.itemTitle ? " zu " + item : ""} erwähnt${n.commentText ? `: „${socialEsc(n.commentText)}“` : ""}`;
       if (n.type === "reco_watched")     return `${from} hat ${item} geschaut`;
       if (n.type === "reco_seen")        return `${from} hat ${item} bereits gesehen`;
       if (n.type === "match")            return `Match mit ${from}! Ihr habt beide ${item} gesehen 🎬`;
@@ -12888,7 +13113,11 @@
       const host = document.getElementById("profile-with-friends");
       if (!host) return;
       const groups = collectWithFriendsStats();
-      if (!groups.length) { host.innerHTML = ""; return; }
+      if (!groups.length) {
+        // R49: eigener Reiter → ein leerer Reiter braucht eine Erklärung statt Leere
+        host.innerHTML = '<div class="prof-posts-empty">Noch nichts gemeinsam geschaut.<br>Markiere beim Bewerten „Geschaut mit …" — eure gemeinsamen Titel erscheinen dann hier.</div>';
+        return;
+      }
       let html = '<div class="prof-section-head"><h2>Mit Freunden geschaut</h2></div>';
       html += groups.map(g => {
         const movies = g.watched.filter(it => it.mediaType === "movie").length;
@@ -13831,6 +14060,7 @@
         section.innerHTML =
           `<div class="feed-cmt-list"><div class="feed-cmt-empty">Lädt …</div></div>
            <div class="feed-cmt-form">
+             <div class="cmt-mention-box" hidden></div>
              <textarea class="feed-cmt-input" rows="1" placeholder="Kommentar …" maxlength="500"></textarea>
              <button class="feed-cmt-send" type="button" disabled aria-label="Senden">
                <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -13838,10 +14068,13 @@
            </div>`;
         const input = section.querySelector(".feed-cmt-input");
         const send  = section.querySelector(".feed-cmt-send");
+        const mbox  = section.querySelector(".cmt-mention-box");
         input.addEventListener("input", () => {
           send.disabled = !input.value.trim();
           input.style.height = "auto"; input.style.height = Math.min(90, input.scrollHeight) + "px";
+          updateMentionBox(input, mbox);   // R49: @-Vorschläge während des Tippens
         });
+        input.addEventListener("blur", () => setTimeout(() => { mbox.hidden = true; }, 250));
         input.addEventListener("keydown", e => {
           if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!send.disabled) submitComment(btn, section, input, send); }
         });
@@ -13855,6 +14088,54 @@
       renderCommentList(list, comments);
     }
 
+    // ---------- R49: @-Mentions in Kommentaren ----------
+    // Erlaubte Zeichen in einem @Namen (deckt die Benutzernamen-Regeln der App ab).
+    const MENTION_RX = /(^|[\s(])@([\wäöüÄÖÜß.\-]+)/g;
+    function _acceptedFriends() {
+      return (_socialFriends || []).filter(f => f.status === "accepted" && f.username);
+    }
+    // Während des Tippens: steht vor dem Cursor ein angefangenes „@…", zeigt die Box
+    // passende Freunde. Auswahl per pointerdown (läuft VOR dem blur des Inputs).
+    function updateMentionBox(input, box) {
+      if (!box) return;
+      const pos = input.selectionStart != null ? input.selectionStart : input.value.length;
+      const before = input.value.slice(0, pos);
+      const m = before.match(/(^|[\s(])@([\wäöüÄÖÜß.\-]*)$/);
+      const friends = _acceptedFriends();
+      if (!m || !friends.length) { box.hidden = true; return; }
+      const q = m[2].toLowerCase();
+      const hits = friends.filter(f => f.username.toLowerCase().indexOf(q) === 0).slice(0, 6);
+      if (!hits.length) { box.hidden = true; return; }
+      box.innerHTML = hits.map(f =>
+        '<button class="cmt-mention-item" type="button" data-name="' + socialEsc(f.username) + '">' +
+          '<div class="feed-cmt-av">' + avatarHtml(f.uid, f.username) + '</div>' +
+          '<span>@' + socialEsc(f.username) + '</span></button>').join("");
+      box.hidden = false;
+      box.querySelectorAll(".cmt-mention-item").forEach(b =>
+        b.addEventListener("pointerdown", e => {
+          e.preventDefault();   // Fokus bleibt im Input → kein blur vor dem Einfügen
+          insertMention(input, box, b.dataset.name);
+        }));
+    }
+    function insertMention(input, box, name) {
+      const pos = input.selectionStart != null ? input.selectionStart : input.value.length;
+      const before = input.value.slice(0, pos).replace(/@[\wäöüÄÖÜß.\-]*$/, "@" + name + " ");
+      const after  = input.value.slice(pos);
+      input.value = before + after;
+      box.hidden = true;
+      input.focus();
+      input.setSelectionRange(before.length, before.length);
+      input.dispatchEvent(new Event("input"));   // Senden-Button aktivieren + Höhe anpassen
+    }
+    // @Namen im Kommentartext gold hervorheben; kennt die App den Freund, wird der
+    // Name klickbar (data-uid → openFriendProfile über die bestehende Bindung).
+    function commentTextHtml(text) {
+      return socialEsc(text || "").replace(MENTION_RX, (all, pre, name) => {
+        const f = _acceptedFriends().find(x => x.username.toLowerCase() === name.toLowerCase());
+        return pre + '<span class="cmt-mention"' + (f ? ' data-uid="' + socialEsc(f.uid) + '"' : '') + '>@' + name + '</span>';
+      });
+    }
+
     function renderCommentList(list, comments) {
       if (!comments.length) { list.innerHTML = '<div class="feed-cmt-empty">Noch keine Kommentare. Schreib den ersten!</div>'; return; }
       list.innerHTML = comments.map(c =>
@@ -13862,7 +14143,7 @@
           <div class="feed-cmt-av" data-uid="${socialEsc(c.userId || "")}">${avatarHtml(c.userId, c.username || "?")}</div>
           <div class="feed-cmt-body">
             <span class="feed-cmt-name" data-uid="${socialEsc(c.userId || "")}">${socialEsc(c.username || "?")}</span>
-            <div class="feed-cmt-text">${socialEsc(c.text || "")}</div>
+            <div class="feed-cmt-text">${commentTextHtml(c.text || "")}</div>
             <div class="feed-cmt-time">${relativeTime(c.timestamp)}</div>
           </div>
         </div>`).join("");
@@ -13902,10 +14183,23 @@
         if (ownerUid && ownerUid !== window.__vaultUser.uid && window.__vaultSocial.pushNotification) {
           window.__vaultSocial.pushNotification(ownerUid, { type: "post_comment", ..._notifBase });
         }
-        // R47: wie bei Instagram auch die anderen Mitkommentierer im Thread
-        // benachrichtigen (außer mir selbst und dem Besitzer, der oben dran ist).
+        // R49: mit @ erwähnte Freunde gezielt benachrichtigen (comment_mention).
+        // Der Post-Besitzer bekommt bereits post_comment — keine Doppel-Notification.
+        const _mentioned = new Set();
         if (window.__vaultSocial.pushNotification) {
-          const _notified = new Set([window.__vaultUser.uid, ownerUid || ""]);
+          let mm;
+          MENTION_RX.lastIndex = 0;
+          while ((mm = MENTION_RX.exec(text))) {
+            const f = _acceptedFriends().find(x => x.username.toLowerCase() === mm[2].toLowerCase());
+            if (!f || f.uid === window.__vaultUser.uid || f.uid === ownerUid || _mentioned.has(f.uid)) continue;
+            _mentioned.add(f.uid);
+            window.__vaultSocial.pushNotification(f.uid, { type: "comment_mention", ..._notifBase });
+          }
+        }
+        // R47: wie bei Instagram auch die anderen Mitkommentierer im Thread
+        // benachrichtigen (außer mir selbst, dem Besitzer und den eben Erwähnten).
+        if (window.__vaultSocial.pushNotification) {
+          const _notified = new Set([window.__vaultUser.uid, ownerUid || "", ..._mentioned]);
           arr.forEach(c => {
             const uid = c && c.userId;
             if (!uid || _notified.has(uid)) return;
@@ -14332,13 +14626,22 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R48";
+    const APP_VERSION = "R49";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R49": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Profil im Instagram-Stil:</strong> Unter dem Profilkopf gibt es jetzt drei Reiter — deine <strong>Posts</strong> als Poster-Grid, <strong>Mit Freunden geschaut</strong> und <strong>Deine Listen</strong>.",
+          "<strong>Posts-Reiter:</strong> Alle bewusst geposteten Filme und Serien auf einen Blick. Tippen zeigt deine Sterne, das Datum und was du dazu geschrieben hast — von dort geht's direkt zur Detailseite.",
+          "<strong>Zahlen zählen hoch:</strong> Filme, Serien, Stunden und Episoden zählen beim Öffnen des Profils animiert hoch — und die Statistik-Kästen sind jetzt kompakter (alle vier in einer Reihe).",
+          "<strong>@-Erwähnungen in Kommentaren:</strong> Tippe @ unter einem Post und wähle einen Freund aus der Vorschlagsliste. Erwähnte Namen erscheinen gold und sind antippbar — und der erwähnte Freund bekommt eine Benachrichtigung."
+        ]
+      },
       "R48": {
         title: "Was ist neu",
         notes: [
