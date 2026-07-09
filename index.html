@@ -1818,6 +1818,23 @@
       white-space: pre-wrap; word-wrap: break-word;
     }
 
+    /* R50: Archiv im Posts-Reiter + Lösch-Button im Post-Sheet */
+    .sheet-btn-danger {
+      width: 100%; padding: 13px; border-radius: 12px; margin-top: 8px;
+      background: transparent; border: 1px solid rgba(229,72,77,.45);
+      color: #e5484d; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer;
+    }
+    .sheet-btn-danger:active, .sheet-btn-danger.armed { background: rgba(229,72,77,.12); border-color: #e5484d; }
+    .prof-posts-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; min-height: 30px; }
+    .prof-posts-head-label { font-size: 13px; font-weight: 700; color: var(--text-dim); letter-spacing: .02em; }
+    .prof-archive-btn {
+      display: flex; align-items: center; gap: 6px; background: none; border: none; cursor: pointer;
+      color: var(--text-mute); font-family: inherit; font-size: 13px; font-weight: 700; padding: 6px 2px;
+    }
+    .prof-archive-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .prof-archive-btn:active { color: var(--text); }
+    .prof-post-tile.archived img { opacity: .5; filter: grayscale(.4); }
+
     /* R49: @-Mentions in Kommentaren */
     .cmt-mention { color: var(--accent); font-weight: 700; cursor: pointer; }
     .feed-cmt-form { position: relative; }
@@ -3422,6 +3439,10 @@
       </div>
       <div class="mypost-note" id="mypost-note" hidden></div>
       <button id="mypost-detail" class="sheet-btn-primary" type="button">Details ansehen</button>
+      <!-- R50: Post archivieren (versteckt überall, wiederherstellbar) bzw. wiederherstellen -->
+      <button id="mypost-archive" class="sheet-btn-ghost" type="button">Archivieren</button>
+      <!-- R50: Post löschen (zweistufig) — der Titel + Bewertung bleiben in der Bibliothek -->
+      <button id="mypost-delete" class="sheet-btn-danger" type="button">Post löschen</button>
       <button id="mypost-close" class="sheet-btn-cancel" type="button">Schließen</button>
     </div>
   </div>
@@ -4321,6 +4342,23 @@
       },
       async deletePost(postId) {
         try { await deleteDoc(doc(firestore, "posts", postId)); } catch (e) {}
+      },
+      // R50: alle EIGENEN posts-Einträge zu einem Titel löschen (Archivieren/Löschen
+      // eines Posts). Best-effort: schlägt das Löschen fehl (Rules/offline), versteckt
+      // der Client den Post trotzdem lokal + über den Profil-Snapshot.
+      async deleteMyItemPosts(userId, mediaType, itemId) {
+        if (!userId || itemId == null) return 0;
+        try {
+          const snap = await getDocs(query(collection(firestore, "posts"), where("userId", "==", userId), limit(200)));
+          const targets = snap.docs.filter(d => {
+            const p = d.data() || {};
+            return /^(watched|rated)$/.test(p.type || "")
+              && String(p.itemId) === String(itemId)
+              && (p.mediaType || "movie") === (mediaType || "movie");
+          });
+          for (const d of targets) { try { await deleteDoc(d.ref); } catch (e) {} }
+          return targets.length;
+        } catch (e) { return 0; }
       },
       // R23-#17: comments live under posts/{postId}/comments (rules deployed R21).
       async addComment(postId, userId, username, text) {
@@ -5355,7 +5393,7 @@
       pushIf(sortedTv[0], "Deine #1 Serie");
       pushIf(sortedTv[1], "Deine #2 Serie");
       // R42: der „Zuletzt gesehen"-Hero-Slide nimmt den neuesten GEPOSTETEN Titel.
-      pushIf(sortedRecent.find(it => { const m = db.meta[it.mediaType + ":" + it.id]; return !!(m && m.posted); }), "Zuletzt gesehen");
+      pushIf(sortedRecent.find(it => isPostLive(db.meta[it.mediaType + ":" + it.id])), "Zuletzt gesehen");
 
       // Favourite-genre picks — best-scored title in a random well-rated genre.
       const topGenreOf = (arr) => {
@@ -5704,8 +5742,7 @@
           const recent = all.filter(it => {
             const key = (it.mediaType || it.media_type) + ":" + it.id;
             if (excluded[key]) return false;
-            const m = db.meta[key];
-            return !!(m && m.posted);
+            return isPostLive(db.meta[key]);   // R50: archivierte Posts zählen nicht mehr
           }).sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0)).slice(0, 10);
           buildHomeRow("lh-recent", "Zuletzt gesehen", recent, false, true); break;
         }
@@ -5929,7 +5966,7 @@
       if (sectionId === "lh-recent") {
         // R42: auch die „Alle anzeigen"-Seite zeigt nur gepostete Titel.
         const all = Object.values(db.items)
-          .filter(it => { const m = db.meta[it.mediaType + ":" + it.id]; return !!(m && m.posted); })
+          .filter(it => isPostLive(db.meta[it.mediaType + ":" + it.id]))   // R50: ohne archivierte
           .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0));
         if (!all.length) { listEl.innerHTML = '<div class="placeholder"><span>Noch nichts gepostet.</span></div>'; return; }
         all.forEach(it => {
@@ -6184,6 +6221,7 @@
       let metaChanged = false;
       if (noteTrim && m.note !== noteTrim) { m.note = noteTrim; metaChanged = true; }
       if (!m.posted) { m.posted = true; metaChanged = true; }
+      if (m.archived) { m.archived = false; metaChanged = true; }   // R50: erneut posten hebt das Archiv auf
       if (metaChanged) saveMeta(key, m);
       // R36: Profil-Schnappschuss SOFORT neu veröffentlichen (nicht auf den ~2s-Debounce
       // warten). Der recentlyWatched-Kanal ist der zuverlässige Weg zum Freund — die
@@ -8381,17 +8419,21 @@
       // stillschweigend und der 3★-Feed-Fix (meta.posted) kam nie in der Cloud an.
       // R41: watchedWith/watchingWith ([{uid,name}]) gehören zur Whitelist — sonst
       // verwirft saveMeta die Partner-Vermerke stillschweigend (Lektion aus R35.1).
-      return { note: (m && m.note) || "", tags: (m && m.tags) || [], rewatch: !!(m && m.rewatch), flagged: !!(m && m.flagged), removedTags: (m && m.removedTags) || [], autoTags: (m && m.autoTags) || [], posted: !!(m && m.posted), watchedWith: (m && m.watchedWith) || [], watchingWith: (m && m.watchingWith) || [] };
+      // R50: archived gehört zur Whitelist — Post ist archiviert (versteckt, wiederherstellbar).
+      return { note: (m && m.note) || "", tags: (m && m.tags) || [], rewatch: !!(m && m.rewatch), flagged: !!(m && m.flagged), removedTags: (m && m.removedTags) || [], autoTags: (m && m.autoTags) || [], posted: !!(m && m.posted), archived: !!(m && m.archived), watchedWith: (m && m.watchedWith) || [], watchingWith: (m && m.watchingWith) || [] };
     }
     function saveMeta(key, meta) {
       const removed = meta.removedTags || [];
       const auto = meta.autoTags || [];
       const wWith = meta.watchedWith || [];
       const wingWith = meta.watchingWith || [];
-      if (!meta.note && (!meta.tags || !meta.tags.length) && !meta.rewatch && !meta.flagged && !removed.length && !meta.posted && !wWith.length && !wingWith.length) delete db.meta[key];
-      else db.meta[key] = { note: meta.note || "", tags: meta.tags || [], rewatch: !!meta.rewatch, flagged: !!meta.flagged, removedTags: removed, autoTags: auto, posted: !!meta.posted, watchedWith: wWith, watchingWith: wingWith };
+      if (!meta.note && (!meta.tags || !meta.tags.length) && !meta.rewatch && !meta.flagged && !removed.length && !meta.posted && !meta.archived && !wWith.length && !wingWith.length) delete db.meta[key];
+      else db.meta[key] = { note: meta.note || "", tags: meta.tags || [], rewatch: !!meta.rewatch, flagged: !!meta.flagged, removedTags: removed, autoTags: auto, posted: !!meta.posted, archived: !!meta.archived, watchedWith: wWith, watchingWith: wingWith };
       saveDB();
     }
+    // R50: „lebt" der Post? — bewusst gepostet UND nicht archiviert. Zentrale Prüfung
+    // für Feed, Home-„Zuletzt gesehen", Hero und Profil-Snapshot.
+    function isPostLive(m) { return !!(m && m.posted && !m.archived); }
 
     // ---------- Tag database (B1) ----------
     function tagDefs() { return (db.tagDefs || (db.tagDefs = DEFAULT_TAGS.slice())); }
@@ -9328,7 +9370,7 @@
             id: it.id, title: it.title || "", posterPath: it.poster || null,
             mediaType: it.mediaType, bucket: it.bucket || null, watchedAt: it.loggedAt || 0,
             year: it.year || null, note: (m && m.note) ? m.note : "",   // R18-A: feed shows the friend's note
-            posted: !!(m && m.posted),   // R35-Fix: bewusst gepostet → im Feed IMMER zeigen (auch 2–3★)
+            posted: isPostLive(m),   // R35-Fix: bewusst gepostet → im Feed IMMER zeigen; R50: archiviert = für Freunde unsichtbar
             // R46: „Geschaut mit"-Partner → Collab-Darstellung auch für Pseudo-Posts
             watchedWith: (m && Array.isArray(m.watchedWith)) ? m.watchedWith.map(w => ({ uid: w.uid || "", name: w.name || "" })) : []
           };
@@ -11256,23 +11298,25 @@
 
     // Reiter 1: bewusst gepostete Titel (meta.posted) als 3er-Poster-Grid — Tippen
     // öffnet das „Dein Post"-Sheet mit Sternen, Datum und der eigenen Notiz.
+    // R50: dazu eine Archiv-Ansicht (meta.archived) — archivierte Posts sind überall
+    // versteckt (Feed, Freunde, „Zuletzt gesehen"), aber hier wiederherstellbar.
+    let _profPostsArchive = false;   // false = Posts, true = Archiv-Ansicht
     function renderProfilePosts() {
       const host = document.getElementById("profile-posts");
       if (!host) return;
-      const posts = [];
+      const live = [], archived = [];
       for (const k in db.meta) {
         const m = db.meta[k];
         if (!m || !m.posted) continue;
         const it = db.items[k];
         if (!it) continue;
-        posts.push({ key: k, it, m });
+        (m.archived ? archived : live).push({ key: k, it, m });
       }
-      posts.sort((a, b) => (b.it.loggedAt || 0) - (a.it.loggedAt || 0));
-      if (!posts.length) {
-        host.innerHTML = '<div class="prof-posts-empty">Noch keine Posts.<br>Bewerte einen Titel und tippe auf „Posten" — er erscheint dann hier und im Feed deiner Freunde.</div>';
-        return;
-      }
-      host.innerHTML = '<div class="prof-posts-grid">' + posts.map(p => {
+      const bySeen = (a, b) => (b.it.loggedAt || 0) - (a.it.loggedAt || 0);
+      live.sort(bySeen); archived.sort(bySeen);
+      if (_profPostsArchive && !archived.length) _profPostsArchive = false;   // letzter Post wiederhergestellt/gelöscht
+
+      const tile = p => {
         const stars = p.it.bucket && FEED_STAR[p.it.bucket] ? "★".repeat(FEED_STAR[p.it.bucket]) : "";
         const badges = (stars || p.m.note)
           ? '<div class="prof-post-badges">' +
@@ -11282,8 +11326,32 @@
         const img = p.it.poster
           ? '<img loading="lazy" src="' + IMG_BASE + 'w342' + p.it.poster + '" alt="">'
           : '<span class="prof-post-tile-ph">' + esc(dispTitleOf ? dispTitleOf(p.it) : (p.it.title || "")) + '</span>';
-        return '<button class="prof-post-tile" type="button" data-key="' + esc(p.key) + '">' + img + badges + '</button>';
-      }).join("") + '</div>';
+        return '<button class="prof-post-tile' + (p.m.archived ? ' archived' : '') + '" type="button" data-key="' + esc(p.key) + '">' + img + badges + '</button>';
+      };
+      const ARCHIVE_ICON = '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><line x1="10" y1="12" x2="14" y2="12"/></svg>';
+
+      let html = "";
+      if (_profPostsArchive) {
+        html += '<div class="prof-posts-head">' +
+          '<button class="prof-archive-btn" type="button" id="prof-archive-back"><svg viewBox="0 0 24 24"><polyline points="15 5 8 12 15 19"/></svg>Posts</button>' +
+          '<span class="prof-posts-head-label">Archiv (' + archived.length + ')</span></div>';
+        html += archived.length
+          ? '<div class="prof-posts-grid">' + archived.map(tile).join("") + '</div>'
+          : '<div class="prof-posts-empty">Dein Archiv ist leer.</div>';
+      } else {
+        if (archived.length) {
+          html += '<div class="prof-posts-head"><span class="prof-posts-head-label"></span>' +
+            '<button class="prof-archive-btn" type="button" id="prof-archive-open">' + ARCHIVE_ICON + 'Archiv (' + archived.length + ')</button></div>';
+        }
+        html += live.length
+          ? '<div class="prof-posts-grid">' + live.map(tile).join("") + '</div>'
+          : '<div class="prof-posts-empty">Noch keine Posts.<br>Bewerte einen Titel und tippe auf „Posten" — er erscheint dann hier und im Feed deiner Freunde.</div>';
+      }
+      host.innerHTML = html;
+      const openBtn = document.getElementById("prof-archive-open");
+      if (openBtn) openBtn.addEventListener("click", () => { _profPostsArchive = true; renderProfilePosts(); });
+      const backBtn = document.getElementById("prof-archive-back");
+      if (backBtn) backBtn.addEventListener("click", () => { _profPostsArchive = false; renderProfilePosts(); });
       host.querySelectorAll(".prof-post-tile").forEach(btn =>
         btn.addEventListener("click", () => openMyPostSheet(btn.dataset.key)));
     }
@@ -11307,6 +11375,9 @@
       const noteEl = document.getElementById("mypost-note");
       if (m.note) { noteEl.textContent = "„" + m.note + "“"; noteEl.hidden = false; }
       else noteEl.hidden = true;
+      // R50: Archiv-Button spiegelt den Zustand; Lösch-Button frisch entschärfen
+      document.getElementById("mypost-archive").textContent = m.archived ? "Wiederherstellen" : "Archivieren";
+      _disarmMyPostDelete();
       _myPostKey = key;
       document.getElementById("mypost-backdrop").hidden = false;
       document.body.style.overflow = "hidden";
@@ -11315,6 +11386,7 @@
       document.getElementById("mypost-backdrop").hidden = true;
       document.body.style.overflow = "";
       _myPostKey = null;
+      _disarmMyPostDelete();
     }
     document.getElementById("mypost-close").addEventListener("click", closeMyPostSheet);
     document.getElementById("mypost-backdrop").addEventListener("click", e => { if (e.target.id === "mypost-backdrop") closeMyPostSheet(); });
@@ -11322,6 +11394,67 @@
       const it = _myPostKey ? db.items[_myPostKey] : null;
       closeMyPostSheet();
       if (it) openDetail(it.mediaType, it.id);
+    });
+
+    // ---------- R50: Post archivieren / wiederherstellen / löschen ----------
+    // Sichtbarkeits-Wahrheit ist meta (posted/archived) + der Profil-Snapshot
+    // (zuverlässiger Kanal zu den Freunden). Echte posts-Einträge in Firestore
+    // werden zusätzlich best-effort gelöscht.
+    function _republishProfileSnapshot() {
+      if (window.__vaultUser && window.__vaultSocial && window.__vaultSocial.saveProfile
+          && typeof buildProfileSnapshot === "function") {
+        window.__vaultSocial.saveProfile(window.__vaultUser.uid, buildProfileSnapshot()).catch(() => {});
+      }
+    }
+    function _deleteMyCloudPosts(key) {
+      const it = db.items[key];
+      const uid = window.__vaultUser && window.__vaultUser.uid;
+      if (it && uid && window.__vaultSocial && window.__vaultSocial.deleteMyItemPosts) {
+        window.__vaultSocial.deleteMyItemPosts(uid, it.mediaType, it.id).catch(() => {});
+      }
+    }
+    function _refreshAfterPostChange() {
+      _republishProfileSnapshot();
+      renderProfilePosts();
+      if (typeof repaintFeedIfOpen === "function") repaintFeedIfOpen();
+    }
+    document.getElementById("mypost-archive").addEventListener("click", () => {
+      const key = _myPostKey;
+      if (!key) return;
+      const m = getMeta(key);
+      const wasArchived = !!m.archived;
+      m.archived = !wasArchived;
+      saveMeta(key, m);
+      if (!wasArchived) _deleteMyCloudPosts(key);   // Archivieren: echten Cloud-Post entfernen
+      closeMyPostSheet();
+      showToast(wasArchived ? "Post wiederhergestellt" : "Post archiviert — unter „Archiv“ zu finden");
+      _refreshAfterPostChange();
+    });
+    // Löschen ist zweistufig: erster Tap schärft („Wirklich löschen?"), zweiter löscht.
+    let _myPostDeleteArmed = false;
+    function _disarmMyPostDelete() {
+      _myPostDeleteArmed = false;
+      const btn = document.getElementById("mypost-delete");
+      if (btn) { btn.textContent = "Post löschen"; btn.classList.remove("armed"); }
+    }
+    document.getElementById("mypost-delete").addEventListener("click", () => {
+      const btn = document.getElementById("mypost-delete");
+      if (!_myPostDeleteArmed) {
+        _myPostDeleteArmed = true;
+        btn.textContent = "Wirklich löschen?";
+        btn.classList.add("armed");
+        return;
+      }
+      const key = _myPostKey;
+      if (!key) return;
+      const m = getMeta(key);
+      m.posted = false;
+      m.archived = false;
+      saveMeta(key, m);
+      _deleteMyCloudPosts(key);
+      closeMyPostSheet();
+      showToast("Post gelöscht — Titel und Bewertung bleiben in deiner Bibliothek");
+      _refreshAfterPostChange();
     });
 
     // point 12 / R9-P6a: blocked titles are hidden behind a tap so unwanted content
@@ -13851,7 +13984,7 @@
           .slice(0, 20)
           .forEach(it => {
             const m = db.meta[it.mediaType + ":" + it.id];
-            if (!m || !m.posted) return;
+            if (!isPostLive(m)) return;   // R50: archivierte/gelöschte Posts nicht mehr zeigen
             pseudo.push({
               type: it.bucket ? "rated" : "watched",
               userId: myUid, username: myName,
@@ -13869,8 +14002,15 @@
       // Meilensteine und keine übrig gebliebenen Alt-Kommentar-Posts (Bugfix: Kommentare
       // erzeugen keinen eigenen Post mehr, bleiben aber ggf. als Altlast in Firestore).
       const FEED_HIDDEN_TYPES = /^(actor_ranked|actor_number_one|ranking_milestone|comment)$/;
+      // R50: EIGENE echte posts-Einträge sofort lokal ausblenden, wenn der Post
+      // archiviert oder gelöscht wurde — das Firestore-Löschen läuft best-effort
+      // parallel, aber die eigene Ansicht darf nicht davon abhängen.
+      const _mineHidden = p => {
+        if (!myUid || p.userId !== myUid || !/^(watched|rated)$/.test(p.type || "")) return false;
+        return !isPostLive(db.meta[(p.mediaType || "movie") + ":" + p.itemId]);
+      };
       const merged = _feedPosts.concat(pseudo.filter(p => !realKeys.has(idKey(p))))
-        .filter(p => !FEED_HIDDEN_TYPES.test(p.type || ""));
+        .filter(p => !FEED_HIDDEN_TYPES.test(p.type || "") && !_mineHidden(p));
       merged.sort((a, b) => tsOf(b) - tsOf(a));
 
       if (!merged.length) {
@@ -14626,13 +14766,21 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R49";
+    const APP_VERSION = "R50";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R50": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Posts archivieren:</strong> Im Profil → Posts einen Beitrag antippen → „Archivieren“. Der Post verschwindet aus deinem Feed, bei deinen Freunden und aus „Zuletzt gesehen“ — bleibt aber im Archiv erhalten.",
+          "<strong>Archiv ansehen &amp; wiederherstellen:</strong> Oben rechts im Posts-Reiter findest du „Archiv“. Ein archivierter Post lässt sich jederzeit mit einem Tap wiederherstellen — inklusive aller Kommentare.",
+          "<strong>Posts löschen:</strong> „Post löschen“ entfernt den Beitrag endgültig (mit Sicherheitsabfrage). Dein Titel und deine Bewertung bleiben natürlich in der Bibliothek."
+        ]
+      },
       "R49": {
         title: "Was ist neu",
         notes: [
