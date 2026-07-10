@@ -433,6 +433,25 @@
       transition: background .35s ease, transform .35s ease;
     }
     .hero-dot.active { background: var(--accent); transform: scale(1.3); }
+    /* R58: Reroll-Knopf (Slideshow neu würfeln) + X pro Slide (Titel wegwischen) */
+    .hero-reroll {
+      position: absolute; top: 10px; right: 10px; z-index: 30;
+      width: 30px; height: 30px; border-radius: 50%;
+      background: rgba(12,12,14,.55); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+      -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+    }
+    .hero-reroll svg { width: 14px; height: 14px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .hero-reroll:active { background: rgba(0,0,0,.85); }
+    .hero-dismiss {
+      position: absolute; top: 8px; right: 8px; z-index: 3;
+      width: 26px; height: 26px; border-radius: 50%;
+      background: rgba(12,12,14,.55); border: none; padding: 0;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+      opacity: 0; pointer-events: none; transition: opacity .3s ease;
+    }
+    .hero-slide.center .hero-dismiss { opacity: 1; pointer-events: auto; }
+    .hero-dismiss svg { width: 12px; height: 12px; stroke: rgba(255,255,255,.85); fill: none; stroke-width: 2; stroke-linecap: round; }
 
     /* ---------- R57: Kategorie-Kacheln auf Home (Filme / Serien / TV Shows) ---------- */
     .home-cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0 0 20px; }
@@ -444,6 +463,45 @@
     }
     .home-cat svg { width: 26px; height: 26px; stroke: var(--accent); fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
     .home-cat:active { background: var(--surface-2); }
+
+    /* ---------- R58: kompakter Kopf im Kategorie-/Genre-Grid ---------- */
+    .genre-head { display: flex; align-items: center; gap: 10px; margin: 2px 0 12px; }
+    .genre-back {
+      flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%;
+      background: var(--surface); border: 1px solid var(--border); color: var(--text);
+      display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer;
+    }
+    .genre-back svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .genre-back:active { background: var(--surface-2); }
+    .genre-head h1 {
+      flex: 1; min-width: 0; margin: 0; font-size: 18px; font-weight: 800;
+      letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .genre-sort {
+      flex: 0 0 auto; max-width: 130px; -webkit-appearance: none; appearance: none;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      color: var(--text-dim); font-family: inherit; font-size: 12px; font-weight: 600;
+      padding: 7px 10px; cursor: pointer;
+    }
+    /* R58: Streamingdienst-Leiste (runde Logos, horizontal scrollbar) */
+    .genre-providers {
+      display: flex; gap: 10px; align-items: center;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; margin: 0 -16px 14px; padding: 2px 16px;
+    }
+    .genre-providers::-webkit-scrollbar { display: none; }
+    .prov-chip {
+      flex: 0 0 auto; width: 42px; height: 42px; border-radius: 50%;
+      padding: 0; border: 2px solid var(--border); background: var(--surface);
+      overflow: hidden; cursor: pointer; transition: border-color .18s ease, transform .18s ease;
+    }
+    .prov-chip img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .prov-chip.on { border-color: var(--accent); transform: scale(1.08); }
+    .prov-chip-all {
+      width: auto; border-radius: 21px; padding: 0 14px; height: 42px;
+      color: var(--text-dim); font-family: inherit; font-size: 12px; font-weight: 600;
+    }
+    .prov-chip-all.on { color: var(--accent); }
 
     /* ---------- Brand (small, top of Log tab) ---------- */
     .brand {
@@ -1350,7 +1408,10 @@
     /* ---------- R9-P4: settings rows + toggle switch ---------- */
     .settings-sub-label { font-size: 12px; color: var(--text-mute); margin: 0 0 10px; line-height: 1.5; }
     .settings-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
-    .settings-group-title { font-size: 13px; font-weight: 600; color: var(--text-dim); margin: 4px 0 8px; }
+    .settings-group-title { font-size: 13px; font-weight: 600; color: var(--text-dim); margin: 4px 0 8px; display: flex; align-items: center; justify-content: space-between; }
+    /* R58: kleiner „Alle abwählen"-Textknopf in der Überschriftszeile */
+    .settings-selall { background: none; border: none; padding: 2px 0; font-size: 11px; font-weight: 600; color: var(--accent); cursor: pointer; }
+    .settings-selall:active { opacity: .6; }
     .settings-empty { font-size: 13px; color: var(--text-mute); padding: 2px 0 6px; }
     .set-row {
       display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -2556,6 +2617,19 @@
     /* R30: Notiz/Kommentar zum Post — deutlicher sichtbar (heller + Akzent-Rand). */
     .feed-note { margin: 2px 14px 6px; padding: 6px 0 6px 10px; border-left: 2px solid var(--accent); font-size: 14px; color: var(--text); font-style: italic; line-height: 1.45; }
     .feed-titleline { padding: 2px 14px 12px; font-size: 13px; color: var(--text-mute); }
+    /* R58: Inline-Bearbeiten der Beschreibung auf eigenen Folgen-Posts */
+    .feed-editbox { margin: 4px 14px 10px; }
+    .feed-edit-input {
+      width: 100%; resize: none; box-sizing: border-box;
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+      color: var(--text); font: inherit; font-size: 14px; padding: 8px 10px;
+    }
+    .feed-editbox-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+    .feed-editbox-btns button {
+      border: none; border-radius: 9px; padding: 7px 12px; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .feed-edit-cancel { background: none; color: var(--text-mute); }
+    .feed-edit-save { background: var(--accent); color: #14100a; }
     .profile-version { text-align: center; font-size: 12px; color: var(--text-mute); letter-spacing: .08em; padding: 18px 0 calc(var(--nav-h) + var(--safe-bottom) + 20px); opacity: .7; }
     /* R23-#17: inline comments */
     .feed-comment-btn { position: relative; }
@@ -2860,23 +2934,22 @@
         </div>
       </div>
 
-      <!-- R57: Kategorie-/Genre-Grid (aus Entdecken hierher gezogen) -->
+      <!-- R57: Kategorie-/Genre-Grid (aus Entdecken hierher gezogen)
+           R58: kompakter Kopf — EINE schmale Zeile: Zurück-Icon + Titel + Sortierung;
+           darunter die Streamingdienst-Leiste, dann direkt das Grid. -->
       <div id="disc-genre-view" hidden>
-        <button id="disc-genre-back" class="list-back" type="button">
-          <svg viewBox="0 0 24 24"><polyline points="15 5 8 12 15 19"/></svg>
-          Zurück
-        </button>
-        <div class="list-detail-head">
+        <div class="genre-head">
+          <button id="disc-genre-back" class="genre-back" type="button" aria-label="Zurück">
+            <svg viewBox="0 0 24 24"><polyline points="15 5 8 12 15 19"/></svg>
+          </button>
           <h1 id="disc-genre-name"></h1>
-        </div>
-        <div class="filter-row">
-          <label>Sortierung</label>
-          <select id="disc-genre-sort" class="modal-select">
+          <select id="disc-genre-sort" class="genre-sort" aria-label="Sortierung">
             <option value="popularity.desc">Beliebt</option>
             <option value="vote_average.desc">Bestbewertet</option>
             <option value="primary_release_date.desc">Neueste</option>
           </select>
         </div>
+        <div id="disc-genre-providers" class="genre-providers" hidden></div>
         <div id="disc-genre-grid" class="poster-grid"></div>
         <button id="disc-genre-more" class="new-list-btn" type="button" hidden>Mehr laden</button>
       </div>
@@ -4525,6 +4598,11 @@
       async deletePost(postId) {
         try { await deleteDoc(doc(firestore, "posts", postId)); } catch (e) {}
       },
+      // R58: Beschreibung eines EIGENEN Posts nachträglich ändern (Rules: update nur Autor).
+      async updatePostNote(postId, note) {
+        if (!postId) return;
+        try { await updateDoc(doc(firestore, "posts", postId), { note: note || "" }); } catch (e) {}
+      },
       // R50: alle EIGENEN posts-Einträge zu einem Titel löschen (Archivieren/Löschen
       // eines Posts). Best-effort: schlägt das Löschen fehl (Rules/offline), versteckt
       // der Client den Post trotzdem lokal + über den Profil-Snapshot.
@@ -4670,6 +4748,7 @@
         gv.hidden = true;
         const lh = document.getElementById("log-home");
         if (lh) lh.hidden = false;
+        if (typeof _homeSearchBar === "function") _homeSearchBar(true);   // R58
         _genreBackEntry = false;
         closed = true;
       }
@@ -5178,7 +5257,7 @@
       hintEl.hidden = true;
       // R57: eine laufende Suche verdrängt das offene Kategorie-/Genre-Grid
       const gvSearch = document.getElementById("disc-genre-view");
-      if (gvSearch && !gvSearch.hidden) { gvSearch.hidden = true; _genreBackEntry = false; }
+      if (gvSearch && !gvSearch.hidden) { gvSearch.hidden = true; _genreBackEntry = false; _homeSearchBar(true); }
 
       if (items === "error") {
         resultsEl.innerHTML = '<div class="results-empty">Suche fehlgeschlagen. Internet prüfen?</div>';
@@ -5527,6 +5606,44 @@
       buildHero().finally(() => { heroBuildPending = false; });
     }
 
+    // R58: Session-Ausschlussliste für die Slideshow — Reroll merkt sich die gerade
+    // gezeigten Titel, das X pro Slide snoozed den Titel zusätzlich 14 Tage
+    // (snoozeReco, wie im alten Empfehlungs-Popup).
+    const heroExcluded = new Set();
+    let _heroKeys = [];
+    async function rerollHero() {
+      if (heroBuildPending) return;
+      heroBuildPending = true;
+      _heroKeys.forEach(k => heroExcluded.add(k));
+      try {
+        await buildHero();
+        if (!heroSlides.length) { heroExcluded.clear(); await buildHero(); }   // alles durch → von vorn
+      } finally { heroBuildPending = false; }
+    }
+    function dismissHeroSlide(slide, mt, item) {
+      snoozeReco(item.id);
+      const k = keyOf(mt, item.id);
+      heroExcluded.add(k);
+      _heroKeys = _heroKeys.filter(x => x !== k);
+      const idx = heroSlides.indexOf(slide);
+      if (idx < 0) return;
+      heroSlides.splice(idx, 1);
+      const dot = heroDots.splice(idx, 1)[0];
+      if (dot) dot.remove();
+      slide.remove();
+      if (!heroSlides.length) {
+        if (!heroBuildPending) {
+          heroBuildPending = true;
+          buildHero().finally(() => { heroBuildPending = false; });
+        }
+        return;
+      }
+      if (idx < heroIndex) heroIndex -= 1;
+      if (heroIndex >= heroSlides.length) heroIndex = heroSlides.length - 1;
+      layoutHero();
+      heroResetTimer();
+    }
+
     // Place each slide in 3D space relative to the active index (coverflow look)
     function layoutHero() {
       const n = heroSlides.length;
@@ -5619,7 +5736,7 @@
                 const c = pool[idxs[i]++];
                 const mt = c._mt || (c.media_type === "tv" ? "tv" : "movie");
                 const k = keyOf(mt, c.id);
-                if (usedKeys.has(k) || recoUnavailable(c.id) || !c.poster_path) continue;
+                if (usedKeys.has(k) || heroExcluded.has(k) || recoUnavailable(c.id) || !c.poster_path) continue;
                 usedKeys.add(k);
                 picks.push({ mt, item: c, label: s.label });
                 break;
@@ -5641,7 +5758,8 @@
               if (picks.length >= 7) break;
               const mt = it.media_type === "tv" ? "tv" : "movie";
               const k = keyOf(mt, it.id);
-              if (usedKeys.has(k)) continue;
+              // R58: weggewischte/gesnooozte Titel auch im Trend-Auffüller überspringen
+              if (usedKeys.has(k) || heroExcluded.has(k) || recoUnavailable(it.id)) continue;
               usedKeys.add(k);
               picks.push({ mt, item: it, label: "Diese Woche im Trend" });
             }
@@ -5649,10 +5767,11 @@
         } catch (e) { /* offline → Hero bleibt leer/alt */ }
       }
 
-      if (!picks.length) { heroEl.hidden = true; return; }
+      if (!picks.length) { heroEl.hidden = true; _heroKeys = []; return; }
 
       if (heroTimer) { clearInterval(heroTimer); heroTimer = null; }
       heroSlides = []; heroDots = []; heroIndex = 0;
+      _heroKeys = picks.map(x => keyOf(x.mt, x.item.id));   // R58: fürs Reroll merken
       heroEl.innerHTML = "";
 
       const stage = document.createElement("div"); stage.className = "hero-stage";
@@ -5681,6 +5800,16 @@
         meta.textContent = bits.join(" · ");
         content.appendChild(lbl); content.appendChild(ttl); content.appendChild(meta);
         slide.appendChild(content);
+
+        // R58: kleines X auf dem mittleren Slide — Titel wegwischen (14 Tage snoozen),
+        // damit nicht ständig dieselben Vorschläge kommen.
+        const dis = document.createElement("button");
+        dis.className = "hero-dismiss"; dis.type = "button";
+        dis.setAttribute("aria-label", "Nicht mehr vorschlagen");
+        dis.innerHTML = '<svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+        dis.addEventListener("click", e => { e.stopPropagation(); dismissHeroSlide(slide, mt, item); });
+        slide.appendChild(dis);
+
         slide.addEventListener("click", () => {
           const idx = heroSlides.indexOf(slide);
           if (idx === heroIndex) openDetail(mt, item.id);            // tap centre → open
@@ -5706,6 +5835,15 @@
       };
       heroEl.appendChild(mkArrow(-1, "left", "15 5 8 12 15 19"));
       heroEl.appendChild(mkArrow(1, "right", "9 5 16 12 9 19"));
+
+      // R58: kleiner Reroll-Knopf oben rechts — komplette Slideshow neu würfeln
+      const rr = document.createElement("button");
+      rr.className = "hero-reroll"; rr.type = "button";
+      rr.setAttribute("aria-label", "Neue Empfehlungen");
+      rr.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>';
+      rr.addEventListener("click", e => { e.stopPropagation(); rerollHero(); });
+      heroEl.appendChild(rr);
+
       heroEl.appendChild(dotsEl);
       heroEl.hidden = false;
 
@@ -11220,24 +11358,92 @@
     // parkt einen History-Eintrag (iOS-Rechts-Swipe schließt es wieder) und kann
     // neben Genres auch ganze Kategorien (media ohne Genre) durchblättern.
     let _genreBackEntry = false;
+    // R58: solange das Grid offen ist, verschwindet die Home-Suchleiste —
+    // oben bleibt nur der schmale Kopf (Zurück-Icon + Titel + Sortierung).
+    function _homeSearchBar(show) {
+      const sb = document.querySelector("#view-log .search-bar");
+      if (sb) sb.hidden = !show;
+    }
     function openGenreBrowse(id, name, media) {
-      gb = { id: id || null, name, media: media || "movie", sort: discGenreSort.value, page: 0, totalPages: 1 };
+      gb = { id: id || null, name, media: media || "movie", sort: discGenreSort.value, page: 0, totalPages: 1, provider: null };
       document.getElementById("disc-genre-name").textContent = name;
       discGenreGrid.innerHTML = "";
       const lh = document.getElementById("log-home");
       if (lh) lh.hidden = true;
+      _homeSearchBar(false);
       discGenreView.hidden = false;
       discGenreView.scrollTop = 0;
       const v = document.getElementById("view-log");
       if (v) v.scrollTop = 0;
       if (!_genreBackEntry) { _genreBackEntry = true; history.pushState({ vaultOverlay: "genre" }, ""); }
+      buildProviderBar();
       loadGenrePage();
     }
     function closeGenreBrowse() {
       discGenreView.hidden = true;
       const lh = document.getElementById("log-home");
       if (lh) lh.hidden = false;
+      _homeSearchBar(true);
       if (_genreBackEntry) { _genreBackEntry = false; programmingGoingBack = true; history.back(); }
+    }
+
+    // ---------- R58: Streamingdienst-Filter (Netflix, Prime, Disney+, WOW …) ----------
+    // Anbieterliste je Medium einmal von TMDB laden (Region DE, nach Priorität sortiert)
+    // und als runde Logo-Chips über dem Grid zeigen. Auswahl filtert das Discover-Grid
+    // per with_watch_providers + watch_region=DE.
+    const _provCache = {};
+    async function loadProviders(media) {
+      if (_provCache[media]) return _provCache[media];
+      try {
+        const res = await tmFetch("https://api.themoviedb.org/3/watch/providers/" + media +
+          "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG + "&watch_region=DE");
+        if (!res.ok) return [];
+        const d = await res.json();
+        const list = (d.results || [])
+          .filter(p => p.logo_path && p.display_priorities && p.display_priorities.DE != null)
+          .sort((a, b) => a.display_priorities.DE - b.display_priorities.DE)
+          .slice(0, 14);
+        _provCache[media] = list;
+        return list;
+      } catch (e) { return []; }
+    }
+    async function buildProviderBar() {
+      const host = document.getElementById("disc-genre-providers");
+      if (!host) return;
+      host.hidden = true; host.innerHTML = "";
+      const wanted = gb;   // bei schnellem Ansichtswechsel nicht in die falsche Ansicht malen
+      const provs = await loadProviders(gb.media || "movie");
+      if (gb !== wanted || discGenreView.hidden || !provs.length) return;
+      const frag = document.createDocumentFragment();
+      const all = document.createElement("button");
+      all.type = "button"; all.dataset.pid = "";
+      all.className = "prov-chip prov-chip-all" + (gb.provider ? "" : " on");
+      all.textContent = "Alle";
+      all.addEventListener("click", () => setGenreProvider(null));
+      frag.appendChild(all);
+      provs.forEach(p => {
+        const b = document.createElement("button");
+        b.type = "button"; b.dataset.pid = String(p.provider_id);
+        b.className = "prov-chip" + (String(gb.provider) === String(p.provider_id) ? " on" : "");
+        b.title = p.provider_name;
+        b.setAttribute("aria-label", p.provider_name);
+        b.innerHTML = '<img loading="lazy" src="' + IMG_BASE + 'w92' + p.logo_path + '" alt="">';
+        // nochmal antippen = Filter wieder aus
+        b.addEventListener("click", () => setGenreProvider(
+          String(gb.provider) === String(p.provider_id) ? null : p.provider_id));
+        frag.appendChild(b);
+      });
+      host.appendChild(frag);
+      host.hidden = false;
+    }
+    function setGenreProvider(pid) {
+      gb.provider = pid || null;
+      const host = document.getElementById("disc-genre-providers");
+      if (host) host.querySelectorAll(".prov-chip").forEach(c =>
+        c.classList.toggle("on", (c.dataset.pid || "") === String(gb.provider || "")));
+      gb.page = 0; gb.totalPages = 1;
+      discGenreGrid.innerHTML = "";
+      loadGenrePage();
     }
 
     async function loadGenrePage() {
@@ -11251,6 +11457,8 @@
         let url = "https://api.themoviedb.org/3/discover/" + media + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG
           + "&sort_by=" + sort + "&page=" + gb.page + "&include_adult=false";
         if (gb.id) url += "&with_genres=" + gb.id;
+        // R58: nach Streamingdienst filtern (Chips über dem Grid)
+        if (gb.provider) url += "&with_watch_providers=" + gb.provider + "&watch_region=DE";
         if (gb.sort === "vote_average.desc") url += "&vote_count.gte=200";
         if (gb.sort === "primary_release_date.desc") url += "&vote_count.gte=20";
         const res = await tmFetch(url);
@@ -11276,7 +11484,15 @@
       }
     }
 
-    discGenreSort.addEventListener("change", () => { if (!discGenreView.hidden) openGenreBrowse(gb.id, gb.name, gb.media); });
+    // R58: Sortierwechsel lädt nur das Grid neu — Provider-Auswahl bleibt erhalten
+    // (openGenreBrowse würde gb komplett zurücksetzen).
+    discGenreSort.addEventListener("change", () => {
+      if (discGenreView.hidden) return;
+      gb.sort = discGenreSort.value;
+      gb.page = 0; gb.totalPages = 1;
+      discGenreGrid.innerHTML = "";
+      loadGenrePage();
+    });
     discGenreMore.addEventListener("click", loadGenrePage);
     document.getElementById("disc-genre-back").addEventListener("click", closeGenreBrowse);
 
@@ -12382,18 +12598,40 @@
       html += '<div class="settings-reco-body" id="settings-reco-body"' + (settingsRecoRevealed ? "" : " hidden") + ">";
       html += '<p class="settings-sub-label">Lege fest, welche Listen und Tags für die Empfehlungen im Entdecken-Tab genutzt werden. Ausgeschaltete Quellen werden übersprungen.</p>';
 
-      html += '<div class="settings-group-title">Listen</div><div class="settings-group">';
+      // R58: „Alle abwählen"/„Alle auswählen" klein in derselben Zeile wie die Überschrift —
+      // erspart das Einzeln-Wegklicken, wenn Empfehlungen nur noch aus Listen kommen sollen.
+      const anyListOn = lists.some(l => !db.recoExcludeLists[l.id]);
+      const anyTagOn  = tags.some(t => !db.recoExcludeTags[t]);
+      const groupTitle = (label, target, anyOn, has) =>
+        '<div class="settings-group-title">' + label +
+        (has ? '<button class="settings-selall" type="button" data-selall="' + target + '">' +
+               (anyOn ? "Alle abwählen" : "Alle auswählen") + '</button>' : "") +
+        '</div>';
+
+      html += groupTitle("Listen", "lists", anyListOn, lists.length > 0) + '<div class="settings-group">';
       html += lists.length
         ? lists.map(l => row(l.name, "data-reco-list", l.id, !db.recoExcludeLists[l.id])).join("")
         : '<div class="settings-empty">Keine eigenen Listen.</div>';
       html += '</div>';
 
-      html += '<div class="settings-group-title">Tags</div><div class="settings-group">';
+      html += groupTitle("Tags", "tags", anyTagOn, tags.length > 0) + '<div class="settings-group">';
       html += tags.length
         ? tags.map(t => row(t, "data-reco-tag", t, !db.recoExcludeTags[t])).join("")
         : '<div class="settings-empty">Keine Tags.</div>';
       html += '</div></div></div>';
       host.innerHTML = html;
+
+      host.querySelectorAll(".settings-selall").forEach(btn => btn.addEventListener("click", () => {
+        if (btn.dataset.selall === "lists") {
+          if (anyListOn) lists.forEach(l => { db.recoExcludeLists[l.id] = true; });
+          else lists.forEach(l => { delete db.recoExcludeLists[l.id]; });
+        } else {
+          if (anyTagOn) tags.forEach(t => { db.recoExcludeTags[t] = true; });
+          else tags.forEach(t => { delete db.recoExcludeTags[t]; });
+        }
+        saveDB(); recoDirty = true;
+        renderSettings();   // Zeilen + Button-Beschriftung frisch aufbauen
+      }));
 
       const recoToggle = document.getElementById("settings-reco-toggle");
       const recoBody   = document.getElementById("settings-reco-body");
@@ -14497,9 +14735,13 @@
       const epNameReal = p.episodeName && !/^(folge|episode)\s*\d+$/i.test(p.episodeName.trim())
         ? p.episodeName : "";
       const epRef = `S${p.season}E${p.episode}` + (epNameReal ? " – " + socialEsc(epNameReal) : "");
+      // R58: Der Titel steht bei Karten mit Titelzeile NUR dort unten — die Aktionszeile
+      // oben bleibt generisch („hat einen Film geschaut"), sonst stünde er doppelt.
+      // Außerdem heißt es immer „geschaut", nie „bewertet" — die Sterne zeigen die Wertung.
+      const aWhat = (p.mediaType || "movie") === "tv" ? "eine Serie" : "einen Film";
       switch (p.type) {
-        case "watched":         return `hat ${title} geschaut`;
-        case "rated":           return `hat ${title} bewertet`;
+        case "watched":         return `hat ${aWhat} geschaut`;
+        case "rated":           return `hat ${aWhat} geschaut`;
         case "ranked":          return `hat ${title}${p.rank ? " auf Platz " + p.rank : ""} gerankt`;
         case "episode_watched": return `hat ${epRef} geschaut`;
         // R56.2: nur einmal (unten in der Titelzeile) den Serientitel zeigen, oben nur
@@ -14508,8 +14750,8 @@
         case "episode_shared":  return `hat ${epRef}${title ? " von " + title : ""} geteilt`;
         case "actor_ranked":    return `hat ${socialEsc(p.actorName || "")} ins Ranking geschickt`;
         case "actor_number_one":return `${socialEsc(p.actorName || "")}s Film ${title} ist jetzt Nr. 1 im Duell`;
-        case "series_watched":  return `hat die ganze Serie ${title} geschaut`;
-        case "watchlist_added": return `hat ${title} auf die Watchlist gesetzt`;
+        case "series_watched":  return `hat eine komplette Serie geschaut`;
+        case "watchlist_added": return `hat ${aWhat} auf die Watchlist gesetzt`;
         case "ranking_milestone": {
           const what = p.actorName ? socialEsc(p.actorName) : title;
           return (p.rank === 1 || p.milestone === 1)
@@ -14606,13 +14848,26 @@
       // R57: eigene Film-/Serien-Posts bekommen oben rechts ein ⋯-Menü
       // (Bearbeiten / Archivieren / Löschen — gleiche Logik wie das Post-Sheet).
       const _isMineCard = !!(_meUid && ownerUid === _meUid && /^(watched|rated)$/.test(p.type || "") && id != null);
+      // R58: AUCH alle anderen eigenen Posts (einzelne Folgen, geteilte Folgen, Listen …)
+      // bekommen das ⋯-Menü. Diese Typen existieren nur als echte Firestore-Posts,
+      // deshalb reicht die Doc-ID (p.id) — kein meta/epMeta-Umweg wie bei watched/rated.
+      const _isMineDoc = !!(_meUid && ownerUid === _meUid && !_isMineCard && !p._pseudo && p.id);
+      const _isEpPost  = /^(episode_watched|episode_rated)$/.test(p.type || "")
+                         && id != null && p.season != null && p.episode != null;
       const _menuKey = type + ":" + id;
+      const _dotsBtn = `<button class="feed-menu-btn" type="button" aria-label="Optionen"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></button>`;
       const menuHtml = _isMineCard
-        ? `<button class="feed-menu-btn" type="button" aria-label="Optionen"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></button>` +
+        ? _dotsBtn +
           `<div class="mypost-menu feed-menu" hidden>` +
           `<button type="button" class="feed-m-edit" data-key="${socialEsc(_menuKey)}">Beschreibung bearbeiten</button>` +
           `<button type="button" class="feed-m-archive" data-key="${socialEsc(_menuKey)}">Archivieren</button>` +
           `<button type="button" class="feed-m-delete danger" data-key="${socialEsc(_menuKey)}">Post löschen</button>` +
+          `</div>`
+        : _isMineDoc
+        ? _dotsBtn +
+          `<div class="mypost-menu feed-menu" hidden>` +
+          (_isEpPost ? `<button type="button" class="feed-m-edit-ep" data-postid="${socialEsc(p.id)}">Beschreibung bearbeiten</button>` : "") +
+          `<button type="button" class="feed-m-delete-doc danger" data-postid="${socialEsc(p.id)}">Post löschen</button>` +
           `</div>`
         : "";
       const wwPartners = (Array.isArray(p.watchedWith) ? p.watchedWith : [])
@@ -14674,7 +14929,11 @@
       const _eff       = feedEffectiveRating(p);
       const stars      = _eff.bucket ? bucketToStars(_eff.bucket) : (_eff.epStars ? "★".repeat(Math.max(0, Math.min(5, _eff.epStars))) : "");
       const mediaLabel = type === "tv" ? "Serie" : "Film";
-      const titleLine  = [socialEsc(p.title || ""), mediaLabel].filter(Boolean).join(" · ");
+      // R58: Bei diesen Typen nennt die Aktionszeile oben schon „Film/Serie" →
+      // unten steht nur noch der Titel (nichts doppelt).
+      const titleLine  = /^(watched|rated|series_watched|watchlist_added)$/.test(p.type || "")
+        ? socialEsc(p.title || "")
+        : [socialEsc(p.title || ""), mediaLabel].filter(Boolean).join(" · ");
       const inWl       = !!db.watchlist[key];
       const iWatched   = !!db.items[key];
       // R23-#17/R46: Kommentare an jeder Post-Karte. Für watched/rated-Posts ist die
@@ -14713,6 +14972,10 @@
             </div>
           </div>
           ${p.note ? `<div class="feed-note">„${socialEsc(p.note)}"</div>` : ""}
+          ${_isMineDoc && _isEpPost ? `<div class="feed-editbox" data-postid="${socialEsc(p.id)}" hidden>
+            <textarea class="feed-edit-input" rows="2" placeholder="Beschreibung …">${socialEsc(p.note || "")}</textarea>
+            <div class="feed-editbox-btns"><button type="button" class="feed-edit-cancel">Abbrechen</button><button type="button" class="feed-edit-save">Speichern</button></div>
+          </div>` : ""}
           <div class="feed-titleline">${titleLine}</div>
           ${seenHtml}
           ${canComment ? `<div class="feed-comments" data-post="${socialEsc(commentThreadId)}" hidden></div>` : ""}
@@ -14759,7 +15022,10 @@
           const _eff       = feedEffectiveRating(p);
           const stars      = _eff.bucket ? bucketToStars(_eff.bucket) : (_eff.epStars ? "★".repeat(Math.max(0, Math.min(5, _eff.epStars))) : "");
           const mediaLabel = type === "tv" ? "Serie" : "Film";
-          const titleLine  = [socialEsc(p.title || ""), mediaLabel].filter(Boolean).join(" · ");
+          // R58: gleiche Anti-Dopplungs-Regel wie in renderFeedCard
+          const titleLine  = /^(watched|rated|series_watched|watchlist_added)$/.test(p.type || "")
+            ? socialEsc(p.title || "")
+            : [socialEsc(p.title || ""), mediaLabel].filter(Boolean).join(" · ");
           const inWl       = !!db.watchlist[keyOf(type, id)];
           const iWatched   = !!db.items[keyOf(type, id)];
           const dataAttrs  = `data-id="${id}" data-type="${type}" data-title="${socialEsc(p.title || "")}" data-poster="${socialEsc(p.posterPath || "")}" data-owner="${socialEsc(ownerUid)}" data-ownername="${socialEsc(author)}"`;
@@ -15026,7 +15292,7 @@
       // (dieselbe meta-Logik wie das Post-Sheet aus R50/R52).
       const _closeFeedMenus = () => {
         host.querySelectorAll(".feed-menu").forEach(m => { m.hidden = true; });
-        host.querySelectorAll(".feed-m-delete").forEach(d => { d.classList.remove("armed"); d.textContent = "Post löschen"; });
+        host.querySelectorAll(".feed-m-delete, .feed-m-delete-doc").forEach(d => { d.classList.remove("armed"); d.textContent = "Post löschen"; });
       };
       host.querySelectorAll(".feed-menu-btn").forEach(btn => btn.addEventListener("click", e => {
         e.stopPropagation();
@@ -15069,6 +15335,59 @@
         _refreshAfterPostChange();
       }));
 
+      // R58: ⋯-Menü auf eigenen Folgen-/Sonder-Posts (echte Firestore-Docs — Doc-ID
+      // reicht zum Bearbeiten/Löschen; epMeta wird bei Folgen-Posts mitgepflegt).
+      const _findPostById = pid => _feedPosts.find(x => x && x.id === pid) || null;
+      const _epMetaSync = (p, note, posted) => {
+        if (p && /^(episode_watched|episode_rated)$/.test(p.type || "")
+            && p.itemId != null && p.season != null && p.episode != null)
+          saveEpMeta(keyOf("tv", p.itemId), p.season, p.episode, note, posted);
+      };
+      host.querySelectorAll(".feed-m-edit-ep").forEach(btn => btn.addEventListener("click", e => {
+        e.stopPropagation();
+        _closeFeedMenus();
+        const card = btn.closest(".feed-card");
+        const box = card && card.querySelector(`.feed-editbox[data-postid="${cssEsc(btn.dataset.postid)}"]`);
+        if (box) { box.hidden = false; const ta = box.querySelector("textarea"); if (ta) ta.focus(); }
+      }));
+      host.querySelectorAll(".feed-edit-cancel").forEach(btn => btn.addEventListener("click", () => {
+        const box = btn.closest(".feed-editbox");
+        if (box) box.hidden = true;
+      }));
+      host.querySelectorAll(".feed-edit-save").forEach(btn => btn.addEventListener("click", () => {
+        const box = btn.closest(".feed-editbox");
+        if (!box) return;
+        const pid = box.dataset.postid;
+        const ta  = box.querySelector("textarea");
+        const val = ((ta && ta.value) || "").trim();
+        const p = _findPostById(pid);
+        if (p) { p.note = val; _epMetaSync(p, val, true); }
+        if (window.__vaultSocial && window.__vaultSocial.updatePostNote)
+          window.__vaultSocial.updatePostNote(pid, val).catch(() => {});
+        showToast("Beschreibung gespeichert");
+        repaintFeedIfOpen();
+        try { saveFeedCache(accepted); } catch (e) {}
+      }));
+      host.querySelectorAll(".feed-m-delete-doc").forEach(btn => btn.addEventListener("click", e => {
+        e.stopPropagation();
+        if (!btn.classList.contains("armed")) {
+          btn.classList.add("armed");
+          btn.textContent = "Wirklich löschen?";
+          return;
+        }
+        _closeFeedMenus();
+        const pid = btn.dataset.postid;
+        const p = _findPostById(pid);
+        if (p) _epMetaSync(p, (p.note || "").trim(), false);   // Folge gilt wieder als „nicht gepostet"
+        const i = _feedPosts.findIndex(x => x && x.id === pid);
+        if (i >= 0) _feedPosts.splice(i, 1);
+        if (window.__vaultSocial && window.__vaultSocial.deletePost)
+          window.__vaultSocial.deletePost(pid).catch(() => {});
+        showToast("Post gelöscht");
+        repaintFeedIfOpen();
+        try { saveFeedCache(accepted); } catch (e) {}
+      }));
+
       // R47: Episoden-Posts aus der Zeit vor R44 tragen kein stillPath und zeigten
       // deshalb weiter das Serienposter. Standbild der konkreten Folge nachladen
       // (tmFetch ist gecacht), auf dem Post-Objekt merken und einmal neu malen.
@@ -15102,7 +15421,7 @@
     document.addEventListener("click", e => {
       if (e.target.closest(".feed-menu") || e.target.closest(".feed-menu-btn")) return;
       document.querySelectorAll(".feed-menu").forEach(m => { m.hidden = true; });
-      document.querySelectorAll(".feed-m-delete").forEach(d => { d.classList.remove("armed"); d.textContent = "Post löschen"; });
+      document.querySelectorAll(".feed-m-delete, .feed-m-delete-doc").forEach(d => { d.classList.remove("armed"); d.textContent = "Post löschen"; });
     });
 
     // R23-#17: reflect a post's comment count on every visible badge for that post.
@@ -15714,13 +16033,24 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R57";
+    const APP_VERSION = "R58";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R58": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Slideshow mit Reroll und X:</strong> Oben rechts auf der Empfehlungs-Slideshow sitzt ein kleiner Neu-würfeln-Knopf für frische Vorschläge. Und auf dem mittleren Poster gibt es ein kleines X — damit wischst du Titel weg, die du nicht sehen willst (sie werden 14 Tage lang nicht mehr vorgeschlagen).",
+          "<strong>Kategorien und Genres aufgeräumt:</strong> Öffnest du „Filme“, „Serien“, „TV Shows“ oder ein Genre, bleibt oben nur noch eine schmale Zeile: Zurück-Pfeil, Titel und Sortierung nebeneinander. Die Suchleiste verschwindet solange — das Grid startet direkt oben.",
+          "<strong>Nach Streamingdienst filtern:</strong> In den Kategorie- und Genre-Ansichten zeigt eine Logo-Leiste Netflix, Prime Video, Disney+, WOW & Co. Ein Tipp aufs Logo zeigt nur Titel, die dort laufen (nochmal tippen oder „Alle“ hebt den Filter auf).",
+          "<strong>Alles abwählen bei Empfehlungen:</strong> Unter Profil → Einstellungen → Empfehlungen kannst du bei „Listen“ und „Tags“ jetzt mit einem Tipp alle Quellen ab- oder wieder anwählen.",
+          "<strong>Jeden eigenen Post verwalten:</strong> Auch einzelne Folgen-Posts (und alle anderen eigenen Beiträge) haben jetzt das ⋯-Menü im Feed — Beschreibung bearbeiten und löschen geht damit überall.",
+          "<strong>Nichts steht mehr doppelt:</strong> Feed-Karten sagen oben nur noch „hat einen Film geschaut“ (nie mehr „bewertet“ — die Sterne zeigen die Wertung), der Titel steht genau einmal unten in der Karte."
+        ]
+      },
       "R57": {
         title: "Was ist neu",
         notes: [
