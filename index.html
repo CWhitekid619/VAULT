@@ -6571,9 +6571,12 @@
         bucket: bucket || null, note: noteTrim,
         // R46: „Geschaut mit"-Partner → Collab-Darstellung im Feed (Avatare + „haben")
         watchedWith: (Array.isArray(m.watchedWith) ? m.watchedWith : []).map(w => ({ uid: w.uid || "", name: w.name || "" }))
-      }).then(ok => showToast(ok === false
-        ? "Feed-Post fehlgeschlagen – bitte erneut versuchen"
-        : "Im Feed gepostet"));
+      }).then(ok => {
+        showToast(ok === false
+          ? "Feed-Post fehlgeschlagen – bitte erneut versuchen"
+          : "Im Feed gepostet");
+        if (ok !== false && typeof repaintFeedIfOpen === "function") repaintFeedIfOpen();
+      });
     }
 
     // R25-#22 (parts 4 & 5): whenever the user acts on a title that was recommended to them
@@ -10312,9 +10315,12 @@
         season: s, episode: e, episodeName: epName || "",
         bucket: bucket || null, note: noteTrim,
         epRating: (typeof FEED_STAR !== "undefined" && FEED_STAR[bucket]) || null
-      }).then(ok => showToast(ok === false
-        ? "Feed-Post fehlgeschlagen – bitte erneut versuchen"
-        : "Im Feed gepostet"));
+      }).then(ok => {
+        showToast(ok === false
+          ? "Feed-Post fehlgeschlagen – bitte erneut versuchen"
+          : "Im Feed gepostet");
+        if (ok !== false && typeof repaintFeedIfOpen === "function") repaintFeedIfOpen();
+      });
     }
 
     // mini rating sheet
@@ -15137,9 +15143,12 @@
       // als Pseudo-Posts gebaut, in derselben Form wie die der Freunde. Echte eigene
       // Posts gewinnen über die realKeys-Dedupe darunter.
       if (myUid) {
-        const _rwEx = db.recentlyWatchedExcluded || {};
+        // R58.1-Fix: „Zuletzt gesehen"-Ausblendung (recentlyWatchedExcluded) steuert NUR
+        // die gleichnamige Profil-Reihe — ein bewusst gepostetes meta.posted-Item muss
+        // im Feed erscheinen, auch wenn es dort ausgeblendet ist (sonst: Post taucht im
+        // Profil unter „Letzte Posts" auf, aber nie im eigenen Feed).
         Object.values(db.items)
-          .filter(it => it.loggedAt && !_rwEx[it.mediaType + ":" + it.id])
+          .filter(it => it.loggedAt)
           .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0))
           .slice(0, 20)
           .forEach(it => {
@@ -16033,13 +16042,19 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R58";
+    const APP_VERSION = "R58.1";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R58.1": {
+        title: "Fehlerbehebung",
+        notes: [
+          "<strong>Bewusste Posts fehlten im Feed:</strong> War ein Titel aus „Zuletzt gesehen“ ausgeblendet, verschwand er auch aus dem Feed, obwohl er im Profil unter „Letzte Posts“ korrekt angezeigt wurde. Behoben — beide Anzeigen richten sich jetzt einheitlich nur danach, ob du den Titel bewusst gepostet hast. Außerdem erscheint ein neuer Post jetzt sofort im Feed, ohne dass du die Ansicht neu laden musst."
+        ]
+      },
       "R58": {
         title: "Was ist neu",
         notes: [
