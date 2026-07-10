@@ -216,6 +216,15 @@
     .rm-btn:active { background: var(--surface-2); }
     .rm-sub { font-size: 12px; color: var(--text-mute); margin: 14px 0 4px; }
     .rm-empty { font-size: 13px; color: var(--text-mute); padding: 12px 0; }
+    /* R57: ⋯-Menü pro Post in „Letzte Posts verwalten" (Bearbeiten / Löschen) */
+    .rm-row { position: relative; }
+    .rm-menu-btn {
+      background: none; border: none; padding: 5px; cursor: pointer; color: var(--text-mute);
+      display: flex; align-items: center; justify-content: center; border-radius: 8px; flex: 0 0 auto;
+    }
+    .rm-menu-btn svg { width: 18px; height: 18px; fill: currentColor; stroke: none; }
+    .rm-menu-btn:active { background: var(--surface-2); }
+    .rm-menu { top: 50px; right: 0; min-width: 190px; }
     .reorder-row {
       display: flex; align-items: center; justify-content: space-between; gap: 12px;
       padding: 10px 12px; border-radius: 12px;
@@ -351,19 +360,20 @@
     .ep-legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-mute); }
     .ep-legend-dot { width: 9px; height: 9px; border-radius: 3px; flex: 0 0 auto; }
 
-    /* ---------- Home hero: 3D coverflow carousel (B8) ---------- */
+    /* ---------- Home hero: 3D coverflow carousel (B8) ----------
+       R57: hochkant (Poster-Format) statt breit — zeigt jetzt Empfehlungen. */
     #log-hero {
-      position: relative; height: 250px;
-      margin: 4px -16px 24px; overflow: hidden;
+      position: relative; height: 348px;
+      margin: 4px -16px 20px; overflow: hidden;
       perspective: 1100px;
       touch-action: pan-y;   /* R9-P3: let us handle horizontal swipes, keep vertical scroll */
     }
     #log-hero img { -webkit-user-drag: none; user-select: none; }
     .hero-stage { position: absolute; inset: 0; transform-style: preserve-3d; }
     .hero-slide {
-      position: absolute; top: 28px; left: 50%;
-      width: 248px; height: 150px; margin-left: -124px;
-      border-radius: 14px; overflow: hidden; cursor: pointer;
+      position: absolute; top: 12px; left: 50%;
+      width: 202px; height: 303px; margin-left: -101px;
+      border-radius: 16px; overflow: hidden; cursor: pointer;
       background: var(--surface-2);
       box-shadow: 0 14px 34px rgba(0,0,0,.55);
       transition: transform .55s cubic-bezier(.22,.61,.36,1), opacity .55s ease;
@@ -423,6 +433,17 @@
       transition: background .35s ease, transform .35s ease;
     }
     .hero-dot.active { background: var(--accent); transform: scale(1.3); }
+
+    /* ---------- R57: Kategorie-Kacheln auf Home (Filme / Serien / TV Shows) ---------- */
+    .home-cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0 0 20px; }
+    .home-cat {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: 15px 6px 12px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; color: var(--text); font-family: inherit;
+      font-size: 12px; font-weight: 600; cursor: pointer; transition: background .18s ease;
+    }
+    .home-cat svg { width: 26px; height: 26px; stroke: var(--accent); fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .home-cat:active { background: var(--surface-2); }
 
     /* ---------- Brand (small, top of Log tab) ---------- */
     .brand {
@@ -2461,7 +2482,16 @@
       .feed-poster { max-height: 62vh; width: auto; max-width: 100%; margin: 0 auto; }
     }
     .feed-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; margin-bottom: 14px; overflow: hidden; }
-    .feed-head { display: flex; align-items: center; gap: 10px; padding: 9px 12px; }
+    .feed-head { display: flex; align-items: center; gap: 10px; padding: 9px 12px; position: relative; }
+    /* R57: ⋯-Menü auf eigenen Feed-Posts */
+    .feed-menu-btn {
+      background: none; border: none; padding: 4px; margin-left: -2px; cursor: pointer;
+      color: var(--text-mute); display: flex; align-items: center; justify-content: center;
+      border-radius: 8px; flex: 0 0 auto;
+    }
+    .feed-menu-btn svg { width: 18px; height: 18px; fill: currentColor; stroke: none; }
+    .feed-menu-btn:active { background: var(--surface-2); }
+    .feed-menu { top: 36px; right: 10px; min-width: 200px; z-index: 8; }
     .feed-av { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #1a1206; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
     .feed-author { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; color: var(--accent); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
     /* R46: Collab-Post „Geschaut mit" — überlappende Avatare wie bei Instagram */
@@ -2773,7 +2803,7 @@
         <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
         <input id="log-search" type="search" inputmode="search" autocomplete="off"
                autocorrect="off" spellcheck="false" enterkeyhint="search"
-               placeholder="Film oder Serie suchen …" aria-label="Suche" />
+               placeholder="Alles durchsuchen …" aria-label="Suche" />
         <button id="log-clear" class="search-clear" type="button" aria-label="Leeren" hidden>
           <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
         </button>
@@ -2783,6 +2813,26 @@
 
       <div id="log-home">
         <div id="log-hero" hidden></div>
+        <!-- R57: Kategorie-Kacheln (Home + Entdecken kombiniert) -->
+        <div id="home-cats" class="home-cats">
+          <button class="home-cat" type="button" data-cat="movie">
+            <svg viewBox="0 0 24 24"><path d="M3 8h18v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 8l2.5-4 4 1.6L7 9.6M9.5 5.6L13.5 4 16 8M13.5 5.6L17.5 4 20 8"/></svg>
+            <span>Filme</span>
+          </button>
+          <button class="home-cat" type="button" data-cat="tv">
+            <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="13" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
+            <span>Serien</span>
+          </button>
+          <button class="home-cat" type="button" data-cat="show">
+            <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><polygon points="10 8 15 11 10 14"/><line x1="8" y1="21" x2="16" y2="21"/></svg>
+            <span>TV Shows</span>
+          </button>
+        </div>
+        <!-- R57: Entdecken-Inhalte (Genre-Chips + Trend-Reihen) leben jetzt hier -->
+        <div id="disc-browse">
+          <div id="disc-genre-chips" class="genre-chips"></div>
+          <div id="disc-rows"></div>
+        </div>
         <div id="lh-edit-bar" hidden>
           <button id="lh-edit-toggle" class="lh-edit-btn" type="button">
             <svg viewBox="0 0 24 24"><polyline points="8 9 12 5 16 9"/><polyline points="8 15 12 19 16 15"/></svg>
@@ -2804,10 +2854,31 @@
         <div id="lh-long-unseen" class="log-home-row" hidden></div>
         <div id="lh-recently-added" class="log-home-row" hidden></div>
         <div id="lh-from-list" class="log-home-row" hidden></div>
-        <div id="log-hint" class="placeholder">
+        <div id="log-hint" class="placeholder" hidden>
           <svg viewBox="0 0 24 24"><path d="M3 8h18v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 8l2.5-4 4 1.6L7 9.6M9.5 5.6L13.5 4 16 8M13.5 5.6L17.5 4 20 8"/></svg>
           <span>Tippe los — schon ein paar Buchstaben reichen.</span>
         </div>
+      </div>
+
+      <!-- R57: Kategorie-/Genre-Grid (aus Entdecken hierher gezogen) -->
+      <div id="disc-genre-view" hidden>
+        <button id="disc-genre-back" class="list-back" type="button">
+          <svg viewBox="0 0 24 24"><polyline points="15 5 8 12 15 19"/></svg>
+          Zurück
+        </button>
+        <div class="list-detail-head">
+          <h1 id="disc-genre-name"></h1>
+        </div>
+        <div class="filter-row">
+          <label>Sortierung</label>
+          <select id="disc-genre-sort" class="modal-select">
+            <option value="popularity.desc">Beliebt</option>
+            <option value="vote_average.desc">Bestbewertet</option>
+            <option value="primary_release_date.desc">Neueste</option>
+          </select>
+        </div>
+        <div id="disc-genre-grid" class="poster-grid"></div>
+        <button id="disc-genre-more" class="new-list-btn" type="button" hidden>Mehr laden</button>
       </div>
     </section>
 
@@ -2912,32 +2983,7 @@
       <!-- Personalized recommendations (always visible, responds to Typ filter) -->
       <div id="disc-recos" class="disc-recos" hidden></div>
 
-      <!-- Curated browse content -->
-      <div id="disc-browse">
-        <div id="disc-genre-chips" class="genre-chips"></div>
-        <div id="disc-rows"></div>
-      </div>
-
-      <!-- Genre browse grid -->
-      <div id="disc-genre-view" hidden>
-        <button id="disc-genre-back" class="list-back" type="button">
-          <svg viewBox="0 0 24 24"><polyline points="15 5 8 12 15 19"/></svg>
-          Entdecken
-        </button>
-        <div class="list-detail-head">
-          <h1 id="disc-genre-name"></h1>
-        </div>
-        <div class="filter-row">
-          <label>Sortierung</label>
-          <select id="disc-genre-sort" class="modal-select">
-            <option value="popularity.desc">Beliebt</option>
-            <option value="vote_average.desc">Bestbewertet</option>
-            <option value="primary_release_date.desc">Neueste</option>
-          </select>
-        </div>
-        <div id="disc-genre-grid" class="poster-grid"></div>
-        <button id="disc-genre-more" class="new-list-btn" type="button" hidden>Mehr laden</button>
-      </div>
+      <!-- R57: Genre-Chips + Trend-Reihen + Genre-Grid leben jetzt im Home-Tab -->
 
     </section>
 
@@ -3005,32 +3051,10 @@
           <span>Kein Benutzername gesetzt — lege einen unter <strong>Profil</strong> fest.</span>
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
-        <!-- R17-B: Sub-tab pills -->
-        <div class="social-tabs">
-          <button class="social-tab active" data-stab="feed" id="social-tab-feed">Feed</button>
-          <button class="social-tab" data-stab="friends" id="social-tab-friends">Freunde</button>
-        </div>
-        <!-- Feed pane -->
+        <!-- R57: Social zeigt nur noch den Feed — der Freunde-Bereich lebt jetzt
+             im Profil (Reiter „Mit Freunden geschaut"). -->
         <div id="social-feed-pane" class="social-pane">
           <div id="social-feed-list"></div>
-        </div>
-        <!-- Freunde pane (R27-#6: find & add friends without leaving Social) -->
-        <div id="social-friends-pane" class="social-pane" hidden>
-          <div class="social-friend-search">
-            <div class="search-bar" style="margin-bottom:8px">
-              <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-              <input id="social-friend-search" type="search" inputmode="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Freunde finden — Benutzername oder E-Mail …" />
-            </div>
-            <div id="social-search-results" style="margin-bottom:6px"></div>
-          </div>
-          <div id="social-requests-section" hidden>
-            <p class="social-section-title">Anfragen</p>
-            <div id="social-requests-list"></div>
-          </div>
-          <div id="social-friends-section">
-            <p class="social-section-title">Freunde</p>
-            <div id="social-friends-list"></div>
-          </div>
         </div>
       </div>
     </section>
@@ -3074,8 +3098,26 @@
           <div id="profile-posts"></div>
         </div>
 
-        <!-- Reiter 2: „Mit Freunden geschaut" (R42, aus dem Kopf hierher gezogen) -->
+        <!-- Reiter 2: Freunde + „Mit Freunden geschaut" (R42; R57: Freunde-Bereich
+             mit Suche/Anfragen/Liste aus dem Social-Tab hierher gezogen) -->
         <div id="prof-pane-friends" class="prof-pane" hidden>
+          <div id="social-friends-pane" class="social-pane">
+            <div class="social-friend-search">
+              <div class="search-bar" style="margin-bottom:8px">
+                <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+                <input id="social-friend-search" type="search" inputmode="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Freunde finden — Benutzername oder E-Mail …" />
+              </div>
+              <div id="social-search-results" style="margin-bottom:6px"></div>
+            </div>
+            <div id="social-requests-section" hidden>
+              <p class="social-section-title">Anfragen</p>
+              <div id="social-requests-list"></div>
+            </div>
+            <div id="social-friends-section">
+              <p class="social-section-title">Freunde</p>
+              <div id="social-friends-list"></div>
+            </div>
+          </div>
           <div id="profile-with-friends"></div>
         </div>
 
@@ -3172,10 +3214,7 @@
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       <span class="nav-label">Social</span>
     </button>
-    <button class="nav-btn" data-target="discover" aria-label="Entdecken">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polygon points="15.5 8.5 10.5 10.5 8.5 15.5 13.5 13.5"/></svg>
-      <span class="nav-label">Entdecken</span>
-    </button>
+    <!-- R57: Entdecken lebt jetzt im Home-Tab (Slideshow, Kategorien, Genres, Trend-Reihen) → 4 Tabs -->
     <button class="nav-btn" data-target="ranking" aria-label="Ranking">
       <svg viewBox="0 0 24 24"><line x1="5" y1="20" x2="5" y2="11"/><line x1="12" y1="20" x2="12" y2="5"/><line x1="19" y1="20" x2="19" y2="14"/></svg>
       <span class="nav-label">Ranking</span>
@@ -4568,6 +4607,9 @@
         const input = document.getElementById("log-search");
         if (input && !window.matchMedia("(pointer: coarse)").matches) setTimeout(() => input.focus(), 60);
         if (!searchInput.value.trim()) _deferRender(renderLogHome);
+        // R57: Home trägt jetzt die Entdecken-Reihen — Karten-Zustände (Watchlist/
+        // Gesehen) nachziehen, wie es früher beim Öffnen von Entdecken lief (R35.1).
+        _deferRender(() => { if (typeof refreshAllCardActions === "function") refreshAllCardActions(); });
       }
       // Rebuild the leaderboard each time it is opened (with filter dropdowns)
       // R52-Perf: erst den Tab-Wechsel malen lassen, dann die (große) Liste bauen.
@@ -4622,12 +4664,25 @@
       if (nc && !nc.hidden) { closeNotifCenter(); closed = true; }
       const sd = document.getElementById("settings-drawer");   // R37: Einstellungen-Schublade
       if (sd && !sd.hidden) { closeSettingsDrawer(); closed = true; }
+      // R57: Kategorie-/Genre-Grid auf Home schließen (Home-Inhalt wieder zeigen)
+      const gv = document.getElementById("disc-genre-view");
+      if (gv && !gv.hidden) {
+        gv.hidden = true;
+        const lh = document.getElementById("log-home");
+        if (lh) lh.hidden = false;
+        _genreBackEntry = false;
+        closed = true;
+      }
       navStack = [];
       if (closed) document.body.style.overflow = "";
       return closed;
     }
 
     // R37: Instagram-Stil Einstellungen-Schublade hinter dem Burger im Profil.
+    // R57: die Schublade parkt einen History-Eintrag — der iOS-Rechts-Swipe
+    // (Browser-Zurück) schließt dann die Schublade, statt im Hintergrund über
+    // den popstate-Fallback den Tab zu wechseln.
+    let _settingsBackEntry = false;
     function openSettingsDrawer() {
       const sd = document.getElementById("settings-drawer");
       if (!sd) return;
@@ -4639,6 +4694,7 @@
                              // das in Hintergrund-Tabs / im Preview pausiert und die Klasse nie setzte)
       sd.classList.add("open");
       document.body.style.overflow = "hidden";
+      if (!_settingsBackEntry) { _settingsBackEntry = true; history.pushState({ vaultOverlay: "settings" }, ""); }
     }
     function closeSettingsDrawer() {
       const sd = document.getElementById("settings-drawer");
@@ -4649,6 +4705,10 @@
       sd.addEventListener("transitionend", done);
       setTimeout(done, 320);   // Fallback, falls transitionend nicht feuert
       document.body.style.overflow = "";
+      // R57: geparkten History-Eintrag wieder abräumen (nur wenn der Close nicht
+      // selbst durch popstate/Swipe ausgelöst wurde — dann hat der Aufrufer die
+      // Flagge schon zurückgesetzt).
+      if (_settingsBackEntry) { _settingsBackEntry = false; programmingGoingBack = true; history.back(); }
     }
     {
       const soBtn = document.getElementById("settings-open");
@@ -4742,6 +4802,10 @@
       // R16-#4: close overlays highest-z-index first
       const nc = document.getElementById("notif-center");
       if (nc && !nc.hidden) { closeNotifCenter(); return; }
+      // R57: Einstellungen-Schublade — Rechts-Swipe (Browser-Zurück) schließt sie,
+      // statt durchzufallen und im Hintergrund den Tab zu wechseln.
+      const sdPop = document.getElementById("settings-drawer");
+      if (sdPop && !sdPop.hidden) { _settingsBackEntry = false; closeSettingsDrawer(); return; }
       if (typeof friendProfileEl !== "undefined" && friendProfileEl && !friendProfileEl.hidden) {
         _fprofBackEntry = false; closeFriendProfile(); return;
       }
@@ -4780,6 +4844,13 @@
         closingHsoFromPop = true;
         closeHomeSectionFull();
         closingHsoFromPop = false;
+        return;
+      }
+      // R57: Kategorie-/Genre-Grid auf Home — Rechts-Swipe führt zurück zur Home-Übersicht
+      const gvPop = document.getElementById("disc-genre-view");
+      if (gvPop && !gvPop.hidden) {
+        _genreBackEntry = false;   // History-Eintrag ist durch diesen popstate schon weg
+        closeGenreBrowse();
         return;
       }
       // If we're on a non-Home tab, back goes to Home
@@ -5105,6 +5176,9 @@
 
       if (items === null) { hintEl.hidden = false; renderLogHome(); return; }
       hintEl.hidden = true;
+      // R57: eine laufende Suche verdrängt das offene Kategorie-/Genre-Grid
+      const gvSearch = document.getElementById("disc-genre-view");
+      if (gvSearch && !gvSearch.hidden) { gvSearch.hidden = true; _genreBackEntry = false; }
 
       if (items === "error") {
         resultsEl.innerHTML = '<div class="results-empty">Suche fehlgeschlagen. Internet prüfen?</div>';
@@ -5459,7 +5533,7 @@
       heroSlides.forEach((slide, i) => {
         const off = i - heroIndex;
         const abs = Math.abs(off);
-        const tx = off * 116;                 // horizontal spread
+        const tx = off * 148;                 // horizontal spread (R57: breitere Hochkant-Slides)
         const ry = Math.max(-45, Math.min(45, off * -30)); // tilt of side panels
         const tz = off === 0 ? 0 : -130;      // push neighbours back
         const sc = off === 0 ? 1 : 0.84;
@@ -5520,103 +5594,62 @@
       const w = Math.max(1, Math.floor(d / (7 * day)));            return w + (w === 1 ? " Woche" : " Wochen");
     }
 
+    // R57: Der Home-Hero zeigt jetzt EMPFEHLUNGEN (dieselben Quellen wie das alte
+    // „Für dich empfohlen" aus Entdecken: Genres/Tags/Listen der eigenen Bibliothek)
+    // im Hochkant-Poster-Stil. Ohne Bibliothek oder wenn alle Quellen leer laufen,
+    // füllt „Diese Woche im Trend" auf.
     async function buildHero() {
       const heroEl = document.getElementById("log-hero");
       if (!heroEl) return;
 
-      const all = Object.values(db.items);
-      if (!all.length) { heroEl.hidden = true; return; }
+      // 1) Empfehlungs-Kandidaten: pro Quelle reihum je ein ungesehener Titel,
+      //    bis zu 7 Slides (Label = Quelle, z. B. „Anhand deiner Action-Titel").
+      const picks = [];
+      const usedKeys = new Set();
+      try {
+        const sources = await buildRecoSources(null);
+        if (sources.length) {
+          const pools = await Promise.all(sources.map(s => aggregateRecs(s.seeds)));
+          const idxs = sources.map(() => 0);
+          for (let round = 0; round < 3 && picks.length < 7; round++) {
+            sources.forEach((s, i) => {
+              if (picks.length >= 7) return;
+              const pool = pools[i] || [];
+              while (idxs[i] < pool.length) {
+                const c = pool[idxs[i]++];
+                const mt = c._mt || (c.media_type === "tv" ? "tv" : "movie");
+                const k = keyOf(mt, c.id);
+                if (usedKeys.has(k) || recoUnavailable(c.id) || !c.poster_path) continue;
+                usedKeys.add(k);
+                picks.push({ mt, item: c, label: s.label });
+                break;
+              }
+            });
+          }
+        }
+      } catch (e) { /* Empfehlungen sind optional — Trending fängt auf */ }
 
-      const sortedMovies = all.filter(it => it.mediaType === "movie" && !it.unranked)
-        .sort((a, b) => (b.score || 0) - (a.score || 0));
-      const sortedTv = all.filter(it => it.mediaType === "tv" && !it.unranked)
-        .sort((a, b) => (b.score || 0) - (a.score || 0));
-      const sortedRecent = all.slice().sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0));
-
-      const candidates = [];
-      const usedIds = new Set();
-      const tryAdd = (it, label) => {
-        if (!it || usedIds.has(it.id)) return;
-        usedIds.add(it.id);
-        candidates.push({ it, label });
-      };
-
-      // R18 (B1): build a varied candidate pool, then show a fresh random mix on
-      // each app open (instead of the same fixed ~5 slides every time).
-      const pool = [];
-      const pushIf = (it, label) => { if (it) pool.push({ it, label }); };
-
-      pushIf(sortedMovies[0], "Dein #1 Film");
-      pushIf(sortedMovies[1], "Dein #2 Film");
-      pushIf(sortedTv[0], "Deine #1 Serie");
-      pushIf(sortedTv[1], "Deine #2 Serie");
-      // R42: der „Zuletzt gesehen"-Hero-Slide nimmt den neuesten GEPOSTETEN Titel.
-      pushIf(sortedRecent.find(it => isPostLive(db.meta[it.mediaType + ":" + it.id])), "Zuletzt gesehen");
-
-      // Favourite-genre picks — best-scored title in a random well-rated genre.
-      const topGenreOf = (arr) => {
-        const tally = {};
-        arr.filter(it => !it.unranked && (it.bucket === "great" || it.bucket === "good"))
-           .forEach(it => (it.genreIds || []).forEach(g => { tally[g] = (tally[g] || 0) + 1; }));
-        const ranked = Object.keys(tally).sort((a, b) => tally[b] - tally[a]);
-        if (!ranked.length) return null;
-        return parseInt(ranked[Math.floor(Math.random() * Math.min(3, ranked.length))], 10);
-      };
-      const favMovieGenre = topGenreOf(sortedMovies);
-      if (favMovieGenre != null) {
-        const top = sortedMovies.find(it => (it.genreIds || []).includes(favMovieGenre));
-        const gname = (genreMapById && genreMapById[favMovieGenre]) || "";
-        if (top && gname) pushIf(top, "Dein Lieblings-" + gname + "-Film");
-      }
-      const favTvGenre = topGenreOf(sortedTv);
-      if (favTvGenre != null) {
-        const top = sortedTv.find(it => (it.genreIds || []).includes(favTvGenre));
-        const gname = (genreMapById && genreMapById[favTvGenre]) || "";
-        if (top && gname) pushIf(top, "Deine Lieblings-" + gname + "-Serie");
-      }
-
-      // Longest-waiting watchlist title (older than ~3 weeks to be meaningful).
-      const wl = Object.values(db.watchlist || {})
-        .map(it => ({ it, ts: it.loggedAt || it.addedAt || 0 }))
-        .filter(x => x.ts && (Date.now() - x.ts) > 21 * 86400000)
-        .sort((a, b) => a.ts - b.ts);
-      if (wl.length) {
-        const o = wl[0].it;
-        pushIf({ id: o.id, mediaType: o.mediaType, title: o.title, poster: o.poster, year: o.year, rating: o.rating || 0 },
-               "Liegt seit " + durSince(wl[0].ts) + " in deiner Watchlist");
-      }
-
-      // Best TMDB-rated title across the watched library.
-      const bestRated = all.filter(it => !it.unranked && (it.rating || 0) > 0)
-        .sort((a, b) => (b.rating || 0) - (a.rating || 0))[0];
-      pushIf(bestRated, "Am besten bewertet");
-
-      // Hidden gem — a highly rated but older watched title (≥15 years old).
-      const curYear = new Date().getFullYear();
-      const gems = all.filter(it => !it.unranked && (it.bucket === "great" || it.bucket === "good")
-        && it.year && (curYear - parseInt(it.year, 10)) >= 15);
-      if (gems.length) pushIf(gems[Math.floor(Math.random() * gems.length)], "Versteckte Perle");
-
-      // Shuffle the pool, then take up to 7 unique titles for this session.
-      for (let i = pool.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [pool[i], pool[j]] = [pool[j], pool[i]];
-      }
-      pool.forEach(({ it, label }) => { if (candidates.length < 7) tryAdd(it, label); });
-
-      if (!candidates.length) { heroEl.hidden = true; return; }
-
-      // Fetch film backdrops in parallel (B8: imagery must match each title)
-      const slides = await Promise.all(candidates.map(async ({ it, label }) => {
+      // 2) Fallback/Auffüllen: Trending der Woche (auch für frische Accounts)
+      if (picks.length < 4) {
         try {
-          const res = await tmFetch(
-            "https://api.themoviedb.org/3/" + it.mediaType + "/" + it.id +
-            "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG
-          );
-          const d = res.ok ? await res.json() : {};
-          return { it, label, backdrop: d.backdrop_path || null };
-        } catch (_) { return { it, label, backdrop: null }; }
-      }));
+          const res = await tmFetch("https://api.themoviedb.org/3/trending/all/week?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
+          if (res.ok) {
+            const d = await res.json();
+            const pool = filterHidden((d.results || []).filter(r =>
+              (r.media_type === "movie" || r.media_type === "tv") && r.poster_path), null);
+            for (const it of pool) {
+              if (picks.length >= 7) break;
+              const mt = it.media_type === "tv" ? "tv" : "movie";
+              const k = keyOf(mt, it.id);
+              if (usedKeys.has(k)) continue;
+              usedKeys.add(k);
+              picks.push({ mt, item: it, label: "Diese Woche im Trend" });
+            }
+          }
+        } catch (e) { /* offline → Hero bleibt leer/alt */ }
+      }
+
+      if (!picks.length) { heroEl.hidden = true; return; }
 
       if (heroTimer) { clearInterval(heroTimer); heroTimer = null; }
       heroSlides = []; heroDots = []; heroIndex = 0;
@@ -5625,39 +5658,33 @@
       const stage = document.createElement("div"); stage.className = "hero-stage";
       const dotsEl = document.createElement("div"); dotsEl.className = "hero-dots";
 
-      slides.forEach(({ it, label, backdrop }) => {
+      picks.forEach(({ mt, item, label }) => {
         const slide = document.createElement("div");
         slide.className = "hero-slide";
 
-        if (backdrop) {
-          const img = document.createElement("img");
-          img.className = "hero-backdrop"; img.src = IMG_BASE + "w780" + backdrop; img.alt = "";
-          slide.appendChild(img);
-        } else if (it.poster) {
-          const img = document.createElement("img");
-          img.className = "hero-backdrop"; img.src = IMG_BASE + "w342" + it.poster; img.alt = "";
-          img.style.filter = "blur(10px)"; img.style.transform = "scale(1.12)";
-          slide.appendChild(img);
-        }
+        const img = document.createElement("img");
+        img.className = "hero-backdrop"; img.src = IMG_BASE + "w342" + item.poster_path; img.alt = "";
+        slide.appendChild(img);
 
         const dim = document.createElement("div"); dim.className = "hero-dim"; slide.appendChild(dim);
         const sheen = document.createElement("div"); sheen.className = "hero-sheen"; slide.appendChild(sheen);
 
         const content = document.createElement("div"); content.className = "hero-content";
         const lbl = document.createElement("div"); lbl.className = "hero-label"; lbl.textContent = label;
-        const ttl = document.createElement("div"); ttl.className = "hero-title"; ttl.textContent = it.title;
+        const ttl = document.createElement("div"); ttl.className = "hero-title"; ttl.textContent = dispTitleOf(item, mt) || "";
         const meta = document.createElement("div"); meta.className = "hero-meta";
+        const date = mt === "tv" ? item.first_air_date : item.release_date;
         const bits = [];
-        if (it.year) bits.push(it.year);
-        bits.push(it.mediaType === "tv" ? "Serie" : "Film");
-        if (it.rating > 0) bits.push("★ " + it.rating.toFixed(1).replace(".", ","));
+        if (date) bits.push(date.slice(0, 4));
+        bits.push(mt === "tv" ? "Serie" : "Film");
+        if (typeof item.vote_average === "number" && item.vote_average > 0) bits.push("★ " + item.vote_average.toFixed(1).replace(".", ","));
         meta.textContent = bits.join(" · ");
         content.appendChild(lbl); content.appendChild(ttl); content.appendChild(meta);
         slide.appendChild(content);
         slide.addEventListener("click", () => {
           const idx = heroSlides.indexOf(slide);
-          if (idx === heroIndex) openDetail(it.mediaType, it.id);   // tap centre → open
-          else { heroIndex = idx; layoutHero(); heroResetTimer(); } // tap side → bring to centre
+          if (idx === heroIndex) openDetail(mt, item.id);            // tap centre → open
+          else { heroIndex = idx; layoutHero(); heroResetTimer(); }  // tap side → bring to centre
         });
         stage.appendChild(slide);
         heroSlides.push(slide);
@@ -5737,22 +5764,28 @@
       return pool.slice(0, 3);
     }
 
+    // R57: Home = kombinierter Entdecken-Hub (Suche, Empfehlungs-Slideshow,
+    // Kategorien, Genre-Chips, Trend-Reihen). Die alten persönlichen Reihen
+    // (Aktuelle Serien / Zuletzt gesehen / Watchlist / Top …) leben seit R52
+    // im Profil — hier werden sie nicht mehr gebaut.
+    let _homeBrowseInited = false;
+    function initHomeBrowse() {
+      if (_homeBrowseInited) return;
+      _homeBrowseInited = true;
+      discInited = true;   // alter Entdecken-Init darf nie doppelt bauen
+      buildGenreChips();
+      buildRows();
+    }
     function renderLogHome() {
-      const all = Object.values(db.items);
       const hint = document.getElementById("log-hint");
-      if (hint) hint.hidden = all.length > 0;
+      if (hint) hint.hidden = true;
 
       maybeRebuildHero();
+      initHomeBrowse();
 
-      // R18-B2: every home row is now a curated, persistent, fully-editable section.
-      // Hide all existing rows, then (re)build the ones in the saved section list.
       document.querySelectorAll("#log-home .log-home-row").forEach(el => { el.hidden = true; });
-      getHomeSections().forEach(s => buildSection(s, all));
-
-      applyHomeOrder();
       const editBar = document.getElementById("lh-edit-bar");
-      if (editBar) editBar.hidden =
-        !(all.length || Object.keys(db.watchlist).length || Object.keys(db.progress).length);
+      if (editBar) editBar.hidden = true;
     }
 
     function buildDynamicSections(sections, all) {
@@ -11183,13 +11216,28 @@
     const discGenreSort = document.getElementById("disc-genre-sort");
     let gb = { id: null, name: "", sort: "popularity.desc", page: 0, totalPages: 1 };
 
-    function openGenreBrowse(id, name) {
-      gb = { id, name, sort: discGenreSort.value, page: 0, totalPages: 1 };
+    // R57: das Genre-Grid lebt jetzt im Home-Tab — es versteckt den Home-Inhalt,
+    // parkt einen History-Eintrag (iOS-Rechts-Swipe schließt es wieder) und kann
+    // neben Genres auch ganze Kategorien (media ohne Genre) durchblättern.
+    let _genreBackEntry = false;
+    function openGenreBrowse(id, name, media) {
+      gb = { id: id || null, name, media: media || "movie", sort: discGenreSort.value, page: 0, totalPages: 1 };
       document.getElementById("disc-genre-name").textContent = name;
       discGenreGrid.innerHTML = "";
-      discBrowse.hidden = true; discResults.hidden = true; discFiltered.hidden = true; discFilterBar.hidden = true; discGenreView.hidden = false;
+      const lh = document.getElementById("log-home");
+      if (lh) lh.hidden = true;
+      discGenreView.hidden = false;
       discGenreView.scrollTop = 0;
+      const v = document.getElementById("view-log");
+      if (v) v.scrollTop = 0;
+      if (!_genreBackEntry) { _genreBackEntry = true; history.pushState({ vaultOverlay: "genre" }, ""); }
       loadGenrePage();
+    }
+    function closeGenreBrowse() {
+      discGenreView.hidden = true;
+      const lh = document.getElementById("log-home");
+      if (lh) lh.hidden = false;
+      if (_genreBackEntry) { _genreBackEntry = false; programmingGoingBack = true; history.back(); }
     }
 
     async function loadGenrePage() {
@@ -11197,8 +11245,12 @@
       discGenreMore.hidden = true;
       if (gb.page === 1) discGenreGrid.innerHTML = '<div class="grid-empty">Lädt …</div>';
       try {
-        let url = "https://api.themoviedb.org/3/discover/movie?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG
-          + "&with_genres=" + gb.id + "&sort_by=" + gb.sort + "&page=" + gb.page + "&include_adult=false";
+        const media = gb.media || "movie";
+        // TMDB-Sortierfeld unterscheidet sich je Medium (Kinostart vs. Erstausstrahlung)
+        const sort = (media === "tv" && gb.sort === "primary_release_date.desc") ? "first_air_date.desc" : gb.sort;
+        let url = "https://api.themoviedb.org/3/discover/" + media + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG
+          + "&sort_by=" + sort + "&page=" + gb.page + "&include_adult=false";
+        if (gb.id) url += "&with_genres=" + gb.id;
         if (gb.sort === "vote_average.desc") url += "&vote_count.gte=200";
         if (gb.sort === "primary_release_date.desc") url += "&vote_count.gte=20";
         const res = await tmFetch(url);
@@ -11206,15 +11258,15 @@
         const d = await res.json();
         gb.totalPages = Math.min(d.total_pages || 1, 500);
         if (gb.page === 1) discGenreGrid.innerHTML = "";
-        const items = filterHidden((d.results || []).filter(it => it.poster_path), "movie");   // point 6
+        const items = filterHidden((d.results || []).filter(it => it.poster_path), media);   // point 6
         if (gb.page === 1 && !items.length) { discGenreGrid.innerHTML = '<div class="grid-empty">Nichts gefunden.</div>'; return; }
         const frag = document.createDocumentFragment();
         items.forEach(it => {
           const cell = document.createElement("div"); cell.className = "grid-item";
-          const img = document.createElement("img"); img.loading = "lazy"; img.src = IMG_BASE + "w185" + it.poster_path; img.alt = it.title || "";
+          const img = document.createElement("img"); img.loading = "lazy"; img.src = IMG_BASE + "w185" + it.poster_path; img.alt = dispTitleOf(it, media) || "";
           cell.appendChild(img);
-          cell.appendChild(makeCardActions(it, "movie"));
-          cell.addEventListener("click", () => openDetail("movie", it.id));
+          cell.appendChild(makeCardActions(it, media));
+          cell.addEventListener("click", () => openDetail(media, it.id));
           frag.appendChild(cell);
         });
         discGenreGrid.appendChild(frag);
@@ -11224,9 +11276,18 @@
       }
     }
 
-    discGenreSort.addEventListener("change", () => { if (gb.id) openGenreBrowse(gb.id, gb.name); });
+    discGenreSort.addEventListener("change", () => { if (!discGenreView.hidden) openGenreBrowse(gb.id, gb.name, gb.media); });
     discGenreMore.addEventListener("click", loadGenrePage);
-    document.getElementById("disc-genre-back").addEventListener("click", showDiscBrowse);
+    document.getElementById("disc-genre-back").addEventListener("click", closeGenreBrowse);
+
+    // R57: Kategorie-Kacheln — Filme / Serien / TV Shows (Reality + Talk)
+    document.querySelectorAll("#home-cats .home-cat").forEach(btn =>
+      btn.addEventListener("click", () => {
+        const cat = btn.dataset.cat;
+        if (cat === "movie")     openGenreBrowse(null, "Filme", "movie");
+        else if (cat === "tv")   openGenreBrowse(null, "Serien", "tv");
+        else if (cat === "show") openGenreBrowse("10764|10767", "TV Shows", "tv");
+      }));
 
     // ---------- Filter browse (A3) ----------
     const dfMedia  = document.getElementById("df-media");
@@ -11588,7 +11649,12 @@
       document.getElementById("prof-pane-friends").hidden = t !== "friends";
       document.getElementById("prof-pane-lists").hidden   = t !== "lists";
       if (t === "posts") renderProfilePosts();
-      if (t === "friends") renderWithFriends();
+      if (t === "friends") {
+        renderWithFriends();
+        // R57: der Freunde-Bereich (Suche/Anfragen/Liste) lebt jetzt hier —
+        // beim Öffnen frisch aus Firestore laden (rendert Anfragen + Freunde).
+        if (window.__vaultUser && typeof loadSocialFriends === "function") loadSocialFriends();
+      }
       if (t === "lists") renderListsCards();
     }
     document.querySelectorAll("#prof-tabs .prof-tab").forEach(b =>
@@ -11855,19 +11921,32 @@
       const kind = _rowManageKey;
       const body = document.getElementById("row-manage-body");
       const { shown, hidden } = _rowManageData(kind);
+      const isPosts = kind === "posts";
       const thumb = r => r.poster
         ? '<img class="rm-thumb" loading="lazy" src="' + IMG_BASE + 'w92' + r.poster + '" alt="">'
         : '<div class="rm-thumb rm-thumb-ph"></div>';
+      // R57: bei „Letzte Posts verwalten" heißt der Schnell-Knopf ehrlich
+      // „Archivieren" (das tat „Ausblenden" dort schon immer) und jedes Element
+      // bekommt ein ⋯-Menü mit Bearbeiten + Löschen.
+      const DOTS = '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>';
       const rowHtml = (r, hide) =>
         '<div class="rm-row">' + thumb(r) +
         '<div class="rm-title">' + esc(r.title) + '</div>' +
         '<button class="rm-btn" type="button" data-key="' + esc(r.key) + '" data-hide="' + (hide ? "1" : "0") + '">' +
-        (hide ? "Ausblenden" : "Einblenden") + '</button></div>';
+        (hide ? (isPosts ? "Archivieren" : "Ausblenden") : (isPosts ? "Wiederherstellen" : "Einblenden")) + '</button>' +
+        (isPosts
+          ? '<button class="rm-menu-btn" type="button" data-key="' + esc(r.key) + '" aria-label="Optionen">' + DOTS + '</button>' +
+            '<div class="mypost-menu rm-menu" hidden>' +
+              '<button type="button" class="rm-m-edit" data-key="' + esc(r.key) + '">Beschreibung bearbeiten</button>' +
+              '<button type="button" class="rm-m-delete danger" data-key="' + esc(r.key) + '">Post löschen</button>' +
+            '</div>'
+          : '') +
+        '</div>';
       let html = "";
       html += shown.length ? shown.map(r => rowHtml(r, true)).join("")
                            : '<div class="rm-empty">Nichts in dieser Reihe.</div>';
       if (hidden.length) {
-        html += '<div class="rm-sub">Ausgeblendet</div>' + hidden.map(r => rowHtml(r, false)).join("");
+        html += '<div class="rm-sub">' + (isPosts ? "Archiviert" : "Ausgeblendet") + '</div>' + hidden.map(r => rowHtml(r, false)).join("");
       }
       body.innerHTML = html;
       body.querySelectorAll(".rm-btn").forEach(b =>
@@ -11875,6 +11954,45 @@
           _rowManageToggle(kind, b.dataset.key, b.dataset.hide === "1");
           renderRowManage();
           renderProfilePosts();
+        }));
+      // R57: ⋯-Menü pro Post — Bearbeiten (öffnet das Post-Sheet mit offenem
+      // Textfeld) und zweistufiges Löschen (wie im Post-Sheet, R50).
+      const closeRmMenus = () => {
+        body.querySelectorAll(".rm-menu").forEach(m => { m.hidden = true; });
+        body.querySelectorAll(".rm-m-delete").forEach(d => { d.classList.remove("armed"); d.textContent = "Post löschen"; });
+      };
+      body.querySelectorAll(".rm-menu-btn").forEach(b =>
+        b.addEventListener("click", e => {
+          e.stopPropagation();
+          const menu = b.closest(".rm-row").querySelector(".rm-menu");
+          const wasHidden = menu.hidden;
+          closeRmMenus();
+          menu.hidden = !wasHidden;
+        }));
+      body.querySelectorAll(".rm-m-edit").forEach(b =>
+        b.addEventListener("click", e => {
+          e.stopPropagation();
+          closeRmMenus();
+          openMyPostSheet(b.dataset.key);
+          const eb = document.getElementById("mypost-edit");
+          if (eb) eb.click();   // Edit-Box direkt aufklappen
+        }));
+      body.querySelectorAll(".rm-m-delete").forEach(b =>
+        b.addEventListener("click", e => {
+          e.stopPropagation();
+          if (!b.classList.contains("armed")) {
+            b.classList.add("armed");
+            b.textContent = "Wirklich löschen?";
+            return;
+          }
+          const key = b.dataset.key;
+          const m = getMeta(key);
+          m.posted = false;
+          m.archived = false;
+          saveMeta(key, m);
+          _deleteMyCloudPosts(key);
+          showToast("Post gelöscht");
+          _refreshAfterPostChange();   // rendert auch diese Liste neu (s. u.)
         }));
     }
     function openRowManageSheet(kind) {
@@ -11893,6 +12011,12 @@
     document.getElementById("row-manage-close").addEventListener("click", closeRowManageSheet);
     document.getElementById("row-manage-backdrop").addEventListener("click", e => {
       if (e.target.id === "row-manage-backdrop") closeRowManageSheet();
+      // R57: Tap außerhalb eines offenen ⋯-Menüs schließt es (und entschärft Löschen)
+      if (!e.target.closest(".rm-menu") && !e.target.closest(".rm-menu-btn")) {
+        const body = document.getElementById("row-manage-body");
+        body.querySelectorAll(".rm-menu").forEach(m => { m.hidden = true; });
+        body.querySelectorAll(".rm-m-delete").forEach(d => { d.classList.remove("armed"); d.textContent = "Post löschen"; });
+      }
     });
 
     // ---------- R53: Profil-Reihen anpassen (Muster = Home-Abschnitte) ----------
@@ -12064,7 +12188,10 @@
       // noch offen ist — gleiches Muster wie closeShareSheet (R19-B4).
       const profOpen = friendProfileEl && !friendProfileEl.hidden;
       const detailOpen = detailEl && !detailEl.hidden;
-      if (!profOpen && !detailOpen) document.body.style.overflow = "";
+      // R57: Scroll-Lock auch behalten, wenn noch ein anderes Sheet offen ist
+      // (z. B. „Letzte Posts verwalten", aus dem dieses Sheet geöffnet wurde).
+      const sheetOpen = document.querySelectorAll(".sheet-backdrop:not([hidden])").length > 0;
+      if (!profOpen && !detailOpen && !sheetOpen) document.body.style.overflow = "";
       _myPostKey = null;
       _sheetDetailTarget = null;
       _disarmMyPostDelete();
@@ -12152,6 +12279,8 @@
       _republishProfileSnapshot();
       renderProfilePosts();
       if (typeof repaintFeedIfOpen === "function") repaintFeedIfOpen();
+      // R57: falls „Letzte Posts verwalten" gerade offen ist, die Liste nachziehen
+      if (_rowManageKey && typeof renderRowManage === "function") renderRowManage();
     }
     document.getElementById("mypost-archive").addEventListener("click", () => {
       const key = _myPostKey;
@@ -13173,13 +13302,11 @@
           el.classList.remove("unread");
           el.querySelector(".notif-unread-dot")?.remove();
           if (el.dataset.type === "friend_request" || el.dataset.type === "friend_accepted") {
-            // R48: direkt zur Freunde-Unterseite springen, wo Annehmen/Ablehnen liegt.
-            // _socialActivePane VOR switchTab setzen, weil initSocialTab() async lädt
-            // und am Ende switchSocialPane(_socialActivePane) aufruft — ein Aufruf
-            // NACH switchTab würde von diesem späteren Reset wieder überschrieben.
+            // R48/R57: der Freunde-Bereich (Annehmen/Ablehnen) lebt jetzt im Profil
+            // unter dem mittleren Reiter — direkt dorthin springen.
             closeNotifCenter();
-            _socialActivePane = "friends";
-            switchTab("social");
+            switchTab("profile");
+            if (typeof switchProfTab === "function") switchProfTab("friends");
           } else if (el.dataset.type === "item_shared" || el.dataset.type === "reco_reply") {
             // R21-#9: re-open the recommendation popup (works for any age).
             // Fix #3: reco_reply too → tapping a reply reopens the popup so the
@@ -13572,35 +13699,23 @@
       const banner = document.getElementById("social-no-username");
       if (banner) banner.hidden = !!(_myProfile && _myProfile.username);
 
-      // Wire sub-tab pills (once per tab visit via data-wired flag)
-      const tabFeed    = document.getElementById("social-tab-feed");
-      const tabFriends = document.getElementById("social-tab-friends");
-      if (tabFeed && !tabFeed.dataset.wired) {
-        tabFeed.dataset.wired = "1";
-        tabFeed.addEventListener("click", () => switchSocialPane("feed"));
-        tabFriends.addEventListener("click", () => switchSocialPane("friends"));
-      }
-
       await loadSocialFriends();
       syncPrivacyToFirestore();
 
-      // Show the pane that was last active (default: feed)
-      switchSocialPane(_socialActivePane);
+      // R57: Social zeigt nur noch den Feed (Freunde-Bereich lebt im Profil).
+      switchSocialPane("feed");
     }
 
+    // R57: Der Freunde-Bereich wohnt jetzt im Profil (Reiter 2) — Social hat nur
+    // noch den Feed. "friends" leitet deshalb dorthin um (z. B. alte Aufrufer).
     function switchSocialPane(pane) {
-      _socialActivePane = pane;
-      const feedPane    = document.getElementById("social-feed-pane");
-      const friendsPane = document.getElementById("social-friends-pane");
-      const tabFeed     = document.getElementById("social-tab-feed");
-      const tabFriends  = document.getElementById("social-tab-friends");
-      if (!feedPane || !friendsPane) return;
-      feedPane.hidden    = pane !== "feed";
-      friendsPane.hidden = pane !== "friends";
-      if (tabFeed)    tabFeed.classList.toggle("active",    pane === "feed");
-      if (tabFriends) tabFriends.classList.toggle("active", pane === "friends");
-      if (pane === "feed") renderFeed();
-      else stopFeedSubs();
+      if (pane === "friends") {
+        switchTab("profile");
+        if (typeof switchProfTab === "function") switchProfTab("friends");
+        return;
+      }
+      _socialActivePane = "feed";
+      renderFeed();
     }
 
     // R18-A: Instagram-style activity feed — highlights from friends'
@@ -14488,6 +14603,18 @@
       // R46: Collab-Post — „Geschaut mit"-Partner erscheinen wie bei Instagram als
       // überlappende Avatare + „Anna und Ben haben … geschaut" (bzw. „… und Du").
       const _meUid = window.__vaultUser && window.__vaultUser.uid;
+      // R57: eigene Film-/Serien-Posts bekommen oben rechts ein ⋯-Menü
+      // (Bearbeiten / Archivieren / Löschen — gleiche Logik wie das Post-Sheet).
+      const _isMineCard = !!(_meUid && ownerUid === _meUid && /^(watched|rated)$/.test(p.type || "") && id != null);
+      const _menuKey = type + ":" + id;
+      const menuHtml = _isMineCard
+        ? `<button class="feed-menu-btn" type="button" aria-label="Optionen"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></button>` +
+          `<div class="mypost-menu feed-menu" hidden>` +
+          `<button type="button" class="feed-m-edit" data-key="${socialEsc(_menuKey)}">Beschreibung bearbeiten</button>` +
+          `<button type="button" class="feed-m-archive" data-key="${socialEsc(_menuKey)}">Archivieren</button>` +
+          `<button type="button" class="feed-m-delete danger" data-key="${socialEsc(_menuKey)}">Post löschen</button>` +
+          `</div>`
+        : "";
       const wwPartners = (Array.isArray(p.watchedWith) ? p.watchedWith : [])
         .filter(w => w && w.uid && w.uid !== ownerUid);
       let head, actionText = feedActionLabel(p);
@@ -14505,14 +14632,14 @@
         head = `<div class="feed-head">
             <div class="feed-av-stack">${avs}</div>
             <div class="feed-author feed-author-multi">${nameLine}</div>
-            <div class="feed-time">${relativeTime(p.timestamp)}</div>
+            <div class="feed-time">${relativeTime(p.timestamp)}</div>${menuHtml}
           </div>`;
         actionText = actionText.replace(/^hat /, "haben ");
       } else {
         head = `<div class="feed-head">
             <div class="feed-av" data-uid="${socialEsc(ownerUid)}">${avatarHtml(ownerUid, author)}</div>
             <div class="feed-author" data-uid="${socialEsc(ownerUid)}">${socialEsc(author)}</div>
-            <div class="feed-time">${relativeTime(p.timestamp)}</div>
+            <div class="feed-time">${relativeTime(p.timestamp)}</div>${menuHtml}
           </div>`;
       }
       const action = `<div class="feed-actionline">${actionText}</div>`;
@@ -14895,6 +15022,53 @@
         btn.addEventListener("click", () => toggleCommentSection(btn));
       });
 
+      // R57: ⋯-Menü auf eigenen Posts — Bearbeiten / Archivieren / Löschen
+      // (dieselbe meta-Logik wie das Post-Sheet aus R50/R52).
+      const _closeFeedMenus = () => {
+        host.querySelectorAll(".feed-menu").forEach(m => { m.hidden = true; });
+        host.querySelectorAll(".feed-m-delete").forEach(d => { d.classList.remove("armed"); d.textContent = "Post löschen"; });
+      };
+      host.querySelectorAll(".feed-menu-btn").forEach(btn => btn.addEventListener("click", e => {
+        e.stopPropagation();
+        const menu = btn.nextElementSibling;
+        const wasHidden = menu ? menu.hidden : true;
+        _closeFeedMenus();
+        if (menu) menu.hidden = !wasHidden;
+      }));
+      host.querySelectorAll(".feed-m-edit").forEach(btn => btn.addEventListener("click", e => {
+        e.stopPropagation();
+        _closeFeedMenus();
+        if (!db.items[btn.dataset.key]) return;
+        openMyPostSheet(btn.dataset.key);
+        const eb = document.getElementById("mypost-edit");
+        if (eb) eb.click();   // Edit-Box direkt aufklappen
+      }));
+      host.querySelectorAll(".feed-m-archive").forEach(btn => btn.addEventListener("click", e => {
+        e.stopPropagation();
+        _closeFeedMenus();
+        const m = getMeta(btn.dataset.key);
+        m.archived = true;
+        saveMeta(btn.dataset.key, m);
+        _deleteMyCloudPosts(btn.dataset.key);
+        showToast("Post archiviert — unter „Archiv“ zu finden");
+        _refreshAfterPostChange();
+      }));
+      host.querySelectorAll(".feed-m-delete").forEach(btn => btn.addEventListener("click", e => {
+        e.stopPropagation();
+        if (!btn.classList.contains("armed")) {
+          btn.classList.add("armed");
+          btn.textContent = "Wirklich löschen?";
+          return;
+        }
+        const m = getMeta(btn.dataset.key);
+        m.posted = false;
+        m.archived = false;
+        saveMeta(btn.dataset.key, m);
+        _deleteMyCloudPosts(btn.dataset.key);
+        showToast("Post gelöscht");
+        _refreshAfterPostChange();
+      }));
+
       // R47: Episoden-Posts aus der Zeit vor R44 tragen kein stillPath und zeigten
       // deshalb weiter das Serienposter. Standbild der konkreten Folge nachladen
       // (tmFetch ist gecacht), auf dem Post-Objekt merken und einmal neu malen.
@@ -14923,6 +15097,13 @@
         });
       }
     }
+
+    // R57: Tap außerhalb eines offenen Feed-⋯-Menüs schließt es (einmal global).
+    document.addEventListener("click", e => {
+      if (e.target.closest(".feed-menu") || e.target.closest(".feed-menu-btn")) return;
+      document.querySelectorAll(".feed-menu").forEach(m => { m.hidden = true; });
+      document.querySelectorAll(".feed-m-delete").forEach(d => { d.classList.remove("armed"); d.textContent = "Post löschen"; });
+    });
 
     // R23-#17: reflect a post's comment count on every visible badge for that post.
     function updateCommentBadge(postId, n) {
@@ -15533,13 +15714,23 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R56.2";
+    const APP_VERSION = "R57";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R57": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Home und Entdecken sind jetzt eins:</strong> Der Home-Tab zeigt oben die Suche, darunter eine große Hochkant-Slideshow mit Empfehlungen für dich, die Kategorien „Filme“, „Serien“ und „TV Shows“, die Genre-Leiste und die Trend-Reihen („Diese Woche im Trend“, „Jetzt im Kino“ …). Der separate Entdecken-Tab ist weg — es gibt jetzt vier Tabs. Deine persönlichen Reihen (Zuletzt gesehen, Watchlist, Top-Listen) findest du wie gewohnt im Profil.",
+          "<strong>Zurück-Wischen repariert:</strong> Wer aus „Einstellungen und Aktivität“ nach rechts wischt, schließt jetzt wirklich die Einstellungen — vorher wechselte die App im Hintergrund heimlich den Tab. Auch das Kategorie-/Genre-Grid auf Home lässt sich per Wisch schließen.",
+          "<strong>Drei-Punkte-Menü im Feed:</strong> Eigene Posts haben oben rechts ein ⋯-Menü mit „Beschreibung bearbeiten“, „Archivieren“ und „Post löschen“.",
+          "<strong>Freunde im Profil:</strong> Der mittlere Profil-Reiter listet jetzt oben alle deine Freunde (inklusive Suche und Anfragen), darunter wie bisher „Mit Freunden geschaut“. Der Social-Tab zeigt nur noch den Feed.",
+          "<strong>Posts verwalten mit mehr Optionen:</strong> In „Letzte Posts verwalten“ kannst du jeden Post jetzt auch direkt bearbeiten oder löschen (⋯-Menü) — der schnelle Knopf daneben heißt ehrlich „Archivieren“."
+        ]
+      },
       "R56.2": {
         title: "Was ist neu",
         notes: [
