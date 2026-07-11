@@ -455,6 +455,8 @@
 
     /* ---------- R57: Kategorie-Kacheln auf Home (Filme / Serien / TV Shows) ---------- */
     .home-cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0 0 20px; }
+    /* R59: Serien-Tracker-Kachel über die volle Breite */
+    .home-cat-wide { grid-column: 1 / -1; flex-direction: row !important; gap: 10px; padding: 12px 14px !important; }
     .home-cat {
       display: flex; flex-direction: column; align-items: center; gap: 8px;
       padding: 15px 6px 12px; background: var(--surface); border: 1px solid var(--border);
@@ -490,18 +492,30 @@
       scrollbar-width: none; margin: 0 -16px 14px; padding: 2px 16px;
     }
     .genre-providers::-webkit-scrollbar { display: none; }
+    /* R59: Chips tragen jetzt ein Namens-Label unter dem Logo (Prime Video vs. Amazon Video etc. unterscheidbar) */
     .prov-chip {
-      flex: 0 0 auto; width: 42px; height: 42px; border-radius: 50%;
-      padding: 0; border: 2px solid var(--border); background: var(--surface);
-      overflow: hidden; cursor: pointer; transition: border-color .18s ease, transform .18s ease;
+      flex: 0 0 auto; width: 54px; background: none; border: none; padding: 0;
+      cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px;
+    }
+    .prov-chip .prov-logo {
+      width: 42px; height: 42px; border-radius: 50%; overflow: hidden;
+      border: 2px solid var(--border); background: var(--surface);
+      transition: border-color .18s ease, transform .18s ease;
     }
     .prov-chip img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .prov-chip.on { border-color: var(--accent); transform: scale(1.08); }
-    .prov-chip-all {
-      width: auto; border-radius: 21px; padding: 0 14px; height: 42px;
-      color: var(--text-dim); font-family: inherit; font-size: 12px; font-weight: 600;
+    .prov-chip .prov-name {
+      max-width: 54px; font-size: 9px; font-weight: 600; color: var(--text-mute);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2;
     }
-    .prov-chip-all.on { color: var(--accent); }
+    .prov-chip.on .prov-logo { border-color: var(--accent); transform: scale(1.08); }
+    .prov-chip.on .prov-name { color: var(--accent); }
+    .prov-chip-all {
+      width: auto; border-radius: 21px; padding: 0 14px; height: 42px; align-self: flex-start;
+      border: 2px solid var(--border); background: var(--surface);
+      color: var(--text-dim); font-family: inherit; font-size: 12px; font-weight: 600;
+      flex-direction: row;
+    }
+    .prov-chip-all.on { color: var(--accent); border-color: var(--accent); }
 
     /* ---------- Brand (small, top of Log tab) ---------- */
     .brand {
@@ -1042,6 +1056,20 @@
       transition: background .15s ease;
     }
     .rank-compare svg { width: 17px; height: 17px; stroke: var(--accent); fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .rank-compare.active { border-color: var(--accent); color: var(--accent); }
+    /* R59: Inline-Vergleich — Leiste über der Liste + Freund-Rang je Zeile */
+    #rank-cmp-bar {
+      display: flex; align-items: center; gap: 10px; margin: 0 0 12px;
+      background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+      border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+      border-radius: 12px; padding: 10px 12px; font-size: 12.5px; font-weight: 600; color: var(--text-dim);
+    }
+    #rank-cmp-bar[hidden] { display: none; }
+    #rank-cmp-label { flex: 1; min-width: 0; }
+    #rank-cmp-off { flex: 0 0 auto; background: none; border: none; cursor: pointer; padding: 4px; }
+    #rank-cmp-off svg { width: 15px; height: 15px; stroke: var(--text-dim); stroke-width: 2; stroke-linecap: round; }
+    .rank-cmp-badge { font-size: 11.5px; font-weight: 600; color: var(--accent); margin-top: 2px; }
+    .rank-cmp-badge.none { color: var(--text-mute); }
     .rank-compare:active { background: var(--surface-2); }
     .rank-compare:disabled { opacity: .4; cursor: default; }
 
@@ -1614,6 +1642,15 @@
     }
     .wuerfel-btn-sm svg { width: 22px; height: 22px; stroke: #1a1206; fill: none; stroke-width: 1.7; }
     .wuerfel-btn-sm:active { filter: brightness(.92); }
+    /* R59: Trichter-Knopf neben Suche + Würfel — öffnet die Filter-Leiste */
+    .home-filter-btn {
+      flex: 0 0 49px; align-self: stretch; border-radius: 12px; cursor: pointer;
+      background: var(--surface-2); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .home-filter-btn svg { width: 20px; height: 20px; stroke: var(--text-dim); fill: none; stroke-width: 1.7; stroke-linejoin: round; }
+    .home-filter-btn.on { border-color: var(--accent); }
+    .home-filter-btn.on svg { stroke: var(--accent); }
 
     /* Discover filter bar (A3) */
     .disc-filter-bar { margin-top: 12px; }
@@ -1712,6 +1749,9 @@
     /* ---------- Discover: curated rows ---------- */
     .drow { margin-bottom: 26px; }
     .drow-title { font-size: 16px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 12px; }
+    /* R59: Reihen-Überschrift öffnet das Voll-Grid */
+    .drow-title-link { cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 4px; user-select: none; }
+    .drow-title-link:active { opacity: .65; }
     .drow .hscroll { gap: 12px; }
     .pcard { flex: 0 0 auto; width: 108px; cursor: pointer; }
     .pcard-poster { position: relative; }
@@ -2116,10 +2156,31 @@
     .settings-close:active { background: var(--surface-2); }
     .settings-drawer-body {
       flex: 1; min-height: 0; overflow-y: auto;
-      padding: 16px 16px calc(var(--safe-bottom) + 40px);
+      padding: 10px 16px calc(var(--safe-bottom) + 40px);
       -webkit-overflow-scrolling: touch;
     }
     .settings-drawer-body > div:empty { display: none; }
+    /* R59: einheitliche, flache Menü-Zeilen (Icon + Label + Chevron) statt
+       unterschiedlich gepolsterter Kästen — Abstände jetzt überall gleich. */
+    #settings-drawer .detail-section { margin: 0; padding: 0; border: none; background: none; }
+    #settings-drawer .blocked-toggle {
+      background: none; border: none; border-radius: 0;
+      padding: 15px 2px; font-size: 15px; font-weight: 600; gap: 14px;
+    }
+    #settings-drawer .blocked-toggle .st-ico {
+      flex: 0 0 auto; width: 21px; height: 21px;
+      stroke: var(--text); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+    }
+    #settings-drawer .blocked-chev { transform: rotate(-90deg); width: 17px; height: 17px; }
+    #settings-drawer .blocked-toggle.open .blocked-chev { transform: rotate(0deg); }
+    #settings-drawer .blocked-list[id], #settings-drawer .settings-reco-body,
+    #settings-drawer #privacy-body, #settings-drawer #list-shares-body,
+    #settings-drawer #prof-friends-body, #settings-drawer #notif-settings-body,
+    #settings-drawer #patchhist-body, #settings-drawer #theme-settings-body {
+      padding: 2px 2px 12px 37px;   /* eingerückt unter dem Icon */
+    }
+    #settings-drawer .username-card { margin: 4px 0 6px; }
+    #settings-drawer .export-section { margin-top: 14px; }
 
     /* ---------- Clickable people ---------- */
     .person { cursor: pointer; }
@@ -2182,6 +2243,8 @@
     /* R37: Auf dem Profil-Tab übernimmt der ☰-Button oben rechts — die fixierte Glocke
        würde damit kollidieren, daher hier ausblenden (wie bei Instagram). */
     body[data-tab="profile"] .notif-bell-wrap { display: none !important; }
+    /* R59: im Kategorie-/Genre-Grid und im Filter-Grid überlappte die Glocke die Kopfzeile */
+    body.browse-open .notif-bell-wrap { display: none !important; }
     .notif-bell {
       width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
       background: var(--surface-2); border: 1px solid var(--border); color: var(--text-mute); cursor: pointer;
@@ -2283,7 +2346,55 @@
     .friend-action-btn:active { opacity: .7; }
 
     /* R15-B: Friend Profile — full redesign */
-    #friend-profile, #rank-compare-view { position: fixed; inset: 0; z-index: 140; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; animation: fade-in .22s ease; padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 24px); }   /* Fix #1: clear the always-visible bottom bar */
+    #friend-profile, #rank-compare-view, #flib-view, #series-tracker-view { position: fixed; inset: 0; z-index: 140; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; animation: fade-in .22s ease; padding-bottom: calc(var(--nav-h) + var(--safe-bottom) + 24px); }   /* Fix #1: clear the always-visible bottom bar */
+    #flib-view { z-index: 142; }   /* R59: liegt ÜBER dem Freundesprofil (140), Detail over-profile (145) darüber */
+    /* R59: Freundes-Bibliothek */
+    #flib-content { padding: 4px 16px 24px; }
+    #flib-content .poster-grid { margin-top: 8px; }
+    .flib-empty { color: var(--text-mute); font-size: 14px; text-align: center; padding: 48px 24px; line-height: 1.5; }
+    .stat-card-link { cursor: pointer; }
+    .stat-card-link:active { background: var(--surface-2); }
+    .stat-more { font-size: 10px; font-weight: 600; color: var(--accent); margin-top: 2px; }
+    /* R59: Serien-Tracker */
+    .st-add-wrap { padding: 10px 16px 0; }
+    .st-search-bar { margin: 0 0 4px; }
+    #st-search-results { padding: 4px 0 8px; }
+    #st-list { padding: 10px 16px 24px; display: flex; flex-direction: column; gap: 12px; }
+    .st-card {
+      display: flex; gap: 12px; align-items: stretch;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px;
+    }
+    .st-poster { flex: 0 0 62px; width: 62px; height: 93px; border-radius: 8px; object-fit: cover; background: var(--surface-2); cursor: pointer; }
+    .st-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .st-title { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+    .st-sub { font-size: 12px; color: var(--text-mute); margin-top: 3px; }
+    .st-next { font-size: 13px; color: var(--text-dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .st-next strong { color: var(--text); font-weight: 600; }
+    .st-progress { height: 4px; border-radius: 2px; background: var(--surface-2); margin-top: 8px; overflow: hidden; }
+    .st-progress span { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--accent), #c8901f); }
+    .st-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .st-check-btn {
+      flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      background: var(--accent); color: #1a1206; border: none; border-radius: 10px;
+      font-family: inherit; font-size: 13px; font-weight: 700; padding: 9px 10px; cursor: pointer;
+    }
+    .st-check-btn:disabled { opacity: .45; cursor: default; }
+    .st-check-btn svg { width: 16px; height: 16px; stroke: #1a1206; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+    .st-untrack-btn {
+      flex: 0 0 auto; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-dim);
+      border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 600; padding: 9px 12px; cursor: pointer;
+    }
+    .st-done-badge { font-size: 12px; font-weight: 700; color: var(--accent); margin-top: 8px; }
+    .st-empty { color: var(--text-mute); font-size: 14px; text-align: center; padding: 40px 24px; line-height: 1.6; }
+    .st-result-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .st-result-row img, .st-result-ph { flex: 0 0 36px; width: 36px; height: 54px; border-radius: 6px; object-fit: cover; background: var(--surface-2); }
+    .st-result-title { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .st-result-title .yr { color: var(--text-mute); font-weight: 400; font-size: 12px; }
+    .st-track-toggle {
+      flex: 0 0 auto; background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
+      border-radius: 999px; font-family: inherit; font-size: 12px; font-weight: 600; padding: 7px 13px; cursor: pointer;
+    }
+    .st-track-toggle.on { background: var(--accent); border-color: var(--accent); color: #1a1206; }
     /* R27-#1: ranking compare view */
     .rcmp-title { font-weight: 700; font-size: 16px; }
     #rcmp-content { padding: 4px var(--pad) 20px; }
@@ -2873,110 +2984,27 @@
         <span class="brand-name">VAULT</span>
       </div>
 
-      <div class="search-bar">
-        <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-        <input id="log-search" type="search" inputmode="search" autocomplete="off"
-               autocorrect="off" spellcheck="false" enterkeyhint="search"
-               placeholder="Alles durchsuchen …" aria-label="Suche" />
-        <button id="log-clear" class="search-clear" type="button" aria-label="Leeren" hidden>
-          <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-        </button>
-      </div>
-
-      <div id="log-results" class="results"></div>
-
-      <div id="log-home">
-        <div id="log-hero" hidden></div>
-        <!-- R57: Kategorie-Kacheln (Home + Entdecken kombiniert) -->
-        <div id="home-cats" class="home-cats">
-          <button class="home-cat" type="button" data-cat="movie">
-            <svg viewBox="0 0 24 24"><path d="M3 8h18v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 8l2.5-4 4 1.6L7 9.6M9.5 5.6L13.5 4 16 8M13.5 5.6L17.5 4 20 8"/></svg>
-            <span>Filme</span>
-          </button>
-          <button class="home-cat" type="button" data-cat="tv">
-            <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="13" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
-            <span>Serien</span>
-          </button>
-          <button class="home-cat" type="button" data-cat="show">
-            <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><polygon points="10 8 15 11 10 14"/><line x1="8" y1="21" x2="16" y2="21"/></svg>
-            <span>TV Shows</span>
-          </button>
-        </div>
-        <!-- R57: Entdecken-Inhalte (Genre-Chips + Trend-Reihen) leben jetzt hier -->
-        <div id="disc-browse">
-          <div id="disc-genre-chips" class="genre-chips"></div>
-          <div id="disc-rows"></div>
-        </div>
-        <div id="lh-edit-bar" hidden>
-          <button id="lh-edit-toggle" class="lh-edit-btn" type="button">
-            <svg viewBox="0 0 24 24"><polyline points="8 9 12 5 16 9"/><polyline points="8 15 12 19 16 15"/></svg>
-            <span>Bearbeiten</span>
-          </button>
-        </div>
-        <div id="lh-reorder" hidden></div>
-        <div id="lh-progress" class="log-home-row" hidden>
-          <div class="log-home-title log-home-title-link" data-section="lh-progress"><span>Aktuelle Serien</span><span class="section-seeall">Alle anzeigen <span class="section-chevron">›</span></span></div>
-          <div id="lh-progress-list" class="progress-list"></div>
-        </div>
-        <div id="lh-recent" class="log-home-row" hidden></div>
-        <div id="lh-watchlist" class="log-home-row" hidden></div>
-        <div id="lh-movies" class="log-home-row" hidden></div>
-        <div id="lh-series" class="log-home-row" hidden></div>
-        <!-- R17-D: dynamic section slots (genre, long-unseen, recently-added, from-list) -->
-        <div id="lh-genre-film" class="log-home-row" hidden></div>
-        <div id="lh-genre-serie" class="log-home-row" hidden></div>
-        <div id="lh-long-unseen" class="log-home-row" hidden></div>
-        <div id="lh-recently-added" class="log-home-row" hidden></div>
-        <div id="lh-from-list" class="log-home-row" hidden></div>
-        <div id="log-hint" class="placeholder" hidden>
-          <svg viewBox="0 0 24 24"><path d="M3 8h18v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 8l2.5-4 4 1.6L7 9.6M9.5 5.6L13.5 4 16 8M13.5 5.6L17.5 4 20 8"/></svg>
-          <span>Tippe los — schon ein paar Buchstaben reichen.</span>
-        </div>
-      </div>
-
-      <!-- R57: Kategorie-/Genre-Grid (aus Entdecken hierher gezogen)
-           R58: kompakter Kopf — EINE schmale Zeile: Zurück-Icon + Titel + Sortierung;
-           darunter die Streamingdienst-Leiste, dann direkt das Grid. -->
-      <div id="disc-genre-view" hidden>
-        <div class="genre-head">
-          <button id="disc-genre-back" class="genre-back" type="button" aria-label="Zurück">
-            <svg viewBox="0 0 24 24"><polyline points="15 5 8 12 15 19"/></svg>
-          </button>
-          <h1 id="disc-genre-name"></h1>
-          <select id="disc-genre-sort" class="genre-sort" aria-label="Sortierung">
-            <option value="popularity.desc">Beliebt</option>
-            <option value="vote_average.desc">Bestbewertet</option>
-            <option value="primary_release_date.desc">Neueste</option>
-          </select>
-        </div>
-        <div id="disc-genre-providers" class="genre-providers" hidden></div>
-        <div id="disc-genre-grid" class="poster-grid"></div>
-        <button id="disc-genre-more" class="new-list-btn" type="button" hidden>Mehr laden</button>
-      </div>
-    </section>
-
-    <!-- ============ TAB 2: LISTEN ============ -->
-    <!-- ============ TAB 3: ENTDECKEN ============ -->
-    <section class="view" id="view-discover" data-view="discover">
-
-      <!-- Search row: search bar + Würfeln button beside it (A4) -->
-      <div class="disc-top-row">
+      <!-- R59: Suchzeile mit Würfel- und Filter-Knopf (aus dem alten Entdecken-Tab zurückgeholt) -->
+      <div id="home-top-row" class="disc-top-row">
         <div class="search-bar">
           <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
-          <input id="disc-search" type="search" inputmode="search" autocomplete="off"
+          <input id="log-search" type="search" inputmode="search" autocomplete="off"
                  autocorrect="off" spellcheck="false" enterkeyhint="search"
                  placeholder="Alles durchsuchen …" aria-label="Suche" />
-          <button id="disc-clear" class="search-clear" type="button" aria-label="Leeren" hidden>
+          <button id="log-clear" class="search-clear" type="button" aria-label="Leeren" hidden>
             <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
           </button>
         </div>
         <button id="disc-wuerfel-btn" class="wuerfel-btn-sm" type="button" aria-label="Würfeln" title="Würfeln">
           <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.3"/><circle cx="15" cy="15" r="1.3"/><circle cx="15" cy="9" r="1.3"/><circle cx="9" cy="15" r="1.3"/></svg>
         </button>
+        <button id="home-filter-btn" class="home-filter-btn" type="button" aria-label="Filter" title="Filter" aria-expanded="false">
+          <svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3"/></svg>
+        </button>
       </div>
 
-      <!-- Filter / browse bar (A3) -->
-      <div id="disc-filter-bar" class="disc-filter-bar">
+      <!-- R59: Filter-Leiste (Typ/Genre/Studio/Schauspieler/Regisseur/Jahr/Dauer/Bewertung) — hinter dem Trichter-Knopf -->
+      <div id="disc-filter-bar" class="disc-filter-bar" hidden>
         <div class="dfb-row">
           <div class="filter-field">
             <label for="df-media">Typ</label>
@@ -3040,18 +3068,107 @@
         </div>
       </div>
 
-      <!-- Search results (only while typing) -->
-      <div id="disc-results" class="results" hidden></div>
+      <div id="log-results" class="results"></div>
 
-      <!-- Filtered browse grid (A3) -->
+      <!-- R59: gefiltertes Ergebnis-Grid (lebte vorher im toten Entdecken-Tab) -->
       <div id="disc-filtered" hidden>
         <button id="df-back" class="list-back" type="button">
           <svg viewBox="0 0 24 24"><polyline points="15 5 8 12 15 19"/></svg>
-          Entdecken
+          Zurück
         </button>
         <div id="df-grid" class="poster-grid"></div>
         <button id="df-more" class="new-list-btn" type="button" hidden>Mehr laden</button>
       </div>
+
+      <div id="log-home">
+        <div id="log-hero" hidden></div>
+        <!-- R57: Kategorie-Kacheln (Home + Entdecken kombiniert) -->
+        <div id="home-cats" class="home-cats">
+          <button class="home-cat" type="button" data-cat="movie">
+            <svg viewBox="0 0 24 24"><path d="M3 8h18v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 8l2.5-4 4 1.6L7 9.6M9.5 5.6L13.5 4 16 8M13.5 5.6L17.5 4 20 8"/></svg>
+            <span>Filme</span>
+          </button>
+          <button class="home-cat" type="button" data-cat="tv">
+            <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="13" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
+            <span>Serien</span>
+          </button>
+          <button class="home-cat" type="button" data-cat="show">
+            <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><polygon points="10 8 15 11 10 14"/><line x1="8" y1="21" x2="16" y2="21"/></svg>
+            <span>TV Shows</span>
+          </button>
+          <!-- R59: Serien-Tracker — getrackte Serien mit Folgen-Stand -->
+          <button class="home-cat home-cat-wide" type="button" id="home-tracker-cat">
+            <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="13" rx="2"/><polyline points="17 2 12 7 7 2"/><polyline points="9 11.5 11.5 14 15.5 10"/></svg>
+            <span>Serien-Tracker</span>
+          </button>
+        </div>
+        <!-- R57: Entdecken-Inhalte (Genre-Chips + Trend-Reihen) leben jetzt hier -->
+        <div id="disc-browse">
+          <div id="disc-genre-chips" class="genre-chips"></div>
+          <div id="disc-rows"></div>
+        </div>
+        <div id="lh-edit-bar" hidden>
+          <button id="lh-edit-toggle" class="lh-edit-btn" type="button">
+            <svg viewBox="0 0 24 24"><polyline points="8 9 12 5 16 9"/><polyline points="8 15 12 19 16 15"/></svg>
+            <span>Bearbeiten</span>
+          </button>
+        </div>
+        <div id="lh-reorder" hidden></div>
+        <div id="lh-progress" class="log-home-row" hidden>
+          <div class="log-home-title log-home-title-link" data-section="lh-progress"><span>Aktuelle Serien</span><span class="section-seeall">Alle anzeigen <span class="section-chevron">›</span></span></div>
+          <div id="lh-progress-list" class="progress-list"></div>
+        </div>
+        <div id="lh-recent" class="log-home-row" hidden></div>
+        <div id="lh-watchlist" class="log-home-row" hidden></div>
+        <div id="lh-movies" class="log-home-row" hidden></div>
+        <div id="lh-series" class="log-home-row" hidden></div>
+        <!-- R17-D: dynamic section slots (genre, long-unseen, recently-added, from-list) -->
+        <div id="lh-genre-film" class="log-home-row" hidden></div>
+        <div id="lh-genre-serie" class="log-home-row" hidden></div>
+        <div id="lh-long-unseen" class="log-home-row" hidden></div>
+        <div id="lh-recently-added" class="log-home-row" hidden></div>
+        <div id="lh-from-list" class="log-home-row" hidden></div>
+        <div id="log-hint" class="placeholder" hidden>
+          <svg viewBox="0 0 24 24"><path d="M3 8h18v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 8l2.5-4 4 1.6L7 9.6M9.5 5.6L13.5 4 16 8M13.5 5.6L17.5 4 20 8"/></svg>
+          <span>Tippe los — schon ein paar Buchstaben reichen.</span>
+        </div>
+      </div>
+
+      <!-- R57: Kategorie-/Genre-Grid (aus Entdecken hierher gezogen)
+           R58: kompakter Kopf — EINE schmale Zeile: Zurück-Icon + Titel + Sortierung;
+           darunter die Streamingdienst-Leiste, dann direkt das Grid. -->
+      <div id="disc-genre-view" hidden>
+        <div class="genre-head">
+          <button id="disc-genre-back" class="genre-back" type="button" aria-label="Zurück">
+            <svg viewBox="0 0 24 24"><polyline points="15 5 8 12 15 19"/></svg>
+          </button>
+          <h1 id="disc-genre-name"></h1>
+          <select id="disc-genre-sort" class="genre-sort" aria-label="Sortierung">
+            <option value="popularity.desc">Beliebt</option>
+            <option value="vote_average.desc">Bestbewertet</option>
+            <option value="primary_release_date.desc">Neueste</option>
+          </select>
+        </div>
+        <div id="disc-genre-providers" class="genre-providers" hidden></div>
+        <div id="disc-genre-grid" class="poster-grid"></div>
+        <button id="disc-genre-more" class="new-list-btn" type="button" hidden>Mehr laden</button>
+      </div>
+    </section>
+
+    <!-- ============ TAB 2: LISTEN ============ -->
+    <!-- ============ TAB 3: ENTDECKEN ============ -->
+    <section class="view" id="view-discover" data-view="discover">
+
+      <!-- R59: Suchzeile, Würfel-Knopf, Filter-Leiste und gefiltertes Grid leben jetzt im Home-Tab -->
+      <div class="disc-top-row" hidden>
+        <div class="search-bar">
+          <input id="disc-search" type="search" hidden aria-hidden="true" />
+          <button id="disc-clear" class="search-clear" type="button" hidden></button>
+        </div>
+      </div>
+
+      <!-- Search results (only while typing) -->
+      <div id="disc-results" class="results" hidden></div>
 
       <!-- Personalized recommendations (always visible, responds to Typ filter) -->
       <div id="disc-recos" class="disc-recos" hidden></div>
@@ -3101,6 +3218,14 @@
         <button id="rank-compare" class="rank-compare" type="button">
           <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           Vergleichen
+        </button>
+      </div>
+
+      <!-- R59: aktiver Inline-Vergleich — Freund-Ränge stehen direkt in der Liste -->
+      <div id="rank-cmp-bar" hidden>
+        <span id="rank-cmp-label"></span>
+        <button id="rank-cmp-off" type="button" aria-label="Vergleich beenden">
+          <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
         </button>
       </div>
 
@@ -3250,10 +3375,10 @@
       <div id="profile-privacy"></div>
       <!-- 7. Freunde verwalten (R17-C) -->
       <div id="profile-friends"></div>
-      <!-- 8. Gesperrte Titel -->
-      <div id="profile-blocked"></div>
-      <!-- 9. Listen-Freigaben (extracted from Datenschutz in R17) -->
+      <!-- 8. Listen-Freigaben (extracted from Datenschutz in R17) -->
       <div id="profile-list-shares"></div>
+      <!-- 9. Gesperrte Titel (R59: direkt unter Listen-Freigaben, User-Wunsch) -->
+      <div id="profile-blocked"></div>
       <!-- R31: Neuigkeiten / Update-Historie (alte Patch-Notes erneut ansehen) -->
       <div id="profile-patchnotes"></div>
       <!-- 10. Daten exportieren -->
@@ -3482,6 +3607,41 @@
       <span class="rcmp-title" id="rcmp-title">Vergleichen</span>
     </div>
     <div id="rcmp-content"></div>
+  </div>
+
+  <!-- ============ R59: FREUNDES-BIBLIOTHEK (alle Filme/Serien des Freundes) ============ -->
+  <div id="flib-view" hidden>
+    <div class="fprof-topbar">
+      <button class="fprof-back-btn" id="flib-back" type="button" aria-label="Zurück">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        Zurück
+      </button>
+      <span class="rcmp-title" id="flib-title"></span>
+    </div>
+    <div id="flib-content"></div>
+  </div>
+
+  <!-- ============ R59: SERIEN-TRACKER (getrackte Serien + nächste Folge) ============ -->
+  <div id="series-tracker-view" hidden>
+    <div class="fprof-topbar">
+      <button class="fprof-back-btn" id="st-back" type="button" aria-label="Zurück">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        Zurück
+      </button>
+      <span class="rcmp-title">Serien-Tracker</span>
+    </div>
+    <div class="st-add-wrap">
+      <div class="search-bar st-search-bar">
+        <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+        <input id="st-search" type="search" inputmode="search" autocomplete="off" autocorrect="off"
+               spellcheck="false" enterkeyhint="search" placeholder="Serie zum Tracken suchen …" aria-label="Serie suchen" />
+        <button id="st-search-clear" class="search-clear" type="button" aria-label="Leeren" hidden>
+          <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="st-search-results" hidden></div>
+    </div>
+    <div id="st-list"></div>
   </div>
 
   <!-- ============ FRIEND LIST READ-ONLY VIEW (R15-C) ============ -->
@@ -4733,6 +4893,8 @@
       if (detail && !detail.hidden) { duelDetailReturn = false; _closeDetailFull(); closed = true; }
       const hso = document.getElementById("hso-overlay");
       if (hso && !hso.hidden) { hso.hidden = true; hsoBackEntry = false; closed = true; }
+      const flv2 = document.getElementById("flib-view");   // R59: Freundes-Bibliothek
+      if (flv2 && !flv2.hidden) { flv2.hidden = true; _flibBackEntry = false; closed = true; }
       if (typeof friendProfileEl !== "undefined" && friendProfileEl && !friendProfileEl.hidden) { friendProfileEl.hidden = true; _fprofBackEntry = false; closed = true; }
       const rcv = document.getElementById("rank-compare-view");
       if (rcv && !rcv.hidden) { rcv.hidden = true; closed = true; }   // R27-#1
@@ -4750,6 +4912,24 @@
         if (lh) lh.hidden = false;
         if (typeof _homeSearchBar === "function") _homeSearchBar(true);   // R58
         _genreBackEntry = false;
+        document.body.classList.remove("browse-open");   // R59: Glocke wieder zeigen
+        closed = true;
+      }
+      // R59: Filter-Grid auf Home schließen
+      const dfv = document.getElementById("disc-filtered");
+      if (dfv && !dfv.hidden) {
+        dfv.hidden = true;
+        const lh = document.getElementById("log-home");
+        if (lh) lh.hidden = false;
+        _dfBackEntry = false;
+        document.body.classList.remove("browse-open");
+        closed = true;
+      }
+      // R59: Serien-Tracker-Ansicht schließen
+      const stv = document.getElementById("series-tracker-view");
+      if (stv && !stv.hidden) {
+        stv.hidden = true;
+        _stBackEntry = false;
         closed = true;
       }
       navStack = [];
@@ -4885,12 +5065,22 @@
       // statt durchzufallen und im Hintergrund den Tab zu wechseln.
       const sdPop = document.getElementById("settings-drawer");
       if (sdPop && !sdPop.hidden) { _settingsBackEntry = false; closeSettingsDrawer(); return; }
+      // R59: Freundes-Bibliothek liegt über dem Profil → zuerst schließen
+      const flibPop = document.getElementById("flib-view");
+      if (flibPop && !flibPop.hidden) { _flibBackEntry = false; closeFriendLibrary(); return; }
       if (typeof friendProfileEl !== "undefined" && friendProfileEl && !friendProfileEl.hidden) {
         _fprofBackEntry = false; closeFriendProfile(); return;
       }
       // R27-#1: ranking compare overlay closes on back
       const rcv = document.getElementById("rank-compare-view");
       if (rcv && !rcv.hidden) { closeRankCompare(); return; }
+      // R59: Serien-Tracker schließt auf Zurück
+      const stPop = document.getElementById("series-tracker-view");
+      if (stPop && !stPop.hidden) {
+        _stBackEntry = false;   // History-Eintrag ist durch diesen popstate schon weg
+        closeSeriesTracker();
+        return;
+      }
       // R26 follow-up: episode detail overlay closes first (browser/gesture back).
       const epbd = document.getElementById("ep-detail-backdrop");
       if (epbd && !epbd.hidden) {
@@ -4923,6 +5113,13 @@
         closingHsoFromPop = true;
         closeHomeSectionFull();
         closingHsoFromPop = false;
+        return;
+      }
+      // R59: Filter-Grid auf Home — Rechts-Swipe führt zurück zur Home-Übersicht
+      const dfPop = document.getElementById("disc-filtered");
+      if (dfPop && !dfPop.hidden) {
+        _dfBackEntry = false;   // History-Eintrag ist durch diesen popstate schon weg
+        closeFilteredBrowse(true);
         return;
       }
       // R57: Kategorie-/Genre-Grid auf Home — Rechts-Swipe führt zurück zur Home-Übersicht
@@ -5257,7 +5454,10 @@
       hintEl.hidden = true;
       // R57: eine laufende Suche verdrängt das offene Kategorie-/Genre-Grid
       const gvSearch = document.getElementById("disc-genre-view");
-      if (gvSearch && !gvSearch.hidden) { gvSearch.hidden = true; _genreBackEntry = false; _homeSearchBar(true); }
+      if (gvSearch && !gvSearch.hidden) { gvSearch.hidden = true; _genreBackEntry = false; _homeSearchBar(true); document.body.classList.remove("browse-open"); }
+      // R59: … und das offene Filter-Grid
+      const dfSearch = document.getElementById("disc-filtered");
+      if (dfSearch && !dfSearch.hidden) { dfSearch.hidden = true; _dfBackEntry = false; document.body.classList.remove("browse-open"); }
 
       if (items === "error") {
         resultsEl.innerHTML = '<div class="results-empty">Suche fehlgeschlagen. Internet prüfen?</div>';
@@ -7042,6 +7242,11 @@
       const duelBtn = document.getElementById("duel-start");
       if (duelBtn) duelBtn.disabled = duelItems().length < 2;
 
+      // R59: aktiver Inline-Vergleich → Freund-Rang je Zeile einblenden
+      const cmpPos = _cmpInline ? cmpPosFor(isPerson ? "person" : rankMedia) : null;
+      const cmpBtn = document.getElementById("rank-compare");
+      if (cmpBtn) cmpBtn.classList.toggle("active", !!_cmpInline);
+
       rankListEl.innerHTML = "";
       if (items.length === 0) {
         const empty = document.createElement("div");
@@ -7112,6 +7317,14 @@
           const tierLbl = document.createElement("div"); tierLbl.className = "rank-tier" + (it.unranked ? " unranked-lbl" : "");
           tierLbl.textContent = it.unranked ? "Ungerankt" : bucketLabel(deriveBucket(it.score));
           bodyEl.appendChild(tierLbl);
+        }
+        // R59: Inline-Vergleich — der Platz des Freundes direkt unter dem Titel
+        if (cmpPos) {
+          const fr = cmpPos.get(String(it.id));
+          const badge = document.createElement("div");
+          badge.className = "rank-cmp-badge" + (fr ? "" : " none");
+          badge.textContent = fr ? "@" + _cmpInline.name + ": Platz " + fr : "@" + _cmpInline.name + ": nicht gerankt";
+          bodyEl.appendChild(badge);
         }
         row.appendChild(bodyEl);
 
@@ -9472,6 +9685,208 @@
     }
 
     // ====================================================================
+    //  R59: SERIEN-TRACKER — eigene Ansicht für getrackte Serien.
+    //  Zeigt pro Serie den Stand ("Weiter mit S2 E6 – Titel"), hakt die
+    //  nächste Folge direkt ab (inkl. Bewertungs-Sheet) und trackt Serien
+    //  per Suche rein bzw. per Knopf wieder raus (abgebrochen).
+    // ====================================================================
+    let _stBackEntry = false;
+    let _stToken = 0;
+
+    function openSeriesTracker() {
+      const view = document.getElementById("series-tracker-view");
+      if (!view) return;
+      view.hidden = false;
+      view.scrollTop = 0;
+      document.body.style.overflow = "hidden";
+      if (!_stBackEntry) { _stBackEntry = true; history.pushState({ vaultOverlay: "stracker" }, ""); }
+      const inp = document.getElementById("st-search");
+      if (inp) { inp.value = ""; document.getElementById("st-search-clear").hidden = true; }
+      const res = document.getElementById("st-search-results");
+      if (res) { res.hidden = true; res.innerHTML = ""; }
+      renderSeriesTracker();
+    }
+    function closeSeriesTracker() {
+      const view = document.getElementById("series-tracker-view");
+      if (!view || view.hidden) return;
+      view.hidden = true;
+      document.body.style.overflow = "";
+      _stToken++;
+      if (_stBackEntry) { _stBackEntry = false; programmingGoingBack = true; history.back(); }
+      // Profil-/Home-Reihen können sich geändert haben (Fortschritt, Enttracken)
+      if (typeof buildProgressSection === "function") buildProgressSection();
+      if (typeof renderProfilePosts === "function" && document.body.dataset.tab === "profile") renderProfilePosts();
+    }
+
+    // Erste UNGESEHENE Folge in Serien-Reihenfolge (linear geschaut).
+    function stNextEpisode(data, key) {
+      for (const s of realSeasons(data)) {
+        for (let e = 1; e <= s.episode_count; e++) {
+          if (!isEpWatched(key, s.season_number, e)) return { s: s.season_number, e };
+        }
+      }
+      return null;   // alles gesehen
+    }
+
+    async function renderSeriesTracker() {
+      const tok = ++_stToken;
+      const list = document.getElementById("st-list");
+      if (!list) return;
+      const keys = Object.keys(db.trackedSeries || {}).filter(k => db.trackedSeries[k] && k.indexOf("tv:") === 0);
+      if (!keys.length) {
+        list.innerHTML = '<div class="st-empty">Du trackst noch keine Serie.<br>Such oben nach einer Serie und tippe auf „Tracken" — oder nutze den Tracken-Knopf auf jeder Serien-Detailseite.</div>';
+        return;
+      }
+      // zuletzt aktive zuerst
+      keys.sort((a, b) => (((db.items[b] || {}).loggedAt) || 0) - (((db.items[a] || {}).loggedAt) || 0));
+      list.innerHTML = '<div class="st-empty">Lädt …</div>';
+      const details = await Promise.all(keys.map(k => {
+        const id = parseInt(k.split(":")[1], 10);
+        return tmFetch("https://api.themoviedb.org/3/tv/" + id + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG)
+          .then(r => r.ok ? r.json() : null).catch(() => null);
+      }));
+      if (tok !== _stToken) return;
+      list.innerHTML = "";
+      keys.forEach((key, i) => {
+        const data = details[i];
+        if (!data) return;
+        list.appendChild(buildTrackerCard(key, data));
+      });
+      if (!list.children.length) list.innerHTML = '<div class="st-empty">Konnte nicht laden.</div>';
+    }
+
+    function buildTrackerCard(key, data) {
+      const card = document.createElement("div");
+      card.className = "st-card";
+      card.dataset.key = key;
+      renderTrackerCard(card, key, data);
+      return card;
+    }
+
+    async function renderTrackerCard(card, key, data) {
+      const total   = totalEpisodes(data);
+      const watched = watchedCount(key);
+      const next    = stNextEpisode(data, key);
+      const title   = data.name || data.title || "";
+      const pct     = total ? Math.min(100, Math.round(watched / total * 100)) : 0;
+      const running = data.status === "Returning Series" || data.in_production;
+
+      card.innerHTML =
+        (data.poster_path
+          ? '<img class="st-poster" loading="lazy" src="' + IMG_BASE + 'w185' + data.poster_path + '" alt="">'
+          : '<div class="st-poster"></div>') +
+        '<div class="st-body">' +
+          '<div class="st-title">' + esc(title) + '</div>' +
+          '<div class="st-sub">' + watched + ' / ' + total + ' Episoden' + (running ? ' · läuft noch' : '') + '</div>' +
+          (next
+            ? '<div class="st-next">Weiter mit <strong>S' + next.s + ' E' + next.e + '</strong><span class="st-next-name"></span></div>'
+            : '<div class="st-done-badge">Alle Folgen gesehen ✓</div>') +
+          '<div class="st-progress"><span style="width:' + pct + '%"></span></div>' +
+          '<div class="st-actions">' +
+            (next
+              ? '<button class="st-check-btn" type="button"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>S' + next.s + ' E' + next.e + ' gesehen</button>'
+              : '') +
+            '<button class="st-untrack-btn" type="button">Entfernen</button>' +
+          '</div>' +
+        '</div>';
+
+      // Poster/Titel → Detailseite (über dem Tracker)
+      const openIt = () => { detailEl.classList.add("over-profile"); openDetail("tv", data.id); };
+      card.querySelector(".st-poster").addEventListener("click", openIt);
+      card.querySelector(".st-title").addEventListener("click", openIt);
+
+      // Nächste Folge abhaken → wie in der Detail-Fortschrittsliste inkl. Bewerten-Sheet
+      const checkBtn = card.querySelector(".st-check-btn");
+      if (checkBtn && next) {
+        checkBtn.addEventListener("click", () => {
+          toggleEp(key, next.s, next.e, true);
+          ensureSeriesWatched(data);
+          const epName = card.querySelector(".st-next-name") ? (card.dataset.epName || "") : "";
+          openEpRateSheet(key, next.s, next.e, null, () => renderTrackerCard(card, key, data), data, epName);
+          renderTrackerCard(card, key, data);
+        });
+      }
+
+      // Nicht mehr tracken (z. B. abgebrochen) — Fortschritt/Bewertungen bleiben erhalten
+      card.querySelector(".st-untrack-btn").addEventListener("click", () => {
+        delete db.trackedSeries[key];
+        saveDB();
+        card.remove();
+        showToast("„" + title + "“ wird nicht mehr getrackt");
+        const list = document.getElementById("st-list");
+        if (list && !list.children.length) renderSeriesTracker();
+      });
+
+      // Folgen-Titel der nächsten Episode nachladen (gecacht pro Staffel)
+      if (next) {
+        try {
+          const eps = await fetchSeasonEps(data.id, next.s);
+          const ep = (eps || []).find(x => x.n === next.e);
+          const span = card.querySelector(".st-next-name");
+          if (ep && ep.name && span && !/^(folge|episode)\s*\d+$/i.test(ep.name)) {
+            span.textContent = " – " + ep.name;
+            card.dataset.epName = ep.name;
+          }
+        } catch (e) { /* Titel ist optional */ }
+      }
+    }
+
+    // Suche: Serie finden und direkt (ent)tracken
+    (function wireSeriesTrackerSearch() {
+      const inp = document.getElementById("st-search");
+      const clr = document.getElementById("st-search-clear");
+      const out = document.getElementById("st-search-results");
+      const backBtn = document.getElementById("st-back");
+      if (backBtn) backBtn.addEventListener("click", closeSeriesTracker);
+      if (!inp || !out) return;
+      let t = null;
+      inp.addEventListener("input", () => {
+        clearTimeout(t);
+        const q = inp.value.trim();
+        clr.hidden = !q;
+        if (!q) { out.hidden = true; out.innerHTML = ""; return; }
+        t = setTimeout(async () => {
+          try {
+            const res = await tmFetch("https://api.themoviedb.org/3/search/tv?api_key=" + TMDB_KEY +
+              "&language=" + TMDB_LANG + "&include_adult=false&query=" + encodeURIComponent(q));
+            if (!res.ok) return;
+            const d = await res.json();
+            if (inp.value.trim() !== q) return;
+            const items = filterBlocked((d.results || []), "tv").slice(0, 6);
+            out.innerHTML = "";
+            out.hidden = false;
+            if (!items.length) { out.innerHTML = '<div class="st-empty" style="padding:14px">Nichts gefunden.</div>'; return; }
+            items.forEach(it => {
+              const k = keyOf("tv", it.id);
+              const rowEl = document.createElement("div");
+              rowEl.className = "st-result-row";
+              const yr = it.first_air_date ? it.first_air_date.slice(0, 4) : "";
+              rowEl.innerHTML =
+                (it.poster_path ? '<img loading="lazy" src="' + IMG_BASE + 'w92' + it.poster_path + '" alt="">' : '<div class="st-result-ph"></div>') +
+                '<div class="st-result-title">' + esc(it.name || "") + (yr ? ' <span class="yr">(' + yr + ')</span>' : '') + '</div>' +
+                '<button class="st-track-toggle' + (db.trackedSeries[k] ? " on" : "") + '" type="button">' +
+                (db.trackedSeries[k] ? "Getrackt ✓" : "Tracken") + '</button>';
+              const btn = rowEl.querySelector(".st-track-toggle");
+              btn.addEventListener("click", () => {
+                if (db.trackedSeries[k]) {
+                  delete db.trackedSeries[k];
+                  btn.classList.remove("on"); btn.textContent = "Tracken";
+                } else {
+                  db.trackedSeries[k] = true;
+                  btn.classList.add("on"); btn.textContent = "Getrackt ✓";
+                }
+                saveDB();
+                renderSeriesTracker();
+              });
+              out.appendChild(rowEl);
+            });
+          } catch (e) { /* ignore */ }
+        }, 300);
+      });
+      clr.addEventListener("click", () => { inp.value = ""; clr.hidden = true; out.hidden = true; out.innerHTML = ""; inp.focus(); });
+    })();
+
+    // ====================================================================
     //  LISTS  (Watchlist + custom lists) and the WÜRFEL (random picker)
     // ====================================================================
     const WATCHLIST_ID = "watchlist";
@@ -9738,8 +10153,20 @@
         profileVisible: priv.profileVisible !== false,
         shareWatched:   priv.shareWatched   !== false,
         shareRanking:   priv.shareRanking   !== false,
-        shareLists:     priv.shareLists     !== false
+        shareLists:     priv.shareLists     !== false,
+        shareLibrary:   priv.shareLibrary   !== false   // R59: ganze Bibliothek fürs Freundesprofil
       };
+      // R59: komplette Bibliothek (kompakt) — Freunde können im Profil über die
+      // Filme-/Serien-Kacheln ALLE geschauten Titel durchstöbern. Abschaltbar
+      // über Datenschutz → "Freunde dürfen alle deine Filme & Serien sehen".
+      const library = privacy.shareLibrary ? items
+        .slice()
+        .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0))
+        .slice(0, 800)
+        .map(it => ({
+          id: it.id, mediaType: it.mediaType, title: (it.title || "").slice(0, 80),
+          posterPath: it.poster || null, bucket: it.bucket || null, year: it.year || null
+        })) : [];
       // Zuletzt gesehen — newest first, max 20; exclude items the user removed.
       const _rwExcluded = db.recentlyWatchedExcluded || {};
       const recentlyWatched = items
@@ -9775,7 +10202,7 @@
         tv:     rankSeries.map(it => it.id),
         person: rankPersons.map(it => it.id)
       };
-      return { stats, privacy, recentlyWatched, topRanked, rankFull, profileUpdatedAt: Date.now() };
+      return { stats, privacy, recentlyWatched, topRanked, rankFull, library, profileUpdatedAt: Date.now() };
     }
     function renderListSettings() {
       const host = document.getElementById("list-settings");
@@ -10822,10 +11249,13 @@
     const discRows       = document.getElementById("disc-rows");
     const discGenreChips = document.getElementById("disc-genre-chips");
 
+    // R59: noIndia filtert Bollywood-Titel aus den Kino-Reihen (dominieren TMDBs
+    // Popularität, laufen hier aber kaum). Jede Reihe ist über die Überschrift
+    // als Voll-Grid mit Infinite-Scroll zu öffnen (openRowBrowse).
     const DISC_ROWS = [
       { title: "Diese Woche im Trend", url: "/trending/all/week", mixed: true },
-      { title: "Jetzt im Kino",        url: "/movie/now_playing", region: true, media: "movie" },
-      { title: "Demnächst",            url: "/movie/upcoming",    region: true, media: "movie" },
+      { title: "Jetzt im Kino",        url: "/movie/now_playing", region: true, media: "movie", noIndia: true },
+      { title: "Demnächst",            url: "/movie/upcoming",    region: true, media: "movie", noIndia: true },
       { title: "Beliebt",              url: "/movie/popular",     media: "movie" },
       { title: "Bestbewertet",         url: "/movie/top_rated",   media: "movie" }
     ];
@@ -10962,7 +11392,12 @@
       discRows.innerHTML = "";
       for (const def of DISC_ROWS) {
         const wrap = document.createElement("div"); wrap.className = "drow";
-        const h = document.createElement("div"); h.className = "drow-title"; h.textContent = def.title;
+        // R59: Überschrift öffnet das Voll-Grid der Reihe ("Alle anzeigen")
+        const h = document.createElement("div");
+        h.className = "drow-title drow-title-link";
+        h.innerHTML = '<span></span><span class="section-seeall">Alle anzeigen <span class="section-chevron">›</span></span>';
+        h.querySelector("span").textContent = def.title;
+        h.addEventListener("click", () => openRowBrowse(def));
         const sc = document.createElement("div"); sc.className = "hscroll";
         sc.innerHTML = '<div class="drow-skeleton"><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>';
         wrap.appendChild(h); wrap.appendChild(sc); discRows.appendChild(wrap);
@@ -10972,18 +11407,30 @@
 
     async function fillRow(def, sc) {
       try {
-        let url = "https://api.themoviedb.org/3" + def.url + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG + "&include_adult=false";
-        if (def.region) url += "&region=" + TMDB_REGION;
-        const res = await tmFetch(url);
-        if (!res.ok) throw new Error();
-        const d = await res.json();
-        let items = (d.results || []);
-        if (def.mixed) items = items.filter(it => it.media_type === "movie" || it.media_type === "tv");
-        items = filterHidden(items.filter(it => it.poster_path), def.mixed ? null : def.media).slice(0, 18);
+        // R59: filterHidden schrumpfte die 20 TMDB-Treffer teils auf 4 Karten —
+        // jetzt werden bis zu 3 Seiten eingesammelt, bis die Reihe voll ist.
+        const items = [];
+        const seenIds = new Set();
+        for (let page = 1; page <= 3 && items.length < 18; page++) {
+          let url = "https://api.themoviedb.org/3" + def.url + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG
+            + "&include_adult=false&page=" + page;
+          if (def.region) url += "&region=" + TMDB_REGION;
+          const res = await tmFetch(url);
+          if (!res.ok) { if (page === 1) throw new Error(); break; }
+          const d = await res.json();
+          let raw = (d.results || []).filter(it => it.poster_path);
+          if (def.mixed)   raw = raw.filter(it => it.media_type === "movie" || it.media_type === "tv");
+          if (def.noIndia) raw = raw.filter(it => !_INDIA_LANGS.has(it.original_language));
+          filterHidden(raw, def.mixed ? null : def.media).forEach(it => {
+            const k = (def.mixed ? it.media_type : def.media) + ":" + it.id;
+            if (!seenIds.has(k)) { seenIds.add(k); items.push(it); }
+          });
+          if (page >= Math.min(d.total_pages || 1, 500)) break;
+        }
         sc.innerHTML = "";
         if (!items.length) { sc.innerHTML = '<div class="disc-loading">—</div>'; return; }
         const frag = document.createDocumentFragment();
-        items.forEach(it => frag.appendChild(discPosterCard(it, def.mixed ? it.media_type : def.media)));
+        items.slice(0, 18).forEach(it => frag.appendChild(discPosterCard(it, def.mixed ? it.media_type : def.media)));
         sc.appendChild(frag);
       } catch (e) {
         sc.innerHTML = '<div class="disc-loading">Konnte nicht laden.</div>';
@@ -11257,9 +11704,33 @@
     }
     const discFilterBar = document.getElementById("disc-filter-bar");
     const discFiltered  = document.getElementById("disc-filtered");
-    function showDiscBrowse() { discResults.hidden = true; discResults.innerHTML = ""; discGenreView.hidden = true; discFiltered.hidden = true; discFilterBar.hidden = false; discBrowse.hidden = false; }
-    function showDiscResults() { discBrowse.hidden = true; discGenreView.hidden = true; discFiltered.hidden = true; discFilterBar.hidden = true; discResults.hidden = false; }
-    function showDiscFiltered() { discBrowse.hidden = true; discGenreView.hidden = true; discResults.hidden = true; discFilterBar.hidden = false; discFiltered.hidden = false; }
+    // R59: Die Filter-Leiste lebt jetzt im Home-Tab hinter dem Trichter-Knopf;
+    // das gefilterte Grid verdrängt den Home-Inhalt (wie das Kategorie-Grid).
+    let _homeFilterOpen = false;
+    let _dfBackEntry = false;
+    function openFilteredBrowse() {
+      const lh = document.getElementById("log-home");
+      if (lh) lh.hidden = true;
+      discGenreView.hidden = true;
+      document.body.classList.add("browse-open");
+      discFiltered.hidden = false;
+      if (!_dfBackEntry) { _dfBackEntry = true; history.pushState({ vaultOverlay: "dfilter" }, ""); }
+    }
+    function closeFilteredBrowse(showHome) {
+      discFiltered.hidden = true;
+      if (showHome !== false) {
+        const lh = document.getElementById("log-home");
+        if (lh) lh.hidden = false;
+        document.body.classList.remove("browse-open");
+        if (_dfBackEntry) { _dfBackEntry = false; programmingGoingBack = true; history.back(); }
+      } else if (_dfBackEntry) {
+        // Ansicht wechselt direkt weiter (z. B. ins Genre-Grid) — History-Eintrag übergeben
+        _dfBackEntry = false; _genreBackEntry = true;
+      }
+    }
+    function showDiscBrowse() { discResults.hidden = true; discResults.innerHTML = ""; discGenreView.hidden = true; closeFilteredBrowse(true); discBrowse.hidden = false; }
+    function showDiscResults() { discBrowse.hidden = true; discGenreView.hidden = true; discFiltered.hidden = true; discResults.hidden = false; }
+    function showDiscFiltered() { discResults.hidden = true; openFilteredBrowse(); }
 
     async function runDiscSearch(q) {
       if (discAbort) discAbort.abort();
@@ -11367,22 +11838,50 @@
     // R58: solange das Grid offen ist, verschwindet die Home-Suchleiste —
     // oben bleibt nur der schmale Kopf (Zurück-Icon + Titel + Sortierung).
     function _homeSearchBar(show) {
-      const sb = document.querySelector("#view-log .search-bar");
+      const sb = document.getElementById("home-top-row");   // R59: ganze Zeile (Suche + Würfel + Filter)
       if (sb) sb.hidden = !show;
+      // Filter-Leiste im Grid ebenfalls verstecken (gehört zur Suchzeile)
+      if (typeof discFilterBar !== "undefined" && discFilterBar) {
+        discFilterBar.hidden = show ? !_homeFilterOpen : true;
+      }
     }
-    function openGenreBrowse(id, name, media) {
-      gb = { id: id || null, name, media: media || "movie", sort: discGenreSort.value, page: 0, totalPages: 1, provider: null };
-      document.getElementById("disc-genre-name").textContent = name;
-      discGenreGrid.innerHTML = "";
+    function _openGenreView() {
       const lh = document.getElementById("log-home");
       if (lh) lh.hidden = true;
+      const df = document.getElementById("disc-filtered");
+      if (df && !df.hidden) closeFilteredBrowse(false);
       _homeSearchBar(false);
+      document.body.classList.add("browse-open");   // R59: Glocke weg — überlappte die Kopfzeile
       discGenreView.hidden = false;
       discGenreView.scrollTop = 0;
       const v = document.getElementById("view-log");
       if (v) v.scrollTop = 0;
+      window.scrollTo(0, 0);
       if (!_genreBackEntry) { _genreBackEntry = true; history.pushState({ vaultOverlay: "genre" }, ""); }
+    }
+    function openGenreBrowse(id, name, media) {
+      gb = { id: id || null, name, media: media || "movie", sort: discGenreSort.value, page: 0, totalPages: 1, provider: null, url: null };
+      document.getElementById("disc-genre-name").textContent = name;
+      discGenreSort.hidden = false;
+      _gbToken++; _gbLoading = false;
+      discGenreGrid.innerHTML = "";
+      _openGenreView();
       buildProviderBar();
+      loadGenrePage();
+    }
+    // R59: Home-Reihen ("Diese Woche im Trend", "Jetzt im Kino" …) öffnen dieselbe
+    // Grid-Ansicht, blättern aber den festen TMDB-Endpoint durch (kein Sortier-/
+    // Anbieter-Filter — die Endpoints unterstützen das nicht).
+    function openRowBrowse(def) {
+      gb = { id: null, name: def.title, media: def.media || null, sort: null, page: 0, totalPages: 1,
+             provider: null, url: def.url, region: !!def.region, mixed: !!def.mixed, noIndia: !!def.noIndia };
+      document.getElementById("disc-genre-name").textContent = def.title;
+      discGenreSort.hidden = true;
+      const provHost = document.getElementById("disc-genre-providers");
+      if (provHost) { provHost.hidden = true; provHost.innerHTML = ""; }
+      _gbToken++; _gbLoading = false;
+      discGenreGrid.innerHTML = "";
+      _openGenreView();
       loadGenrePage();
     }
     function closeGenreBrowse() {
@@ -11390,6 +11889,7 @@
       const lh = document.getElementById("log-home");
       if (lh) lh.hidden = false;
       _homeSearchBar(true);
+      document.body.classList.remove("browse-open");
       if (_genreBackEntry) { _genreBackEntry = false; programmingGoingBack = true; history.back(); }
     }
 
@@ -11398,6 +11898,19 @@
     // und als runde Logo-Chips über dem Grid zeigen. Auswahl filtert das Discover-Grid
     // per with_watch_providers + watch_region=DE.
     const _provCache = {};
+    // R59: Kauf-/Leih-Stores, Aggregatoren und "Channel"-Einträge fliegen raus —
+    // sie zeigten fast identische Kataloge (JustWatch TV, Apple TV Store, Amazon
+    // Video, Google Play, YouTube …) und stifteten Verwirrung ("zwei Amazons").
+    const _PROV_JUNK = /(channel|store|justwatch|google play|youtube|rakuten|microsoft|videobuster|maxdome|chili|sky go|amazon video)/i;
+    // Kurze Anzeigenamen fürs Label unter dem Logo
+    function provShortName(n) {
+      return (n || "")
+        .replace(/^Amazon Prime Video$/i, "Prime Video")
+        .replace(/^Disney Plus$/i, "Disney+")
+        .replace(/^Paramount Plus$/i, "Paramount+")
+        .replace(/^Apple TV$/i, "Apple TV+")
+        .replace(/ Plus$/i, "+");
+    }
     async function loadProviders(media) {
       if (_provCache[media]) return _provCache[media];
       try {
@@ -11407,8 +11920,9 @@
         const d = await res.json();
         const list = (d.results || [])
           .filter(p => p.logo_path && p.display_priorities && p.display_priorities.DE != null)
+          .filter(p => !_PROV_JUNK.test(p.provider_name || ""))
           .sort((a, b) => a.display_priorities.DE - b.display_priorities.DE)
-          .slice(0, 14);
+          .slice(0, 12);
         _provCache[media] = list;
         return list;
       } catch (e) { return []; }
@@ -11433,7 +11947,9 @@
         b.className = "prov-chip" + (String(gb.provider) === String(p.provider_id) ? " on" : "");
         b.title = p.provider_name;
         b.setAttribute("aria-label", p.provider_name);
-        b.innerHTML = '<img loading="lazy" src="' + IMG_BASE + 'w92' + p.logo_path + '" alt="">';
+        // R59: Name unter dem Logo, damit ähnliche Logos unterscheidbar sind
+        b.innerHTML = '<span class="prov-logo"><img loading="lazy" src="' + IMG_BASE + 'w92' + p.logo_path + '" alt=""></span>' +
+          '<span class="prov-name">' + esc(provShortName(p.provider_name)) + '</span>';
         // nochmal antippen = Filter wieder aus
         b.addEventListener("click", () => setGenreProvider(
           String(gb.provider) === String(p.provider_id) ? null : p.provider_id));
@@ -11448,46 +11964,98 @@
       if (host) host.querySelectorAll(".prov-chip").forEach(c =>
         c.classList.toggle("on", (c.dataset.pid || "") === String(gb.provider || "")));
       gb.page = 0; gb.totalPages = 1;
+      _gbToken++; _gbLoading = false;   // laufenden Ladevorgang entwerten (R59)
       discGenreGrid.innerHTML = "";
       loadGenrePage();
     }
 
-    async function loadGenrePage() {
-      gb.page += 1;
-      discGenreMore.hidden = true;
-      if (gb.page === 1) discGenreGrid.innerHTML = '<div class="grid-empty">Lädt …</div>';
-      try {
-        const media = gb.media || "movie";
-        // TMDB-Sortierfeld unterscheidet sich je Medium (Kinostart vs. Erstausstrahlung)
-        const sort = (media === "tv" && gb.sort === "primary_release_date.desc") ? "first_air_date.desc" : gb.sort;
-        let url = "https://api.themoviedb.org/3/discover/" + media + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG
-          + "&sort_by=" + sort + "&page=" + gb.page + "&include_adult=false";
-        if (gb.id) url += "&with_genres=" + gb.id;
-        // R58: nach Streamingdienst filtern (Chips über dem Grid)
-        if (gb.provider) url += "&with_watch_providers=" + gb.provider + "&watch_region=DE";
-        if (gb.sort === "vote_average.desc") url += "&vote_count.gte=200";
-        if (gb.sort === "primary_release_date.desc") url += "&vote_count.gte=20";
-        const res = await tmFetch(url);
-        if (!res.ok) throw new Error();
-        const d = await res.json();
-        gb.totalPages = Math.min(d.total_pages || 1, 500);
-        if (gb.page === 1) discGenreGrid.innerHTML = "";
-        const items = filterHidden((d.results || []).filter(it => it.poster_path), media);   // point 6
-        if (gb.page === 1 && !items.length) { discGenreGrid.innerHTML = '<div class="grid-empty">Nichts gefunden.</div>'; return; }
-        const frag = document.createDocumentFragment();
-        items.forEach(it => {
-          const cell = document.createElement("div"); cell.className = "grid-item";
-          const img = document.createElement("img"); img.loading = "lazy"; img.src = IMG_BASE + "w185" + it.poster_path; img.alt = dispTitleOf(it, media) || "";
-          cell.appendChild(img);
-          cell.appendChild(makeCardActions(it, media));
-          cell.addEventListener("click", () => openDetail(media, it.id));
-          frag.appendChild(cell);
-        });
-        discGenreGrid.appendChild(frag);
-        discGenreMore.hidden = gb.page >= gb.totalPages;
-      } catch (e) {
-        if (gb.page === 1) discGenreGrid.innerHTML = '<div class="grid-empty">Konnte nicht laden.</div>';
+    // R59: Sprachen, die in den DE-Kino-Charts nichts verloren haben (User-Beschwerde:
+    // "Jetzt im Kino" bestand zur Hälfte aus indischen Titeln — TMDB-Popularität
+    // wird von Bollywood-Votes dominiert, obwohl die Filme hier kaum jemand kennt).
+    const _INDIA_LANGS = new Set(["hi", "ta", "te", "ml", "kn", "bn", "mr", "pa", "gu"]);
+
+    function _gbBuildUrl(page) {
+      const media = gb.media || "movie";
+      if (gb.url) {   // Endpoint-Modus (Home-Reihen)
+        let url = "https://api.themoviedb.org/3" + gb.url + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG
+          + "&include_adult=false&page=" + page;
+        if (gb.region) url += "&region=" + TMDB_REGION;
+        return url;
       }
+      // TMDB-Sortierfeld unterscheidet sich je Medium (Kinostart vs. Erstausstrahlung)
+      const sort = (media === "tv" && gb.sort === "primary_release_date.desc") ? "first_air_date.desc" : gb.sort;
+      let url = "https://api.themoviedb.org/3/discover/" + media + "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG
+        + "&sort_by=" + sort + "&page=" + page + "&include_adult=false";
+      if (gb.id) url += "&with_genres=" + gb.id;
+      // R58: nach Streamingdienst filtern (Chips über dem Grid)
+      if (gb.provider) url += "&with_watch_providers=" + gb.provider + "&watch_region=DE";
+      if (gb.sort === "vote_average.desc") url += "&vote_count.gte=200";
+      if (gb.sort === "primary_release_date.desc") url += "&vote_count.gte=20";
+      return url;
+    }
+
+    // R59: eine "Seite" fürs Grid sammelt jetzt so lange TMDB-Seiten ein, bis genug
+    // sichtbare Karten zusammenkommen. Vorher zeigte Seite 1 nach filterHidden oft
+    // nur 1-4 Titel — und wenn ALLE 20 gefiltert waren, stand fälschlich
+    // "Nichts gefunden" da (der Disney+/RTL+-Bug).
+    let _gbToken = 0;          // entwertet laufende Ladevorgänge bei Ansichts-/Filterwechsel
+    let _gbLoading = false;
+    const GB_MIN_BATCH = 18;   // Ziel: mindestens so viele neue Karten pro Ladevorgang
+    const GB_MAX_FETCH = 6;    // aber höchstens so viele TMDB-Seiten pro Ladevorgang
+
+    async function loadGenrePage() {
+      if (_gbLoading) return;
+      _gbLoading = true;
+      const tok = ++_gbToken;
+      discGenreMore.hidden = true;
+      if (gb.page === 0) discGenreGrid.innerHTML = '<div class="grid-empty">Lädt …</div>';
+      const media0 = gb.media;
+      const collected = [];
+      let fetched = 0, failed = false;
+      try {
+        while (collected.length < GB_MIN_BATCH && fetched < GB_MAX_FETCH && gb.page < gb.totalPages) {
+          const page = gb.page + 1;
+          const res = await tmFetch(_gbBuildUrl(page));
+          if (tok !== _gbToken) { _gbLoading = false; return; }   // Ansicht gewechselt
+          if (!res.ok) { failed = true; break; }
+          const d = await res.json();
+          gb.page = page;
+          fetched++;
+          gb.totalPages = Math.min(d.total_pages || 1, 500);
+          let raw = (d.results || []).filter(it => it.poster_path);
+          if (gb.mixed) raw = raw.filter(it => it.media_type === "movie" || it.media_type === "tv");
+          if (gb.noIndia) raw = raw.filter(it => !_INDIA_LANGS.has(it.original_language));
+          const items = filterHidden(raw, gb.mixed ? null : (media0 || "movie"));
+          collected.push(...items);
+        }
+      } catch (e) { failed = true; }
+      if (tok !== _gbToken) { _gbLoading = false; return; }
+
+      const firstBatch = discGenreGrid.querySelector(".grid-empty");
+      if (firstBatch) discGenreGrid.innerHTML = "";
+      if (!collected.length && !discGenreGrid.children.length) {
+        discGenreGrid.innerHTML = '<div class="grid-empty">' + (failed ? "Konnte nicht laden." : "Nichts gefunden.") + '</div>';
+        _gbLoading = false;
+        discGenreMore.hidden = true;
+        return;
+      }
+      const frag = document.createDocumentFragment();
+      const seen = new Set([...discGenreGrid.querySelectorAll(".grid-item[data-key]")].map(c => c.dataset.key));
+      collected.forEach(it => {
+        const mt = gb.mixed ? it.media_type : (media0 || "movie");
+        const k = mt + ":" + it.id;
+        if (seen.has(k)) return;   // Endpoints liefern über Seitengrenzen gern Duplikate
+        seen.add(k);
+        const cell = document.createElement("div"); cell.className = "grid-item"; cell.dataset.key = k;
+        const img = document.createElement("img"); img.loading = "lazy"; img.src = IMG_BASE + "w185" + it.poster_path; img.alt = dispTitleOf(it, mt) || "";
+        cell.appendChild(img);
+        cell.appendChild(makeCardActions(it, mt));
+        cell.addEventListener("click", () => openDetail(mt, it.id));
+        frag.appendChild(cell);
+      });
+      discGenreGrid.appendChild(frag);
+      _gbLoading = false;
+      discGenreMore.hidden = gb.page >= gb.totalPages;
     }
 
     // R58: Sortierwechsel lädt nur das Grid neu — Provider-Auswahl bleibt erhalten
@@ -11496,11 +12064,28 @@
       if (discGenreView.hidden) return;
       gb.sort = discGenreSort.value;
       gb.page = 0; gb.totalPages = 1;
+      _gbToken++; _gbLoading = false;
       discGenreGrid.innerHTML = "";
       loadGenrePage();
     });
     discGenreMore.addEventListener("click", loadGenrePage);
     document.getElementById("disc-genre-back").addEventListener("click", closeGenreBrowse);
+
+    // R59: Infinite-Scroll — sobald der "Mehr laden"-Knopf in Sichtweite kommt,
+    // lädt das Grid automatisch nach (der Knopf bleibt als Fallback tippbar).
+    // Bewusst per Scroll-Listener + Rect-Check statt IntersectionObserver: der
+    // Knopf bleibt oft dauerhaft "intersecting" (kein Übergang) und der Feed
+    // scrollt je nach Gerät im #view-log-Container ODER im Fenster.
+    function _gbMaybeAutoLoad() {
+      if (discGenreView.hidden || discGenreMore.hidden || _gbLoading) return;
+      const r = discGenreMore.getBoundingClientRect();
+      if (r.top < window.innerHeight + 500) loadGenrePage().then(() => setTimeout(_gbMaybeAutoLoad, 50));
+    }
+    (function wireGenreInfiniteScroll() {
+      const v = document.getElementById("view-log");
+      if (v) v.addEventListener("scroll", _gbMaybeAutoLoad, { passive: true });
+      window.addEventListener("scroll", _gbMaybeAutoLoad, { passive: true });
+    })();
 
     // R57: Kategorie-Kacheln — Filme / Serien / TV Shows (Reality + Talk)
     document.querySelectorAll("#home-cats .home-cat").forEach(btn =>
@@ -11510,6 +12095,11 @@
         else if (cat === "tv")   openGenreBrowse(null, "Serien", "tv");
         else if (cat === "show") openGenreBrowse("10764|10767", "TV Shows", "tv");
       }));
+    // R59: Serien-Tracker-Kachel
+    (function wireHomeTrackerCat() {
+      const b = document.getElementById("home-tracker-cat");
+      if (b) b.addEventListener("click", openSeriesTracker);
+    })();
 
     // ---------- Filter browse (A3) ----------
     const dfMedia  = document.getElementById("df-media");
@@ -11620,29 +12210,64 @@
       if (personFilterActive()) { applyPersonFilter(); return; }   // 16a
       const { url, media } = buildFilterUrl();
       fb = { page: 0, totalPages: 1, url, media };
+      _fbToken++; _fbLoading = false;   // laufenden Ladevorgang entwerten (R59)
       loadFilterPage();
     }
 
+    // R59: sammelt wie das Kategorie-Grid mehrere TMDB-Seiten ein, bis genug
+    // sichtbare Karten zusammenkommen (filterHidden ließ sonst Mini-Seiten übrig).
+    let _fbToken = 0;
+    let _fbLoading = false;
     async function loadFilterPage() {
-      fb.page += 1;
+      if (_fbLoading) return;
+      _fbLoading = true;
+      const tok = ++_fbToken;
       dfMore.hidden = true;
-      if (fb.page === 1) dfGrid.innerHTML = '<div class="grid-empty">Lädt …</div>';
+      if (fb.page === 0) dfGrid.innerHTML = '<div class="grid-empty">Lädt …</div>';
+      const collected = [];
+      let fetched = 0, failed = false;
       try {
-        const res = await tmFetch(fb.url + "&page=" + fb.page);
-        if (!res.ok) throw new Error();
-        const d = await res.json();
-        fb.totalPages = Math.min(d.total_pages || 1, 500);
-        if (fb.page === 1) dfGrid.innerHTML = "";
-        const items = filterHidden((d.results || []).filter(it => it.poster_path), fb.media);   // point 6
-        if (fb.page === 1 && !items.length) { dfGrid.innerHTML = '<div class="grid-empty">Nichts gefunden.</div>'; return; }
-        const frag = document.createDocumentFragment();
-        items.forEach(it => frag.appendChild(fbCell(it, fb.media)));
-        dfGrid.appendChild(frag);
-        dfMore.hidden = fb.page >= fb.totalPages;
-      } catch (e) {
-        if (fb.page === 1) dfGrid.innerHTML = '<div class="grid-empty">Konnte nicht laden.</div>';
+        while (collected.length < GB_MIN_BATCH && fetched < GB_MAX_FETCH && fb.page < fb.totalPages) {
+          const page = fb.page + 1;
+          const res = await tmFetch(fb.url + "&page=" + page);
+          if (tok !== _fbToken) { _fbLoading = false; return; }
+          if (!res.ok) { failed = true; break; }
+          const d = await res.json();
+          fb.page = page;
+          fetched++;
+          fb.totalPages = Math.min(d.total_pages || 1, 500);
+          collected.push(...filterHidden((d.results || []).filter(it => it.poster_path), fb.media));   // point 6
+        }
+      } catch (e) { failed = true; }
+      if (tok !== _fbToken) { _fbLoading = false; return; }
+      const loadingEl = dfGrid.querySelector(".grid-empty");
+      if (loadingEl) dfGrid.innerHTML = "";
+      if (!collected.length && !dfGrid.children.length) {
+        dfGrid.innerHTML = '<div class="grid-empty">' + (failed ? "Konnte nicht laden." : "Nichts gefunden.") + '</div>';
+        _fbLoading = false;
+        dfMore.hidden = true;
+        return;
+      }
+      const frag = document.createDocumentFragment();
+      collected.forEach(it => frag.appendChild(fbCell(it, fb.media)));
+      dfGrid.appendChild(frag);
+      _fbLoading = false;
+      dfMore.hidden = fb.page >= fb.totalPages;
+    }
+    // R59: Infinite-Scroll fürs Filter-Grid (gleiche Mechanik wie Kategorie-Grid)
+    function _fbMaybeAutoLoad() {
+      if (discFiltered.hidden || dfMore.hidden || _fbLoading) return;
+      const r = dfMore.getBoundingClientRect();
+      if (r.top < window.innerHeight + 500) {
+        if (personFilterActive()) { renderPersonSlice(); }
+        else loadFilterPage().then(() => setTimeout(_fbMaybeAutoLoad, 50));
       }
     }
+    (function wireFilterInfiniteScroll() {
+      const v = document.getElementById("view-log");
+      if (v) v.addEventListener("scroll", _fbMaybeAutoLoad, { passive: true });
+      window.addEventListener("scroll", _fbMaybeAutoLoad, { passive: true });
+    })();
 
     // ---------- Cast / director filter (16a) ----------
     // TMDB's discover endpoint has no cast/crew filter for TV, so we drive this off the
@@ -11796,6 +12421,20 @@
       dfAdvanced.hidden = !dfAdvanced.hidden;
       dfToggle.classList.toggle("on", !dfAdvanced.hidden);
     });
+    // R59: Trichter-Knopf neben der Home-Suche klappt die Filter-Leiste auf/zu;
+    // Zuklappen schließt auch ein offenes Filter-Grid.
+    (function wireHomeFilterBtn() {
+      const btn = document.getElementById("home-filter-btn");
+      if (!btn) return;
+      btn.addEventListener("click", () => {
+        _homeFilterOpen = discFilterBar.hidden;
+        discFilterBar.hidden = !_homeFilterOpen;
+        btn.classList.toggle("on", _homeFilterOpen);
+        btn.setAttribute("aria-expanded", _homeFilterOpen ? "true" : "false");
+        if (_homeFilterOpen) fillDfGenres();
+        else if (!discFiltered.hidden) closeFilteredBrowse(true);
+      });
+    })();
     document.getElementById("df-back").addEventListener("click", showDiscBrowse);
     dfMore.addEventListener("click", () => { if (personFilterActive()) renderPersonSlice(); else loadFilterPage(); });
 
@@ -11807,7 +12446,7 @@
     function refreshDiscoverWatched() {
       if (discInited) buildRows();
       if (!discFiltered.hidden) applyFilterBrowse();
-      if (!discGenreView.hidden) { gb.page = 0; discGenreGrid.innerHTML = ""; loadGenrePage(); }
+      if (!discGenreView.hidden) { gb.page = 0; gb.totalPages = 1; _gbToken++; _gbLoading = false; discGenreGrid.innerHTML = ""; loadGenrePage(); }
     }
     hideWatchedCb.addEventListener("change", () => { db.hideWatched = hideWatchedCb.checked; saveDB(); refreshDiscoverWatched(); });
     hideWatchlistCb.addEventListener("change", () => { db.hideWatchlist = hideWatchlistCb.checked; saveDB(); refreshDiscoverWatched(); });
@@ -12000,13 +12639,17 @@
               .map(k => ({ key: k, it: db.items[k] }))
               .sort((a, b) => (b.it.loggedAt || 0) - (a.it.loggedAt || 0))
               .slice(0, 6);
-            return row("Aktuelle Serien", cur.map(({ key, it }) => {
+            // R59: Knopf zum Serien-Tracker (auch sichtbar, wenn gerade nichts läuft)
+            const trackerBtn = '<button class="prof-archive-btn" type="button" id="prof-open-tracker">Tracker öffnen ›</button>';
+            const cards = cur.map(({ key, it }) => {
               const last = lastWatched(key);
               const avg = seriesAvgEpRating(key);
               const sub = (last ? "S" + last.s + " E" + last.e : "") +
                 (avg ? (last ? " · " : "") + '<span class="hcard-stars">★</span> ' + avg.toFixed(1).replace(".", ",") : "");
               return openCard(it, sub);
-            }).join(""));
+            }).join("");
+            return row("Aktuelle Serien", cards, trackerBtn) ||
+              ('<div class="prof-row"><div class="prof-row-head"><span class="prof-row-title">Aktuelle Serien</span>' + trackerBtn + '</div></div>');
           }
           case "recent": {   // alles Geloggte (eigene Ansicht; Freunde sehen nur Gepostetes)
             const excluded = db.recentlyWatchedExcluded || {};
@@ -12070,6 +12713,9 @@
 
       const openBtn = document.getElementById("prof-archive-open");
       if (openBtn) openBtn.addEventListener("click", () => { _profPostsArchive = true; renderProfilePosts(); });
+      // R59: „Tracker öffnen" in der Aktuelle-Serien-Reihe
+      const trackerOpenBtn = document.getElementById("prof-open-tracker");
+      if (trackerOpenBtn) trackerOpenBtn.addEventListener("click", openSeriesTracker);
       host.querySelectorAll(".hcard[data-key]").forEach(el =>
         el.addEventListener("click", () => openMyPostSheet(el.dataset.key)));
       host.querySelectorAll(".hcard[data-open]").forEach(el =>
@@ -12552,7 +13198,7 @@
       const entries = Object.entries(db.blocklist || {});
       if (!entries.length) { host.innerHTML = ""; blockedRevealed = false; return; }
       let html = '<div class="detail-section">';
-      html += '<button class="blocked-toggle" type="button" id="blocked-toggle">' +
+      html += '<button class="blocked-toggle" type="button" id="blocked-toggle">' + stIco("ban") +
         '<span class="blocked-toggle-label">Gesperrte Titel</span>' +
         '<span class="blocked-count">' + entries.length + '</span>' +
         '<svg class="blocked-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>' +
@@ -12597,7 +13243,7 @@
         (included ? " checked" : "") + '><span class="switch-track"></span></label></div>';
 
       let html = '<div class="detail-section">';
-      html += '<button class="blocked-toggle" type="button" id="settings-reco-toggle">' +
+      html += '<button class="blocked-toggle" type="button" id="settings-reco-toggle">' + stIco("reco") +
         '<span class="blocked-toggle-label">Empfehlungen</span>' +
         '<svg class="blocked-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>' +
         '</button>';
@@ -13009,16 +13655,32 @@
 
     // Privacy (sharing groundwork). Stored in db.settings.privacy, so it rides
     // along to Firestore via saveDB(). No sharing UI yet — just the settings.
+    // R59: kleine Zeilen-Icons für die Einstellungen-Schublade (Instagram-Optik)
+    function stIco(name) {
+      const paths = {
+        reco:    '<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.3l6.1-.7z"/>',
+        bell:    '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+        shield:  '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+        users:   '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+        share:   '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/>',
+        ban:     '<circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/>',
+        info:    '<circle cx="12" cy="12" r="9"/><line x1="12" y1="10.5" x2="12" y2="16"/><circle cx="12" cy="7.5" r="0.4"/>',
+        theme:   '<path d="M12 3a9 9 0 1 0 9 9c0-.5 0-1-.1-1.4A5.5 5.5 0 0 1 12.5 3z"/>'
+      };
+      return '<svg class="st-ico" viewBox="0 0 24 24">' + (paths[name] || "") + '</svg>';
+    }
+
     const PRIVACY_DEFAULTS = {
       profileVisible: true, shareWatched: true, shareRanking: true,
-      shareLists: true, shareWatchlist: false
+      shareLists: true, shareWatchlist: false, shareLibrary: true
     };
     const PRIVACY_LABELS = {
       profileVisible: "Profil auffindbar",
       shareWatched:   "Gesehene Filme teilen",
       shareRanking:   "Ranking teilen",
       shareLists:     "Eigene Listen teilen",
-      shareWatchlist: "Watchlist teilen"
+      shareWatchlist: "Watchlist teilen",
+      shareLibrary:   "Freunde dürfen alle deine Filme & Serien sehen"
     };
     let privacyRevealed = false;
     function ensurePrivacy() {
@@ -13041,7 +13703,7 @@
         (p[key] ? " checked" : "") + '><span class="switch-track"></span></label></div>';
 
       let html = '<div class="detail-section">';
-      html += '<button class="blocked-toggle" type="button" id="privacy-toggle">' +
+      html += '<button class="blocked-toggle" type="button" id="privacy-toggle">' + stIco("shield") +
         '<span class="blocked-toggle-label">Datenschutz</span>' +
         '<svg class="blocked-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>' +
         '</button>';
@@ -13078,7 +13740,7 @@
       }
       const customLists = Object.values(db.lists || {});
       let html = '<div class="detail-section">';
-      html += '<button class="blocked-toggle" type="button" id="list-shares-toggle">' +
+      html += '<button class="blocked-toggle" type="button" id="list-shares-toggle">' + stIco("share") +
         '<span class="blocked-toggle-label">Listen-Freigaben</span>' +
         '<svg class="blocked-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>' +
         '</button>';
@@ -15911,6 +16573,9 @@
       _fprofBackEntry = false;
       _fprofCurrentUid = null;
       friendProfileEl.hidden = true;
+      // R59: eine noch offene Freundes-Bibliothek schließt mit
+      const flv = document.getElementById("flib-view");
+      if (flv && !flv.hidden) { flv.hidden = true; _flibBackEntry = false; }
       document.body.style.overflow = "";
     }
 
@@ -15926,18 +16591,67 @@
              `<button class="rcmp-change" id="rcmp-change" type="button">Andere Person</button>`;
     }
 
+    // R59: Der Vergleich läuft jetzt INLINE — der Rang des Freundes wird direkt in
+    // die eigene Ranking-Liste eingeblendet, statt eine eigene Ansicht zu öffnen.
+    // Das alte Vollbild (rank-compare-view) dient nur noch als Freunde-Picker.
+    let _cmpInline = null;   // { uid, name, profile }
     function openRankCompare() {
       if (!window.__vaultUser || !window.__vaultSocial) { showToast("Melde dich an, um zu vergleichen"); return; }
+      if (_cmpInline) { clearInlineCompare(); return; }   // zweiter Tap = Vergleich beenden
       const accepted = (typeof _socialFriends !== "undefined" ? _socialFriends : []).filter(f => f.status === "accepted");
       if (!accepted.length) { showToast("Noch keine Freunde zum Vergleichen"); return; }
       _cmpMedia = rankMedia;   // fix the category at open time
+      if (accepted.length === 1) { applyInlineCompare(accepted[0].uid); return; }
       rankCompareEl.hidden = false;
       document.body.style.overflow = "hidden";
       if (!_cmpBackEntry) { _cmpBackEntry = true; history.pushState({ vaultOverlay: "rcmp" }, ""); }
       document.getElementById("rcmp-title").textContent = "Vergleichen · " + cmpMediaLabel(_cmpMedia);
-      if (accepted.length === 1) renderRankCompare(accepted[0].uid);
-      else renderComparePicker(accepted);
+      renderComparePicker(accepted);
     }
+
+    async function applyInlineCompare(friendUid) {
+      const friend = (_socialFriends || []).find(f => f.uid === friendUid);
+      const fname  = (friend && friend.username) || "Freund";
+      if (!rankCompareEl.hidden) closeRankCompare();   // Picker zu
+      showToast("Lade Vergleich mit @" + fname + " …");
+      let profile = null;
+      try { profile = await window.__vaultSocial.getProfile(friendUid); } catch (e) {}
+      if (!profile) { showToast("Profil nicht gefunden"); return; }
+      if (profile.privacy && profile.privacy.shareRanking === false) {
+        showToast("@" + fname + " teilt sein Ranking nicht"); return;
+      }
+      _cmpInline = { uid: friendUid, name: fname, profile };
+      renderCmpBar();
+      renderRanking();
+    }
+    function clearInlineCompare() {
+      _cmpInline = null;
+      renderCmpBar();
+      renderRanking();
+    }
+    // Freund-Positionen für die aktuelle Kategorie (volle Liste, sonst Top-20-Fallback)
+    function cmpPosFor(media) {
+      if (!_cmpInline) return null;
+      const prof = _cmpInline.profile;
+      let ids = (prof.rankFull && Array.isArray(prof.rankFull[media])) ? prof.rankFull[media].map(String) : null;
+      if (!ids) {
+        if (media === "person") return new Map();
+        ids = (prof.topRanked || []).filter(it => it.mediaType === media)
+          .sort((a, b) => (a.rank || 99) - (b.rank || 99)).map(it => String(it.id));
+      }
+      return new Map(ids.map((id, i) => [id, i + 1]));
+    }
+    function renderCmpBar() {
+      const bar = document.getElementById("rank-cmp-bar");
+      if (!bar) return;
+      bar.hidden = !_cmpInline;
+      if (_cmpInline) document.getElementById("rank-cmp-label").textContent =
+        "Vergleich mit @" + _cmpInline.name + " — sein Platz steht bei jedem Titel";
+    }
+    (function wireCmpBar() {
+      const off = document.getElementById("rank-cmp-off");
+      if (off) off.addEventListener("click", clearInlineCompare);
+    })();
 
     function closeRankCompare() {
       if (!rankCompareEl) return;
@@ -15954,7 +16668,7 @@
             <span>${socialEsc(f.username || f.uid)}</span>
             <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
           </button>`).join("") + '</div>';
-      c.querySelectorAll(".rcmp-pick").forEach(b => b.addEventListener("click", () => renderRankCompare(b.dataset.uid)));
+      c.querySelectorAll(".rcmp-pick").forEach(b => b.addEventListener("click", () => applyInlineCompare(b.dataset.uid)));   // R59: inline statt eigener Ansicht
     }
 
     async function renderRankCompare(friendUid) {
@@ -16042,13 +16756,26 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R58.1";
+    const APP_VERSION = "R59";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R59": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Serien-Tracker:</strong> Neue Kachel auf Home (und „Tracker öffnen“ im Profil). Du siehst pro getrackter Serie, bei welcher Folge du bist, hakst die nächste Folge mit einem Tipp ab (inklusive Bewerten) und nimmst Serien per Suche auf oder wirfst sie wieder raus, wenn du abgebrochen hast.",
+          "<strong>Endlos scrollen statt „Mehr laden“:</strong> Kategorie-, Genre- und Filter-Grids laden automatisch nach, sobald du unten ankommst — und es erscheinen immer volle Seiten, auch wenn du schon viel gesehen hast.",
+          "<strong>Streamingdienst-Filter repariert:</strong> Disney+ und RTL+ zeigten fälschlich „Nichts gefunden“, wenn die beliebtesten Titel schon in deiner Bibliothek waren. Außerdem tragen die Logos jetzt Namen (Prime Video ist eindeutig) und Kauf-Stores wie „Amazon Video“ sind aus der Leiste raus.",
+          "<strong>Würfel und Filter sind zurück:</strong> Neben der Home-Suche sitzen wieder der Würfel-Knopf und ein Filter-Knopf mit allen alten Filtern (Typ, Genre, Studio, Schauspieler, Regisseur, Jahr, Dauer, Bewertung).",
+          "<strong>Home-Reihen komplett:</strong> „Diese Woche im Trend“, „Jetzt im Kino“, „Demnächst“, „Beliebt“ und „Bestbewertet“ sind wieder gut gefüllt, per „Alle anzeigen“ komplett durchscrollbar (mit Schnell-Aktionen auf jeder Karte) — und Bollywood-Titel fluten die Kino-Reihe nicht mehr.",
+          "<strong>Freundes-Bibliothek:</strong> Im Profil eines Freundes kannst du auf die Kacheln „Filme“ und „Serien“ tippen und ALLE seine geschauten Titel durchstöbern — inklusive Schnell-Aktionen (gesehen, Watchlist, Liste). Abschaltbar unter Datenschutz: „Freunde dürfen alle deine Filme & Serien sehen“.",
+          "<strong>Ranking-Vergleich direkt in der Liste:</strong> „Vergleichen“ öffnet kein eigenes Fenster mehr — der Platz deines Freundes steht einfach bei jedem Titel in deinem Ranking. Nochmal tippen beendet den Vergleich.",
+          "<strong>Einstellungen aufgeräumt:</strong> Alle Menüpunkte haben jetzt Icons und gleichmäßige Abstände, „Gesperrte Titel“ steht unter „Listen-Freigaben“, und die Glocke überlappt den Sortier-Knopf nicht mehr."
+        ]
+      },
       "R58.1": {
         title: "Fehlerbehebung",
         notes: [
@@ -16456,6 +17183,75 @@
     let _fprofCurrentUid = null;
     let _fprofPosts = [];   // R51: Posts des gerade offenen Freundesprofils (fürs read-only Sheet)
 
+    // ===== R59: komplette Bibliothek eines Freundes (Tap auf Filme/Serien-Kachel) =====
+    // Zeigt alle geschauten Titel aus dem library-Snapshot als Poster-Grid mit den
+    // üblichen Quick-Actions (Watchlist / als gesehen markieren) — Tap = Detailseite.
+    let _flibBackEntry = false;
+    function openFriendLibrary(profile, mediaType, uname) {
+      const view = document.getElementById("flib-view");
+      const content = document.getElementById("flib-content");
+      if (!view || !content) return;
+      document.getElementById("flib-title").textContent =
+        (mediaType === "tv" ? "Serien" : "Filme") + " von @" + uname;
+      view.hidden = false;
+      view.scrollTop = 0;
+      document.body.style.overflow = "hidden";
+      if (!_flibBackEntry) { _flibBackEntry = true; history.pushState({ vaultOverlay: "flib" }, ""); }
+
+      const p = profile.privacy || {};
+      if (p.shareLibrary === false || p.shareWatched === false) {
+        content.innerHTML = '<div class="flib-empty">@' + socialEsc(uname) + ' teilt die Bibliothek nicht.</div>';
+        return;
+      }
+      let lib = Array.isArray(profile.library)
+        ? profile.library.filter(it => (it.mediaType || "movie") === mediaType)
+        : [];
+      let hint = "";
+      if (!lib.length) {
+        // Snapshot von vor R59 → bestmöglicher Fallback: die letzten 20 aus recentlyWatched
+        lib = (profile.recentlyWatched || []).filter(it => (it.mediaType || "movie") === mediaType);
+        if (lib.length) hint = '<p class="settings-sub-label" style="margin:6px 2px 0">Zeigt die zuletzt geschauten Titel — die volle Liste erscheint, sobald @' + socialEsc(uname) + ' die neue Version nutzt.</p>';
+      }
+      if (!lib.length) {
+        content.innerHTML = '<div class="flib-empty">Noch keine ' + (mediaType === "tv" ? "Serien" : "Filme") + ' zu sehen.</div>';
+        return;
+      }
+      content.innerHTML = hint;
+      const grid = document.createElement("div");
+      grid.className = "poster-grid";
+      const frag = document.createDocumentFragment();
+      lib.forEach(it => {
+        if (!it.posterPath) return;
+        const cell = document.createElement("div"); cell.className = "grid-item";
+        const img = document.createElement("img");
+        img.loading = "lazy"; img.src = IMG_BASE + "w185" + it.posterPath; img.alt = it.title || "";
+        cell.appendChild(img);
+        cell.appendChild(makeCardActions({
+          id: it.id, title: it.title || "", name: it.title || "",
+          poster_path: it.posterPath, release_date: it.year ? it.year + "-01-01" : "",
+          first_air_date: it.year ? it.year + "-01-01" : ""
+        }, mediaType));
+        cell.addEventListener("click", () => {
+          detailEl.classList.add("over-profile");   // Detail über Profil UND Bibliothek (z145)
+          openDetail(mediaType, it.id);
+        });
+        frag.appendChild(cell);
+      });
+      grid.appendChild(frag);
+      content.appendChild(grid);
+    }
+    function closeFriendLibrary() {
+      const view = document.getElementById("flib-view");
+      if (!view || view.hidden) return;
+      view.hidden = true;
+      // Scroll-Lock bleibt: darunter ist weiterhin das Freundesprofil offen
+      if (_flibBackEntry) { _flibBackEntry = false; programmingGoingBack = true; history.back(); }
+    }
+    (function wireFlib() {
+      const back = document.getElementById("flib-back");
+      if (back) back.addEventListener("click", closeFriendLibrary);
+    })();
+
     async function openFriendProfile(friendUid) {
       if (!window.__vaultSocial) return;
       _fprofCurrentUid = friendUid;
@@ -16506,14 +17302,17 @@
       }
 
       // ── Statistiken: 4 Kästen in einer Reihe, zählen hoch (wie eigenes Profil) ──
+      // R59: Filme/Serien-Kacheln sind antippbar → komplette Bibliothek des Freundes
       const fpStats = [
-        { n: stats.films   || 0, l: "Filme" },
-        { n: stats.series  || 0, l: "Serien" },
+        { n: stats.films   || 0, l: "Filme",  lib: "movie" },
+        { n: stats.series  || 0, l: "Serien", lib: "tv" },
         { n: stats.hours   || 0, l: "Stunden" },
         { n: stats.episodes || 0, l: "Episoden" }
       ];
       html += '<div class="stat-grid" id="fprof-stats">' + fpStats.map(s =>
-        '<div class="stat-card"><div class="stat-num" data-n="' + s.n + '">0</div><div class="stat-label">' + s.l + '</div></div>').join("") + '</div>';
+        '<div class="stat-card' + (s.lib ? ' stat-card-link" data-fplib="' + s.lib : '') + '">' +
+        '<div class="stat-num" data-n="' + s.n + '">0</div><div class="stat-label">' + s.l + '</div>' +
+        (s.lib ? '<div class="stat-more">Alle ›</div>' : '') + '</div>').join("") + '</div>';
 
       // ── Insta-Reiter (gleiche Icons wie im eigenen Profil) ──────
       html += `<div class="prof-tabs" id="fprof-tabs" role="tablist">
@@ -16687,6 +17486,10 @@
           const it = _fprofPosts[parseInt(btn.dataset.fpidx, 10)];
           if (it) openFriendPostSheet(it, profile.username || "Freund");
         }));
+
+      // R59: Filme/Serien-Kacheln → komplette Bibliothek des Freundes
+      content.querySelectorAll(".stat-card-link[data-fplib]").forEach(el =>
+        el.addEventListener("click", () => openFriendLibrary(profile, el.dataset.fplib, profile.username || "Freund")));
 
       // R53: Karten der übrigen Reihen → Detailseite ÜBER dem Profil
       content.querySelectorAll(".hcard[data-fpopen]").forEach(el =>
@@ -16952,7 +17755,7 @@
       const accepted = _socialFriends.filter(f => f.status === "accepted");
 
       let html = '<div class="detail-section">';
-      html += '<button class="blocked-toggle" type="button" id="prof-friends-toggle">' +
+      html += '<button class="blocked-toggle" type="button" id="prof-friends-toggle">' + stIco("users") +
         '<span class="blocked-toggle-label">Freunde verwalten</span>' +
         '<svg class="blocked-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>' +
         '</button>';
@@ -17158,7 +17961,7 @@
       block.className = "notif-settings-block detail-section";
       block.style.marginTop = "16px";
       block.innerHTML =
-        '<button class="blocked-toggle" type="button" id="notif-settings-toggle">' +
+        '<button class="blocked-toggle" type="button" id="notif-settings-toggle">' + stIco("bell") +
           '<span class="blocked-toggle-label">Benachrichtigungen</span>' +
           '<svg class="blocked-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>' +
         '</button>' +
@@ -17281,7 +18084,7 @@
       ).join("");
       host.innerHTML =
         '<div class="detail-section" style="margin-top:16px">' +
-          '<button class="blocked-toggle' + (patchHistRevealed ? " open" : "") + '" type="button" id="patchhist-toggle">' +
+          '<button class="blocked-toggle' + (patchHistRevealed ? " open" : "") + '" type="button" id="patchhist-toggle">' + stIco("info") +
             '<span class="blocked-toggle-label">Neuigkeiten & Updates</span>' +
             '<span class="blocked-count">' + socialEsc(APP_VERSION) + '</span>' +
             '<svg class="blocked-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>' +
@@ -17349,7 +18152,7 @@
       ).join("");
       host.innerHTML =
         '<div class="detail-section" style="margin-top:16px">' +
-          '<button class="blocked-toggle' + (themeSettingsRevealed ? " open" : "") + '" type="button" id="theme-settings-toggle">' +
+          '<button class="blocked-toggle' + (themeSettingsRevealed ? " open" : "") + '" type="button" id="theme-settings-toggle">' + stIco("theme") +
             '<span class="blocked-toggle-label">Design</span>' +
             '<span class="blocked-count">' + socialEsc(VAULT_THEMES.find(t => t.id === active).name) + '</span>' +
             '<svg class="blocked-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>' +
