@@ -594,7 +594,10 @@
       stroke: var(--text-mute); fill: none;
       stroke-width: 1.8; stroke-linecap: round;
     }
-    #log-search, #disc-search, #social-search {
+    /* R60: gilt für JEDES Suchfeld in einer .search-bar (Serien-Tracker, Freunde
+       finden, …) — vorher nur für 3 alte IDs, wodurch neuere Felder auf iOS das
+       native weiße Suchfeld-Styling behielten ("Leiste in der Leiste"). */
+    .search-bar input[type="search"], #social-search {
       flex: 1;
       border: none;
       background: none;
@@ -604,11 +607,14 @@
       padding: 13px 8px;
       outline: none;
       min-width: 0;
+      width: 100%;
+      border-radius: 0;
       -webkit-appearance: none;   /* R13-#2: drop the native search-field loupe (iOS) */
       appearance: none;
     }
-    #log-search::placeholder, #disc-search::placeholder, #social-search::placeholder { color: var(--text-mute); }
-    #log-search::-webkit-search-cancel-button, #disc-search::-webkit-search-cancel-button, #social-search::-webkit-search-cancel-button { display: none; }
+    .search-bar input[type="search"]::placeholder, #social-search::placeholder { color: var(--text-mute); }
+    .search-bar input[type="search"]::-webkit-search-cancel-button, #social-search::-webkit-search-cancel-button { display: none; }
+    .search-bar input[type="search"]::-webkit-search-decoration, .search-bar input[type="search"]::-webkit-search-results-button, .search-bar input[type="search"]::-webkit-search-results-decoration,
     #social-search::-webkit-search-decoration, #social-search::-webkit-search-results-button, #social-search::-webkit-search-results-decoration { display: none; -webkit-appearance: none; }
     .search-clear {
       flex: 0 0 auto;
@@ -1068,6 +1074,11 @@
     #rank-cmp-label { flex: 1; min-width: 0; }
     #rank-cmp-off { flex: 0 0 auto; background: none; border: none; cursor: pointer; padding: 4px; }
     #rank-cmp-off svg { width: 15px; height: 15px; stroke: var(--text-dim); stroke-width: 2; stroke-linecap: round; }
+    /* R60: öffnet die komplette Rangliste des Freundes */
+    #rank-cmp-list { flex: 0 0 auto; background: none; border: none; cursor: pointer; padding: 4px 2px; font-family: inherit; font-size: 12.5px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+    .rcmp-flrank { flex: 0 0 34px; font-size: 14px; font-weight: 800; color: var(--text-dim); text-align: center; }
+    .rcmp-mypos { font-size: 11.5px; font-weight: 600; color: var(--accent); }
+    .rcmp-mypos.none { color: var(--text-mute); }
     .rank-cmp-badge { font-size: 11.5px; font-weight: 600; color: var(--accent); margin-top: 2px; }
     .rank-cmp-badge.none { color: var(--text-mute); }
     .rank-compare:active { background: var(--surface-2); }
@@ -1633,8 +1644,11 @@
     .filter-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
     /* Discover top: search row + Würfeln button beside it (A4) */
-    .disc-top-row { display: flex; gap: 10px; align-items: stretch; }
-    .disc-top-row .search-bar { flex: 1; margin: 0; }   /* 2a: match the Würfeln button height */
+    .disc-top-row { display: flex; gap: 10px; align-items: stretch; min-width: 0; }
+    /* 2a: match the Würfeln button height. R60: min-width 0 + overflow hidden — auf
+       iOS weigerte sich das Suchfeld zu schrumpfen und schob den Filter-Knopf aus
+       dem Bildschirm (Trichter rechts abgeschnitten). */
+    .disc-top-row .search-bar { flex: 1 1 0%; margin: 0; min-width: 0; overflow: hidden; }
     .wuerfel-btn-sm {
       flex: 0 0 49px; align-self: stretch; display: flex; align-items: center; justify-content: center;
       padding: 0; border-radius: 12px; cursor: pointer;
@@ -2243,6 +2257,9 @@
     /* R37: Auf dem Profil-Tab übernimmt der ☰-Button oben rechts — die fixierte Glocke
        würde damit kollidieren, daher hier ausblenden (wie bei Instagram). */
     body[data-tab="profile"] .notif-bell-wrap { display: none !important; }
+    /* R60: Im Ranking scrollt die Lupe (und die ganze Kopfzeile) unter die fixe
+       Glocke → Überlappung oben rechts. Wie beim Profil: Glocke hier ausblenden. */
+    body[data-tab="ranking"] .notif-bell-wrap { display: none !important; }
     /* R59: im Kategorie-/Genre-Grid und im Filter-Grid überlappte die Glocke die Kopfzeile */
     body.browse-open .notif-bell-wrap { display: none !important; }
     .notif-bell {
@@ -2259,6 +2276,10 @@
     .notif-badge.visible { display: block; }
     /* R13-#1: when the fixed bell is shown, keep top-right content clear of it. */
     body.has-bell #view-log .search-bar { margin-top: 26px; }
+    /* R60: In der Home-Zeile (Suche + Würfel + Filter) bekommt die ganze ZEILE den
+       Glocken-Abstand (Regel unten) — die 26px oben ließen sonst Würfel/Filter
+       (align-items: stretch) 26px höher wachsen als die Suchleiste selbst. */
+    body.has-bell #view-log .disc-top-row .search-bar { margin-top: 0; }
     /* R14-#5: drop the Entdecken top row below the fixed bell so they never
        overlap, and let "Würfeln" use the full width (no right-edge clipping). */
     body.has-bell .disc-top-row { margin-top: 40px; }
@@ -2352,6 +2373,9 @@
     #flib-content { padding: 4px 16px 24px; }
     #flib-content .poster-grid { margin-top: 8px; }
     .flib-empty { color: var(--text-mute); font-size: 14px; text-align: center; padding: 48px 24px; line-height: 1.5; }
+    /* R60: Sortieren + Genre-Filter über dem Bibliotheks-Grid */
+    .flib-controls { display: flex; gap: 8px; margin: 8px 0 4px; }
+    .flib-controls .modal-select { flex: 1; min-width: 0; padding: 9px 10px; font-size: 13px; }
     .stat-card-link { cursor: pointer; }
     .stat-card-link:active { background: var(--surface-2); }
     .stat-more { font-size: 10px; font-weight: 600; color: var(--accent); margin-top: 2px; }
@@ -2385,6 +2409,36 @@
       border-radius: 10px; font-family: inherit; font-size: 13px; font-weight: 600; padding: 9px 12px; cursor: pointer;
     }
     .st-done-badge { font-size: 12px; font-weight: 700; color: var(--accent); margin-top: 8px; }
+    /* R60: aufklappbare Folgen-Liste (Staffel-Chips + Folgen mit Checkbox + Sternen) */
+    .st-eps-toggle {
+      display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px;
+      background: none; border: none; color: var(--text-dim); font-family: inherit;
+      font-size: 12px; font-weight: 600; cursor: pointer; padding: 4px 0;
+    }
+    .st-eps-toggle svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .18s ease; }
+    .st-eps-toggle.open svg { transform: rotate(180deg); }
+    .st-season-chips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 6px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .st-season-chips::-webkit-scrollbar { display: none; }
+    .st-season-chip {
+      flex: 0 0 auto; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-dim);
+      border-radius: 99px; padding: 5px 12px; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+    }
+    .st-season-chip.on { background: var(--accent); border-color: var(--accent); color: #1a1206; }
+    .st-ep-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border); }
+    .st-ep-check {
+      flex: 0 0 22px; width: 22px; height: 22px; border-radius: 7px; padding: 0;
+      border: 1.5px solid var(--border); background: var(--surface-2); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .st-ep-row.seen .st-ep-check { background: var(--accent); border-color: var(--accent); }
+    .st-ep-check svg { width: 13px; height: 13px; stroke: #1a1206; fill: none; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+    .st-ep-name { flex: 1; min-width: 0; font-size: 12.5px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .st-ep-row.seen .st-ep-name { color: var(--text); }
+    .st-ep-stars { flex: 0 0 auto; display: flex; gap: 1px; }
+    .st-ep-star { background: none; border: none; padding: 2px 1px; cursor: pointer; line-height: 0; }
+    .st-ep-star svg { width: 15px; height: 15px; fill: none; stroke: var(--text-mute); stroke-width: 1.6; stroke-linejoin: round; }
+    .st-ep-star.on svg { fill: var(--accent); stroke: var(--accent); }
+    .st-eps-empty, .st-eps-loading { font-size: 12px; color: var(--text-mute); padding: 8px 0; }
     .st-empty { color: var(--text-mute); font-size: 14px; text-align: center; padding: 40px 24px; line-height: 1.6; }
     .st-result-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
     .st-result-row img, .st-result-ph { flex: 0 0 36px; width: 36px; height: 54px; border-radius: 6px; object-fit: cover; background: var(--surface-2); }
@@ -3224,6 +3278,7 @@
       <!-- R59: aktiver Inline-Vergleich — Freund-Ränge stehen direkt in der Liste -->
       <div id="rank-cmp-bar" hidden>
         <span id="rank-cmp-label"></span>
+        <button id="rank-cmp-list" type="button">Seine Rangliste ›</button>
         <button id="rank-cmp-off" type="button" aria-label="Vergleich beenden">
           <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
         </button>
@@ -3752,7 +3807,7 @@
       <div class="match-body">
         <div class="match-title" id="ww-title"></div>
         <div class="match-text" id="ww-text"></div>
-        <button class="ww-details-btn" id="ww-details" type="button">Welcher war das nochmal? Details ansehen ›</button>
+        <button class="ww-details-btn" id="ww-details" type="button">Details ansehen ›</button>
         <button class="match-close-btn" id="ww-yes" type="button">Ja, hab ich!</button>
         <button class="ww-no-btn" id="ww-no" type="button">Nein</button>
       </div>
@@ -5653,8 +5708,12 @@
         .sort((a, b) => (b.it.loggedAt || 0) - (a.it.loggedAt || 0))
         .slice(0, 6);
 
-      if (!inProgress.length) { host.hidden = true; return; }
-      host.hidden = false;
+      // R60: Die Home-Reihe "Aktuelle Serien" ist tot — der Serien-Tracker (R59)
+      // übernimmt das komplett. buildProgressSection füllt die Liste nur noch für
+      // openHomeSectionFull; die Reihe selbst bleibt IMMER versteckt (sie tauchte
+      // sonst nach jedem buildProgressSection-Aufruf wieder auf Home auf).
+      host.hidden = true;
+      if (!inProgress.length) { return; }
       list.innerHTML = "";
 
       inProgress.forEach(({ key, it, p }) => {
@@ -9788,6 +9847,9 @@
               : '') +
             '<button class="st-untrack-btn" type="button">Entfernen</button>' +
           '</div>' +
+          // R60: aufklappbare Folgen-Liste — Folgen abhaken/ABWÄHLEN (rückgängig!) und schnell bewerten
+          '<button class="st-eps-toggle" type="button" aria-expanded="false">Alle Folgen &amp; Bewertungen <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>' +
+          '<div class="st-eps" hidden></div>' +
         '</div>';
 
       // Poster/Titel → Detailseite (über dem Tracker)
@@ -9805,6 +9867,24 @@
           openEpRateSheet(key, next.s, next.e, null, () => renderTrackerCard(card, key, data), data, epName);
           renderTrackerCard(card, key, data);
         });
+      }
+
+      // R60: Folgen-Liste auf-/zuklappen (Zustand überlebt Re-Renders via dataset)
+      const epsToggle = card.querySelector(".st-eps-toggle");
+      const epsHost   = card.querySelector(".st-eps");
+      epsToggle.addEventListener("click", () => {
+        const open = card.dataset.epsOpen === "1";
+        card.dataset.epsOpen = open ? "" : "1";
+        epsHost.hidden = open;
+        epsToggle.classList.toggle("open", !open);
+        epsToggle.setAttribute("aria-expanded", open ? "false" : "true");
+        if (!open) buildStEpisodes(card, key, data);
+      });
+      if (card.dataset.epsOpen === "1") {
+        epsHost.hidden = false;
+        epsToggle.classList.add("open");
+        epsToggle.setAttribute("aria-expanded", "true");
+        buildStEpisodes(card, key, data);
       }
 
       // Nicht mehr tracken (z. B. abgebrochen) — Fortschritt/Bewertungen bleiben erhalten
@@ -9828,6 +9908,112 @@
             card.dataset.epName = ep.name;
           }
         } catch (e) { /* Titel ist optional */ }
+      }
+    }
+
+    // R60: aufklappbare Folgen-Liste einer Tracker-Karte — Staffel-Chips + je Folge
+    // Checkbox (an/AUS = versehentliches Abhaken rückgängig machen) und 5 Sterne
+    // zum Schnell-Bewerten (nochmal auf denselben Stern tippen entfernt die Wertung).
+    const _ST_STAR_BUCKETS = ["bad", "meh", "watchable", "good", "great"];   // 1–5 Sterne
+    async function buildStEpisodes(card, key, data) {
+      const host = card.querySelector(".st-eps");
+      if (!host) return;
+      const seasons = realSeasons(data);
+      if (!seasons.length) { host.innerHTML = '<div class="st-eps-empty">Keine Folgen gefunden.</div>'; return; }
+      let season = parseInt(card.dataset.epsSeason || "", 10);
+      if (!seasons.some(s => s.season_number === season)) {
+        const nx = stNextEpisode(data, key);
+        season = nx ? nx.s : seasons[seasons.length - 1].season_number;
+        card.dataset.epsSeason = season;
+      }
+      host.innerHTML =
+        '<div class="st-season-chips">' + seasons.map(s =>
+          '<button class="st-season-chip' + (s.season_number === season ? " on" : "") + '" data-s="' + s.season_number + '" type="button">S' + s.season_number + '</button>').join("") + '</div>' +
+        '<div class="st-ep-list"><div class="st-eps-loading">Lädt …</div></div>';
+      host.querySelectorAll(".st-season-chip").forEach(b => b.addEventListener("click", () => {
+        card.dataset.epsSeason = b.dataset.s;
+        buildStEpisodes(card, key, data);
+      }));
+      const listEl = host.querySelector(".st-ep-list");
+      let eps = [];
+      try { eps = (await fetchSeasonEps(data.id, season)) || []; } catch (e) { /* leer */ }
+      // Staffel inzwischen gewechselt / Karte neu gebaut?
+      if (parseInt(card.dataset.epsSeason || "", 10) !== season || !card.contains(listEl)) return;
+      if (!eps.length) { listEl.innerHTML = '<div class="st-eps-empty">Keine Folgen gefunden.</div>'; return; }
+      const CHECK_SVG = '<svg viewBox="0 0 24 24"><polyline points="5 12 10 17 19 7"/></svg>';
+      const STAR_SVG  = '<svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+      listEl.innerHTML = "";
+      const frag = document.createDocumentFragment();
+      eps.forEach(ep => {
+        const row = document.createElement("div");
+        row.className = "st-ep-row";
+        const genericName = !ep.name || /^(folge|episode)\s*\d+$/i.test(ep.name);
+        row.innerHTML =
+          '<button class="st-ep-check" type="button" aria-label="Gesehen an/aus"></button>' +
+          '<div class="st-ep-name">E' + ep.n + (genericName ? "" : " – " + esc(ep.name)) + '</div>' +
+          '<div class="st-ep-stars">' + [1, 2, 3, 4, 5].map(n =>
+            '<button class="st-ep-star" data-n="' + n + '" type="button" aria-label="' + n + ' Sterne">' + STAR_SVG + '</button>').join("") + '</div>';
+        const checkEl = row.querySelector(".st-ep-check");
+        const starEls = [...row.querySelectorAll(".st-ep-star")];
+        const upd = () => {
+          const seen = isEpWatched(key, season, ep.n);
+          const cur  = getEpRating(key, season, ep.n);
+          const curN = cur ? _ST_STAR_BUCKETS.indexOf(cur) + 1 : 0;
+          row.classList.toggle("seen", seen);
+          checkEl.innerHTML = seen ? CHECK_SVG : "";
+          starEls.forEach((st, i) => st.classList.toggle("on", i < curN));
+        };
+        checkEl.addEventListener("click", () => {
+          const now = !isEpWatched(key, season, ep.n);
+          toggleEp(key, season, ep.n, now);
+          if (now) ensureSeriesWatched(data);
+          upd();
+          _stRefreshCardHead(card, key, data);
+        });
+        starEls.forEach((btn, idx) => btn.addEventListener("click", () => {
+          const bucket = _ST_STAR_BUCKETS[idx];
+          const cur = getEpRating(key, season, ep.n);
+          if (cur === bucket) {
+            setEpRating(key, season, ep.n, null);   // gleicher Stern nochmal = Wertung weg
+          } else {
+            setEpRating(key, season, ep.n, bucket);
+            if (!isEpWatched(key, season, ep.n)) toggleEp(key, season, ep.n, true);   // bewerten = gesehen
+            ensureSeriesWatched(data);
+          }
+          upd();
+          _stRefreshCardHead(card, key, data);
+        }));
+        upd();
+        frag.appendChild(row);
+      });
+      listEl.appendChild(frag);
+    }
+
+    // Kopfdaten der Karte (x/y Episoden, "Weiter mit", Fortschrittsbalken, Abhak-Knopf)
+    // nach Änderungen in der Folgen-Liste aktualisieren, OHNE die Liste neu zu bauen.
+    function _stRefreshCardHead(card, key, data) {
+      const total   = totalEpisodes(data);
+      const watched = watchedCount(key);
+      const next    = stNextEpisode(data, key);
+      const running = data.status === "Returning Series" || data.in_production;
+      const pct     = total ? Math.min(100, Math.round(watched / total * 100)) : 0;
+      const sub = card.querySelector(".st-sub");
+      if (sub) sub.textContent = watched + " / " + total + " Episoden" + (running ? " · läuft noch" : "");
+      const bar = card.querySelector(".st-progress span");
+      if (bar) bar.style.width = pct + "%";
+      const nextEl = card.querySelector(".st-next");
+      if (nextEl) {
+        if (next) nextEl.innerHTML = 'Weiter mit <strong>S' + next.s + ' E' + next.e + '</strong><span class="st-next-name"></span>';
+        else nextEl.outerHTML = '<div class="st-done-badge">Alle Folgen gesehen ✓</div>';
+      } else if (next) {
+        // Rückweg: "Alle Folgen gesehen" → Folge wieder abgewählt
+        const badge = card.querySelector(".st-done-badge");
+        if (badge) badge.outerHTML = '<div class="st-next">Weiter mit <strong>S' + next.s + ' E' + next.e + '</strong><span class="st-next-name"></span></div>';
+      }
+      const checkBtn = card.querySelector(".st-check-btn");
+      if (checkBtn) {
+        if (next) checkBtn.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>S' + next.s + ' E' + next.e + ' gesehen';
+        else checkBtn.remove();
       }
     }
 
@@ -10165,7 +10351,8 @@
         .slice(0, 800)
         .map(it => ({
           id: it.id, mediaType: it.mediaType, title: (it.title || "").slice(0, 80),
-          posterPath: it.poster || null, bucket: it.bucket || null, year: it.year || null
+          posterPath: it.poster || null, bucket: it.bucket || null, year: it.year || null,
+          g: (it.genreIds || []).slice(0, 4)   // R60: Genre-Filter in der Freundes-Bibliothek
         })) : [];
       // Zuletzt gesehen — newest first, max 20; exclude items the user removed.
       const _rwExcluded = db.recentlyWatchedExcluded || {};
@@ -12479,16 +12666,20 @@
     function paintStats(movies, series, hours, eps, restart) {
       const host = document.getElementById("profile-stats");
       const defs = [
-        { k: "movies", n: movies, l: "Filme" },
-        { k: "series", n: series, l: "Serien" },
+        { k: "movies", n: movies, l: "Filme",  lib: "movie" },
+        { k: "series", n: series, l: "Serien", lib: "tv" },
         { k: "hours",  n: hours,  l: "Stunden" },
         { k: "eps",    n: eps,    l: "Episoden" }
       ];
       if (!host.dataset.built) {
         host.dataset.built = "1";
         host.innerHTML = defs.map(d =>
-          '<div class="stat-card"><div class="stat-num" data-stat="' + d.k + '">0</div><div class="stat-label">' + d.l + "</div></div>"
+          '<div class="stat-card' + (d.lib ? ' stat-card-link" data-mylib="' + d.lib : '') + '">' +
+          '<div class="stat-num" data-stat="' + d.k + '">0</div><div class="stat-label">' + d.l + "</div></div>"
         ).join("");
+        // R60: Filme/Serien-Kacheln öffnen die eigene Bibliothek (wie beim Freund)
+        host.querySelectorAll(".stat-card-link[data-mylib]").forEach(el =>
+          el.addEventListener("click", () => openOwnLibrary(el.dataset.mylib)));
       }
       defs.forEach(d => {
         const el = host.querySelector('[data-stat="' + d.k + '"]');
@@ -15809,13 +16000,16 @@
         // die gleichnamige Profil-Reihe — ein bewusst gepostetes meta.posted-Item muss
         // im Feed erscheinen, auch wenn es dort ausgeblendet ist (sonst: Post taucht im
         // Profil unter „Letzte Posts" auf, aber nie im eigenen Feed).
+        // R60-Fix: ERST auf bewusst gepostete Titel filtern, DANN die 20 neuesten
+        // nehmen. Vorher wurden die 20 zuletzt geloggten genommen und danach
+        // gefiltert — wer viel loggt aber wenig postet, verlor seine Posts aus
+        // dem Fenster ("meine Posts erscheinen nicht im Feed").
         Object.values(db.items)
-          .filter(it => it.loggedAt)
+          .filter(it => it.loggedAt && isPostLive(db.meta[it.mediaType + ":" + it.id]))
           .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0))
           .slice(0, 20)
           .forEach(it => {
             const m = db.meta[it.mediaType + ":" + it.id];
-            if (!isPostLive(m)) return;   // R50: archivierte/gelöschte Posts nicht mehr zeigen
             pseudo.push({
               type: it.bucket ? "rated" : "watched",
               userId: myUid, username: myName,
@@ -16646,12 +16840,104 @@
       if (!bar) return;
       bar.hidden = !_cmpInline;
       if (_cmpInline) document.getElementById("rank-cmp-label").textContent =
-        "Vergleich mit @" + _cmpInline.name + " — sein Platz steht bei jedem Titel";
+        "Vergleich mit @" + _cmpInline.name;
     }
     (function wireCmpBar() {
       const off = document.getElementById("rank-cmp-off");
       if (off) off.addEventListener("click", clearInlineCompare);
+      const lst = document.getElementById("rank-cmp-list");
+      if (lst) lst.addEventListener("click", openFriendRankingList);
     })();
+
+    // R60: komplette Rangliste des Vergleichs-Freundes als eigene Ansicht —
+    // Titel/Poster werden aus dessen Snapshot (library/topRanked/recentlyWatched),
+    // der eigenen Bibliothek oder notfalls per TMDB aufgelöst.
+    async function openFriendRankingList() {
+      if (!_cmpInline || !rankCompareEl) return;
+      const { name, profile } = _cmpInline;
+      const media = rankMedia;
+      rankCompareEl.hidden = false;
+      document.body.style.overflow = "hidden";
+      if (!_cmpBackEntry) { _cmpBackEntry = true; history.pushState({ vaultOverlay: "rcmp" }, ""); }
+      document.getElementById("rcmp-title").textContent = "Rangliste von @" + name;
+      const c = document.getElementById("rcmp-content");
+      c.innerHTML = '<div class="rcmp-loading">Lade Rangliste …</div>';
+
+      let ids = (profile.rankFull && Array.isArray(profile.rankFull[media])) ? profile.rankFull[media].map(String) : null;
+      if ((!ids || !ids.length) && media !== "person") {
+        ids = (profile.topRanked || []).filter(it => it.mediaType === media)
+          .sort((a, b) => (a.rank || 99) - (b.rank || 99)).map(it => String(it.id));
+      }
+      if (!ids || !ids.length) {
+        c.innerHTML = cmpMsg("@" + socialEsc(name) + " hat in dieser Kategorie noch nichts gerankt.");
+        return;
+      }
+      const isPerson = media === "person";
+
+      // Titel/Poster auflösen: Snapshot des Freundes → eigene Daten → TMDB
+      const lookup = {};
+      const note = (id, title, poster) => {
+        const k = String(id);
+        if (!lookup[k] && title) lookup[k] = { title, poster: poster || null };
+      };
+      if (!isPerson) {
+        (profile.library || []).forEach(it => { if ((it.mediaType || "movie") === media) note(it.id, it.title, it.posterPath); });
+        (profile.topRanked || []).forEach(it => { if (it.mediaType === media) note(it.id, it.title, it.posterPath); });
+        (profile.recentlyWatched || []).forEach(it => { if ((it.mediaType || "movie") === media) note(it.id, it.title, it.posterPath); });
+        ids.forEach(id => {
+          const mine = db.items[keyOf(media, id)] || (db.watchlist || {})[keyOf(media, id)];
+          if (mine) note(id, mine.title, mine.poster);
+        });
+      } else {
+        Object.values(db.people || {}).forEach(p => note(p.id, p.name, p.photo));
+      }
+      const rows = ids.map((id, i) => {
+        const hit = lookup[String(id)];
+        return { id, pos: i + 1, title: hit ? hit.title : "", poster: hit ? hit.poster : null };
+      });
+      // Fehlende Titel per TMDB nachladen (gedeckelt — der Rest zeigt Platzhalter)
+      const missing = rows.filter(r => !r.title).slice(0, 40);
+      if (missing.length) {
+        await Promise.all(missing.map(async r => {
+          try {
+            const res = await tmFetch("https://api.themoviedb.org/3/" + (isPerson ? "person" : media) + "/" + r.id +
+              "?api_key=" + TMDB_KEY + "&language=" + TMDB_LANG);
+            if (res.ok) {
+              const d = await res.json();
+              r.title = d.title || d.name || "";
+              r.poster = d.poster_path || d.profile_path || null;
+            }
+          } catch (e) { /* Platzhalter bleibt */ }
+        }));
+      }
+      if (rankCompareEl.hidden) return;   // während des Ladens geschlossen
+
+      // Eigene Position je Titel als Badge dazu
+      const myOrdered = orderedRankedItems(rankedPool(media).sort((a, b) => b.score - a.score), media);
+      const myPos = new Map(myOrdered.map((it, i) => [String(it.id), i + 1]));
+
+      c.innerHTML =
+        '<div class="rcmp-head">Die <strong>' + cmpMediaLabel(media) + '</strong>-Rangliste von <strong>@' + socialEsc(name) + '</strong></div>' +
+        '<div class="rcmp-rows">' + rows.map(r => {
+          const img = r.poster
+            ? '<img class="rcmp-poster' + (isPerson ? " round" : "") + '" src="' + IMG_BASE + 'w92' + r.poster + '" alt="" loading="lazy">'
+            : '<div class="rcmp-poster empty' + (isPerson ? " round" : "") + '">' + socialEsc((r.title || "?").charAt(0)) + '</div>';
+          const mine = myPos.get(String(r.id));
+          return '<div class="rcmp-row" data-id="' + r.id + '">' +
+              '<span class="rcmp-flrank">#' + r.pos + '</span>' + img +
+              '<div class="rcmp-body"><div class="rcmp-name">' + socialEsc(r.title || "Unbekannter Titel") + '</div>' +
+                '<div class="rcmp-mypos' + (mine ? "" : " none") + '">' + (mine ? "Du: Platz " + mine : "Von dir nicht gerankt") + '</div>' +
+              '</div></div>';
+        }).join("") + '</div>';
+      c.querySelectorAll(".rcmp-row[data-id]").forEach(row => {
+        row.addEventListener("click", () => {
+          const rid = parseInt(row.dataset.id, 10);
+          if (!rid) return;
+          if (isPerson) { closeRankCompare(); openPerson(rid); }
+          else          { closeRankCompare(); openDetail(media, rid); }
+        });
+      });
+    }
 
     function closeRankCompare() {
       if (!rankCompareEl) return;
@@ -16756,13 +17042,24 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R59";
+    const APP_VERSION = "R60";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R60": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Serien-Tracker mit Folgen-Liste:</strong> Jede getrackte Serie lässt sich aufklappen („Alle Folgen & Bewertungen“) — mit Staffel-Auswahl, Abhaken UND Abwählen jeder Folge (versehentlich markiert? Einfach nochmal tippen) und Schnell-Bewertung per Sterne direkt in der Liste.",
+          "<strong>Eigene Posts wieder im Feed:</strong> Wer viele Titel einträgt, aber nur manche postet, verlor seine Posts aus dem Feed — behoben, deine „Letzte Posts“ erscheinen jetzt zuverlässig.",
+          "<strong>Deine Bibliothek im Profil:</strong> Die Kacheln „Filme“ und „Serien“ auf deinem eigenen Profil sind jetzt antippbar und zeigen alle deine Titel.",
+          "<strong>Bibliothek sortieren & filtern:</strong> Sowohl deine eigene als auch die Bibliothek eines Freundes lässt sich sortieren (Zuletzt gesehen, Bestbewertet, Titel, Jahr) und nach Genre filtern.",
+          "<strong>Rangliste des Freundes ansehen:</strong> Im Ranking-Vergleich gibt es jetzt „Seine Rangliste ›“ — du siehst die komplette Bestenliste deines Freundes, inklusive deinem eigenen Platz je Titel.",
+          "<strong>Aufgeräumt & repariert:</strong> Die alte „Aktuelle Serien“-Leiste taucht auf Home nicht mehr auf, Würfel- und Filter-Knopf sind exakt so hoch wie die Suchleiste (und der Filter ist nicht mehr abgeschnitten), Suchfelder zeigen auf dem iPhone keine „Leiste in der Leiste“ mehr, das „Alle“-Label auf den Freundes-Kacheln ist weg, die Lupe im Ranking kollidiert nicht mehr mit der Glocke und die seltsame Frage „Welcher war das nochmal?“ ist Geschichte."
+        ]
+      },
       "R59": {
         title: "Was ist neu",
         notes: [
@@ -17187,16 +17484,106 @@
     // Zeigt alle geschauten Titel aus dem library-Snapshot als Poster-Grid mit den
     // üblichen Quick-Actions (Watchlist / als gesehen markieren) — Tap = Detailseite.
     let _flibBackEntry = false;
-    function openFriendLibrary(profile, mediaType, uname) {
+
+    // R60: gemeinsamer Renderer für die Bibliotheks-Ansicht (eigene + Freund) —
+    // mit Sortieren (Zuletzt gesehen / Bestbewertet / Titel / Jahr) und Genre-Filter.
+    // items: { id, mediaType, title, posterPath, bucket, year, g[], _ord, score? }
+    function renderLibraryBody(content, items, mediaType, hint) {
+      content.innerHTML = hint || "";
+      const BUCKET_VAL = { great: 5, good: 4, watchable: 3, meh: 2, bad: 1 };
+      const rateVal = it => (typeof it.score === "number" && it.score)
+        ? it.score : (BUCKET_VAL[it.bucket] || 0) * 400;
+      const hasGenres = items.some(it => (it.g || []).length);
+
+      const controls = document.createElement("div");
+      controls.className = "flib-controls";
+      controls.innerHTML =
+        '<select class="modal-select flib-sort" aria-label="Sortieren">' +
+          '<option value="recent">Zuletzt gesehen</option>' +
+          '<option value="best">Bestbewertet</option>' +
+          '<option value="title">Titel A–Z</option>' +
+          '<option value="year">Erscheinungsjahr</option>' +
+        '</select>' +
+        (hasGenres ? '<select class="modal-select flib-genre" aria-label="Genre"><option value="">Alle Genres</option></select>' : '');
+      content.appendChild(controls);
+      if (hasGenres) {
+        const gsel = controls.querySelector(".flib-genre");
+        // Genre-Namen kommen lazy von TMDB (ensureGenres) — Optionen nachfüllen sobald da
+        ensureGenres().then(map => {
+          if (!content.contains(gsel)) return;   // Ansicht inzwischen neu gebaut
+          const gset = new Set();
+          items.forEach(it => (it.g || []).forEach(g => gset.add(g)));
+          [...gset]
+            .map(g => ({ id: g, name: (map && map[g]) || null }))
+            .filter(x => x.name)
+            .sort((a, b) => a.name.localeCompare(b.name, "de"))
+            .forEach(x => {
+              const o = document.createElement("option");
+              o.value = x.id; o.textContent = x.name;
+              gsel.appendChild(o);
+            });
+        }).catch(() => {});
+      }
+
+      const gridHost = document.createElement("div");
+      content.appendChild(gridHost);
+      const paint = () => {
+        const sort = controls.querySelector(".flib-sort").value;
+        const gsel = controls.querySelector(".flib-genre");
+        const gid  = gsel ? (parseInt(gsel.value, 10) || null) : null;
+        let list = items.slice();
+        if (gid) list = list.filter(it => (it.g || []).indexOf(gid) !== -1);
+        if      (sort === "best")  list.sort((a, b) => rateVal(b) - rateVal(a));
+        else if (sort === "title") list.sort((a, b) => (a.title || "").localeCompare(b.title || "", "de"));
+        else if (sort === "year")  list.sort((a, b) => (b.year || 0) - (a.year || 0));
+        else                       list.sort((a, b) => (a._ord || 0) - (b._ord || 0));
+        gridHost.innerHTML = "";
+        if (!list.length) {
+          gridHost.innerHTML = '<div class="flib-empty">Nichts gefunden.</div>';
+          return;
+        }
+        const grid = document.createElement("div");
+        grid.className = "poster-grid";
+        const frag = document.createDocumentFragment();
+        list.forEach(it => {
+          if (!it.posterPath) return;
+          const cell = document.createElement("div"); cell.className = "grid-item";
+          const img = document.createElement("img");
+          img.loading = "lazy"; img.src = IMG_BASE + "w185" + it.posterPath; img.alt = it.title || "";
+          cell.appendChild(img);
+          cell.appendChild(makeCardActions({
+            id: it.id, title: it.title || "", name: it.title || "",
+            poster_path: it.posterPath, release_date: it.year ? it.year + "-01-01" : "",
+            first_air_date: it.year ? it.year + "-01-01" : ""
+          }, mediaType));
+          cell.addEventListener("click", () => {
+            detailEl.classList.add("over-profile");   // Detail über Profil UND Bibliothek (z145)
+            openDetail(mediaType, it.id);
+          });
+          frag.appendChild(cell);
+        });
+        grid.appendChild(frag);
+        gridHost.appendChild(grid);
+      };
+      controls.querySelectorAll("select").forEach(s => s.addEventListener("change", paint));
+      paint();
+    }
+
+    function _openLibraryView(title) {
       const view = document.getElementById("flib-view");
       const content = document.getElementById("flib-content");
-      if (!view || !content) return;
-      document.getElementById("flib-title").textContent =
-        (mediaType === "tv" ? "Serien" : "Filme") + " von @" + uname;
+      if (!view || !content) return null;
+      document.getElementById("flib-title").textContent = title;
       view.hidden = false;
       view.scrollTop = 0;
       document.body.style.overflow = "hidden";
       if (!_flibBackEntry) { _flibBackEntry = true; history.pushState({ vaultOverlay: "flib" }, ""); }
+      return content;
+    }
+
+    function openFriendLibrary(profile, mediaType, uname) {
+      const content = _openLibraryView((mediaType === "tv" ? "Serien" : "Filme") + " von @" + uname);
+      if (!content) return;
 
       const p = profile.privacy || {};
       if (p.shareLibrary === false || p.shareWatched === false) {
@@ -17216,35 +17603,41 @@
         content.innerHTML = '<div class="flib-empty">Noch keine ' + (mediaType === "tv" ? "Serien" : "Filme") + ' zu sehen.</div>';
         return;
       }
-      content.innerHTML = hint;
-      const grid = document.createElement("div");
-      grid.className = "poster-grid";
-      const frag = document.createDocumentFragment();
-      lib.forEach(it => {
-        if (!it.posterPath) return;
-        const cell = document.createElement("div"); cell.className = "grid-item";
-        const img = document.createElement("img");
-        img.loading = "lazy"; img.src = IMG_BASE + "w185" + it.posterPath; img.alt = it.title || "";
-        cell.appendChild(img);
-        cell.appendChild(makeCardActions({
-          id: it.id, title: it.title || "", name: it.title || "",
-          poster_path: it.posterPath, release_date: it.year ? it.year + "-01-01" : "",
-          first_air_date: it.year ? it.year + "-01-01" : ""
-        }, mediaType));
-        cell.addEventListener("click", () => {
-          detailEl.classList.add("over-profile");   // Detail über Profil UND Bibliothek (z145)
-          openDetail(mediaType, it.id);
-        });
-        frag.appendChild(cell);
-      });
-      grid.appendChild(frag);
-      content.appendChild(grid);
+      // Snapshot ist bereits "zuletzt gesehen zuerst" sortiert → Reihenfolge merken
+      const items = lib.map((it, i) => ({
+        id: it.id, mediaType, title: it.title || "", posterPath: it.posterPath || null,
+        bucket: it.bucket || null, year: it.year || null, g: it.g || [], _ord: i
+      }));
+      renderLibraryBody(content, items, mediaType, hint);
+    }
+
+    // R60: eigene Bibliothek — Tap auf die Filme-/Serien-Kachel im eigenen Profil.
+    function openOwnLibrary(mediaType) {
+      const content = _openLibraryView("Deine " + (mediaType === "tv" ? "Serien" : "Filme"));
+      if (!content) return;
+      const items = Object.values(db.items)
+        .filter(it => it.mediaType === mediaType)
+        .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0))
+        .map((it, i) => ({
+          id: it.id, mediaType, title: it.title || "", posterPath: it.poster || null,
+          bucket: it.bucket || null, year: it.year || null, g: it.genreIds || [],
+          score: it.unranked ? null : (it.score || null), _ord: i
+        }));
+      if (!items.length) {
+        content.innerHTML = '<div class="flib-empty">Noch keine ' + (mediaType === "tv" ? "Serien" : "Filme") + ' eingetragen.</div>';
+        return;
+      }
+      renderLibraryBody(content, items, mediaType, "");
     }
     function closeFriendLibrary() {
       const view = document.getElementById("flib-view");
       if (!view || view.hidden) return;
       view.hidden = true;
-      // Scroll-Lock bleibt: darunter ist weiterhin das Freundesprofil offen
+      // Scroll-Lock nur lösen, wenn darunter NICHT noch das Freundesprofil offen ist
+      // (R60: die Ansicht öffnet jetzt auch direkt über dem eigenen Profil-Tab).
+      if (typeof friendProfileEl === "undefined" || !friendProfileEl || friendProfileEl.hidden) {
+        document.body.style.overflow = "";
+      }
       if (_flibBackEntry) { _flibBackEntry = false; programmingGoingBack = true; history.back(); }
     }
     (function wireFlib() {
@@ -17309,10 +17702,11 @@
         { n: stats.hours   || 0, l: "Stunden" },
         { n: stats.episodes || 0, l: "Episoden" }
       ];
+      // R60: kein "Alle ›"-Label mehr auf den Kacheln (User: man weiß, dass man tippen kann)
       html += '<div class="stat-grid" id="fprof-stats">' + fpStats.map(s =>
         '<div class="stat-card' + (s.lib ? ' stat-card-link" data-fplib="' + s.lib : '') + '">' +
         '<div class="stat-num" data-n="' + s.n + '">0</div><div class="stat-label">' + s.l + '</div>' +
-        (s.lib ? '<div class="stat-more">Alle ›</div>' : '') + '</div>').join("") + '</div>';
+        '</div>').join("") + '</div>';
 
       // ── Insta-Reiter (gleiche Icons wie im eigenen Profil) ──────
       html += `<div class="prof-tabs" id="fprof-tabs" role="tablist">

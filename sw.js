@@ -7,7 +7,7 @@
      ändern sich unter gleicher URL nie, das spart bei jedem App-Start Daten.
    - Alles andere (TMDB-API, Firebase/Firestore, Auth): wird NICHT angefasst.
    VERSION pro Release mitziehen (räumt alte Shell-Caches beim Aktivieren ab). */
-const VERSION = "r59";
+const VERSION = "r60";
 const SHELL_CACHE = "vault-shell-" + VERSION;
 const IMG_CACHE = "vault-img-v1";
 const IMG_LIMIT = 400;
