@@ -1071,7 +1071,15 @@
       border-radius: 12px; padding: 10px 12px; font-size: 12.5px; font-weight: 600; color: var(--text-dim);
     }
     #rank-cmp-bar[hidden] { display: none; }
-    #rank-cmp-label { flex: 1; min-width: 0; }
+    #rank-cmp-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* R63: Ansicht-Umschalter (Plätze | Listen) in der Vergleichs-Leiste */
+    .cmp-view-seg { flex: 0 0 auto; display: flex; gap: 2px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 2px; }
+    .cmp-view-seg button {
+      background: none; border: none; border-radius: 7px; padding: 4px 9px;
+      font-family: inherit; font-size: 11px; font-weight: 700; color: var(--text-mute);
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .cmp-view-seg button.active { background: var(--accent); color: #1a1206; }
     #rank-cmp-off { flex: 0 0 auto; background: none; border: none; cursor: pointer; padding: 4px; }
     #rank-cmp-off svg { width: 15px; height: 15px; stroke: var(--text-dim); stroke-width: 2; stroke-linecap: round; }
     .rcmp-flrank { flex: 0 0 34px; font-size: 14px; font-weight: 800; color: var(--text-dim); text-align: center; }
@@ -1080,8 +1088,19 @@
     /* R61: Vergleich = zwei Ranglisten nebeneinander (Du | Freund) */
     .rank-duo { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
     .rank-duo-col { min-width: 0; }
-    .rank-duo-head { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--text-mute); padding: 4px 2px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: sticky; top: 0; background: var(--bg); z-index: 2; }
+    .rank-duo-head { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--text-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
     .rank-duo-head strong { color: var(--accent); }
+    /* R63: EIN durchgehender Sticky-Balken über die volle Breite statt zwei
+       einzeln klebender Spaltenköpfe („Balken mitten im Bild"). */
+    .rank-duo-headbar {
+      /* Bezugspunkt des Sticky-Offsets ist die Padding-Box der .view — mit -var(--pad)
+         klebt der Balken bündig an der Sichtkante (iPhone: direkt unter der Statusleiste). */
+      position: sticky; top: calc(-1 * var(--pad)); z-index: 2;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: center;
+      margin: 0 calc(-1 * var(--pad)) 4px; padding: 9px var(--pad);
+      background: var(--bg); border-bottom: 1px solid var(--border);
+    }
+    .rank-duo-headbar.pos { display: flex; justify-content: space-between; }
     .rank-duo-row { display: flex; align-items: center; gap: 7px; padding: 5px 2px; border-bottom: 1px solid var(--border); cursor: pointer; min-width: 0; -webkit-tap-highlight-color: transparent; }
     .rank-duo-row:active { opacity: .7; }
     .rank-duo-num { flex: 0 0 20px; font-size: 12px; font-weight: 800; color: var(--text-dim); text-align: right; }
@@ -1091,6 +1110,22 @@
     .rank-duo-poster.empty { display: flex; align-items: center; justify-content: center; color: var(--text-mute); font-weight: 700; font-size: 12px; }
     .rank-duo-title { font-size: 12px; font-weight: 600; line-height: 1.25; min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
     .rank-duo-empty { font-size: 12px; color: var(--text-mute); padding: 10px 2px; }
+    /* R63: Standard-Vergleich „Plätze" — deine Liste, sein Platz rechts daneben */
+    .rank-cmp-pos .rank-duo-row { gap: 10px; padding: 6px 2px; }
+    .rank-cmp-pos .rank-duo-num { flex: 0 0 26px; font-size: 13px; }
+    .rank-cmp-pos .rank-duo-title { flex: 1; font-size: 13px; }
+    .rank-cmp-pos .rank-duo-poster { width: 34px; height: 51px; }
+    .rank-cmp-pos .rank-duo-poster.round { width: 36px; height: 36px; }
+    .rank-fpos { flex: 0 0 auto; font-size: 12px; font-weight: 800; color: var(--accent); white-space: nowrap; }
+    .rank-fpos.none { color: var(--text-mute); font-weight: 600; }
+    /* R63: Duo-Ansicht lädt in 20er-Blöcken nach */
+    .rank-duo-more {
+      display: block; width: 100%; margin: 12px 0 4px; padding: 11px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      font-family: inherit; font-size: 13px; font-weight: 700; color: var(--text-dim);
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .rank-duo-more:disabled { opacity: .6; cursor: default; }
     /* R61: Detailseite — kompakte "Von Freunden gesehen"-Zeile mit Ø */
     .also-seen-summary { display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: none; padding: 2px 0; cursor: pointer; font-family: inherit; color: var(--text); text-align: left; -webkit-tap-highlight-color: transparent; }
     .also-seen-avs { display: flex; align-items: center; flex: 0 0 auto; }
@@ -3312,6 +3347,12 @@
       <!-- R61: aktiver Vergleich — beide Ranglisten stehen nebeneinander in der Liste -->
       <div id="rank-cmp-bar" hidden>
         <span id="rank-cmp-label"></span>
+        <!-- R63: Ansicht umschalten — Plätze (Standard: sein Platz rechts neben deinem
+             Titel) oder Listen (beide Ranglisten nebeneinander) -->
+        <div class="cmp-view-seg" id="rank-cmp-seg" role="group" aria-label="Vergleichsansicht">
+          <button type="button" data-cmpview="pos">Plätze</button>
+          <button type="button" data-cmpview="duo">Listen</button>
+        </div>
         <button id="rank-cmp-off" type="button" aria-label="Vergleich beenden">
           <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
         </button>
@@ -7368,13 +7409,15 @@
       const cmpBtn = document.getElementById("rank-compare");
       if (cmpBtn) cmpBtn.classList.toggle("active", !!_cmpInline);
 
-      // R61: aktiver Vergleich → BEIDE Ranglisten nebeneinander (Du | Freund)
-      // statt Freund-Badges in der eigenen Liste (R59).
+      // R63: aktiver Vergleich → Standard ist die „Plätze"-Ansicht (deine Liste,
+      // sein Platz rechts daneben — sofort da, kein Nachladen); umschaltbar auf
+      // „Listen" = beide Ranglisten nebeneinander (R61).
       if (_cmpInline) {
         const getNameCmp = it => isPerson ? (it.name || "") : (it.title || "");
         const rankedCmp = items.filter(it => !it.unranked)
           .sort((a, b) => b.score - a.score || getNameCmp(a).localeCompare(getNameCmp(b)));
-        renderRankingDuo(rankedCmp);
+        if (_cmpViewMode() === "duo") renderRankingDuo(rankedCmp);
+        else renderRankingCmpPos(rankedCmp);
         return;
       }
 
@@ -10472,21 +10515,34 @@
         })) : [];
       // Zuletzt gesehen — newest first, max 20; exclude items the user removed.
       const _rwExcluded = db.recentlyWatchedExcluded || {};
-      const recentlyWatched = items
+      const _rwMap = it => {
+        const m = db.meta[it.mediaType + ":" + it.id];
+        return {
+          id: it.id, title: it.title || "", posterPath: it.poster || null,
+          mediaType: it.mediaType, bucket: it.bucket || null, watchedAt: it.loggedAt || 0,
+          year: it.year || null, note: (m && m.note) ? m.note : "",   // R18-A: feed shows the friend's note
+          posted: isPostLive(m),   // R35-Fix: bewusst gepostet → im Feed IMMER zeigen; R50: archiviert = für Freunde unsichtbar
+          // R46: „Geschaut mit"-Partner → Collab-Darstellung auch für Pseudo-Posts
+          watchedWith: (m && Array.isArray(m.watchedWith)) ? m.watchedWith.map(w => ({ uid: w.uid || "", name: w.name || "" })) : []
+        };
+      };
+      const _rwBase = items
         .filter(it => it.loggedAt && !_rwExcluded[it.mediaType + ":" + it.id])
         .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0))
-        .slice(0, 20)
-        .map(it => {
-          const m = db.meta[it.mediaType + ":" + it.id];
-          return {
-            id: it.id, title: it.title || "", posterPath: it.poster || null,
-            mediaType: it.mediaType, bucket: it.bucket || null, watchedAt: it.loggedAt || 0,
-            year: it.year || null, note: (m && m.note) ? m.note : "",   // R18-A: feed shows the friend's note
-            posted: isPostLive(m),   // R35-Fix: bewusst gepostet → im Feed IMMER zeigen; R50: archiviert = für Freunde unsichtbar
-            // R46: „Geschaut mit"-Partner → Collab-Darstellung auch für Pseudo-Posts
-            watchedWith: (m && Array.isArray(m.watchedWith)) ? m.watchedWith.map(w => ({ uid: w.uid || "", name: w.name || "" })) : []
-          };
-        });
+        .slice(0, 20);
+      // R63: Bewusst gepostete Titel kommen IMMER mit in den Snapshot (Spiegel des
+      // R60-Fixes für den eigenen Feed): wer viel loggt aber selten postet, verlor
+      // seine Posts aus dem 20er-Fenster — Freunde sahen dann NIE seine Posts.
+      // postOnly-Einträge speisen nur den Feed + „Letzte Posts", nicht die
+      // „Zuletzt gesehen"-Reihe im Profil.
+      const _rwKeys = new Set(_rwBase.map(it => it.mediaType + ":" + it.id));
+      const _rwPostedExtra = items
+        .filter(it => it.loggedAt && !_rwKeys.has(it.mediaType + ":" + it.id)
+          && isPostLive(db.meta[it.mediaType + ":" + it.id]))
+        .sort((a, b) => (b.loggedAt || 0) - (a.loggedAt || 0))
+        .slice(0, 20);
+      const recentlyWatched = _rwBase.map(_rwMap)
+        .concat(_rwPostedExtra.map(it => Object.assign(_rwMap(it), { postOnly: true })));
       // Top ranked — movies + series merged, honouring manual order, by Elo, max 20.
       const rankMovies  = orderedRankedItems(rankedPool("movie").sort((a, b) => b.score - a.score), "movie");
       const rankSeries  = orderedRankedItems(rankedPool("tv").sort((a, b) => b.score - a.score), "tv");
@@ -16939,29 +16995,52 @@
       renderCmpBar();
       renderRanking();
     }
+    // R63: Vergleichsansicht — "pos" (Standard: sein Platz rechts neben deinem
+    // Titel) oder "duo" (beide Listen nebeneinander). Merkt sich die Wahl.
+    function _cmpViewMode() {
+      return (db.settings && db.settings.cmpView) === "duo" ? "duo" : "pos";
+    }
     function renderCmpBar() {
       const bar = document.getElementById("rank-cmp-bar");
       if (!bar) return;
       bar.hidden = !_cmpInline;
       if (_cmpInline) document.getElementById("rank-cmp-label").textContent =
         "Vergleich mit @" + _cmpInline.name;
+      const mode = _cmpViewMode();
+      bar.querySelectorAll("#rank-cmp-seg button").forEach(b =>
+        b.classList.toggle("active", b.dataset.cmpview === mode));
     }
     (function wireCmpBar() {
       const off = document.getElementById("rank-cmp-off");
       if (off) off.addEventListener("click", clearInlineCompare);
+      const seg = document.getElementById("rank-cmp-seg");
+      if (seg) seg.addEventListener("click", e => {
+        const btn = e.target.closest("button[data-cmpview]");
+        if (!btn || btn.dataset.cmpview === _cmpViewMode()) return;
+        db.settings = db.settings || {};
+        db.settings.cmpView = btn.dataset.cmpview;
+        saveDB();
+        renderCmpBar();
+        renderRanking();
+      });
     })();
 
-    // R61: Titel/Poster der Freundes-Rangliste auflösen — aus dessen Snapshot
-    // (library/topRanked/recentlyWatched), der eigenen Bibliothek oder notfalls
-    // per TMDB (gedeckelt 40 — der Rest zeigt Platzhalter). Ersetzt die R60-
-    // Vollbild-Ansicht: der Vergleich zeigt beide Listen jetzt nebeneinander.
-    async function _cmpFriendRows(profile, media) {
-      let ids = (profile.rankFull && Array.isArray(profile.rankFull[media])) ? profile.rankFull[media].map(String) : null;
-      if ((!ids || !ids.length) && media !== "person") {
+    // R63: Geordnete Rang-IDs des Freundes für eine Kategorie (rankFull,
+    // Fallback topRanked) — synchron aus dem Snapshot, von beiden Ansichten genutzt.
+    function _cmpFriendIds(profile, media) {
+      let ids = (profile.rankFull && Array.isArray(profile.rankFull[media])) ? profile.rankFull[media].map(String) : [];
+      if (!ids.length && media !== "person") {
         ids = (profile.topRanked || []).filter(it => it.mediaType === media)
           .sort((a, b) => (a.rank || 99) - (b.rank || 99)).map(it => String(it.id));
       }
-      if (!ids || !ids.length) return [];
+      return ids;
+    }
+    // R61/R63: Titel/Poster der Freundes-Rangliste auflösen — synchron aus dessen
+    // Snapshot (library/topRanked/recentlyWatched) und der eigenen Bibliothek.
+    // Was fehlt, lädt _cmpResolveRows blockweise per TMDB nach (R63: vorher wurden
+    // bis zu 40 Titel VOR dem ersten Malen geladen — bis zu einer Minute Wartezeit).
+    function _cmpFriendRowsBase(profile, media, ids) {
+      if (!ids.length) return [];
       const isPerson = media === "person";
       const lookup = {};
       const note = (id, title, poster) => {
@@ -16979,12 +17058,15 @@
       } else {
         Object.values(db.people || {}).forEach(p => note(p.id, p.name, p.photo));
       }
-      const rows = ids.map((id, i) => {
+      return ids.map((id, i) => {
         const hit = lookup[String(id)];
         return { id, pos: i + 1, title: hit ? hit.title : "", poster: hit ? hit.poster : null };
       });
-      // Fehlende Titel per TMDB nachladen (gedeckelt — der Rest zeigt Platzhalter)
-      const missing = rows.filter(r => !r.title).slice(0, 40);
+    }
+    async function _cmpResolveRows(rows, from, to, media) {
+      const isPerson = media === "person";
+      const missing = rows.slice(from, to).filter(r => !r.title);
+      if (!missing.length) return;
       await Promise.all(missing.map(async r => {
         try {
           const res = await tmFetch("https://api.themoviedb.org/3/" + (isPerson ? "person" : media) + "/" + r.id +
@@ -16996,20 +17078,65 @@
           }
         } catch (e) { /* Platzhalter bleibt */ }
       }));
-      return rows;
     }
 
-    // R61: Vergleichs-Ansicht — eigene und Freundes-Rangliste als zwei Spalten
-    // nebeneinander. Gemeinsame Titel bekommen eine goldene Rang-Nummer.
     let _duoToken = 0;
-    function _duoRowHtml(pos, id, poster, title, both, isPerson) {
+    function _duoRowHtml(pos, id, poster, title, both, isPerson, rightHtml) {
       const img = poster
         ? '<img class="rank-duo-poster' + (isPerson ? " round" : "") + '" src="' + IMG_BASE + 'w92' + poster + '" alt="" loading="lazy">'
         : '<div class="rank-duo-poster empty' + (isPerson ? " round" : "") + '">' + socialEsc((title || "?").charAt(0)) + '</div>';
       return '<div class="rank-duo-row' + (both ? " both" : "") + '" data-id="' + id + '">' +
         '<span class="rank-duo-num">' + pos + '</span>' + img +
-        '<div class="rank-duo-title">' + socialEsc(title || "Unbekannter Titel") + '</div></div>';
+        '<div class="rank-duo-title">' + socialEsc(title || "Unbekannter Titel") + '</div>' +
+        (rightHtml || "") + '</div>';
     }
+    function _duoWireTaps(host, media, isPerson) {
+      host.addEventListener("click", e => {
+        const row = e.target.closest(".rank-duo-row");
+        if (!row) return;
+        const rid = parseInt(row.dataset.id, 10);
+        if (!rid) return;
+        if (isPerson) openPerson(rid); else openDetail(media, rid);
+      });
+    }
+
+    // R63: Standard-Vergleich „Plätze" — die EIGENE Rangliste, rechts daneben der
+    // Platz des Freundes für denselben Titel. Komplett synchron (kein TMDB-Laden):
+    // die Plätze kommen aus rankFull im Snapshot, Titel/Poster aus der eigenen db.
+    function renderRankingCmpPos(myRanked) {
+      const media = rankMedia;
+      const isPerson = media === "person";
+      const { name, profile } = _cmpInline;
+      ++_duoToken;   // laufende Duo-Nachlader entwerten
+      const fids = _cmpFriendIds(profile, media);
+      const fPos = new Map();
+      fids.forEach((id, i) => { if (!fPos.has(id)) fPos.set(id, i + 1); });
+
+      rankListEl.innerHTML = "";
+      const wrap = document.createElement("div");
+      wrap.className = "rank-cmp-pos";
+      const rowsHtml = myRanked.length
+        ? myRanked.map((it, i) => {
+            const pos = fPos.get(String(it.id));
+            const chip = pos
+              ? '<span class="rank-fpos">Platz ' + pos + '</span>'
+              : '<span class="rank-fpos none">–</span>';
+            return _duoRowHtml(i + 1, it.id, isPerson ? it.photo : it.poster,
+              isPerson ? it.name : it.title, !!pos, isPerson, chip);
+          }).join("")
+        : '<div class="rank-duo-empty">Du hast hier noch nichts gerankt.</div>';
+      wrap.innerHTML =
+        '<div class="rank-duo-headbar pos"><div class="rank-duo-head">Du</div>' +
+        '<div class="rank-duo-head"><strong>@' + socialEsc(name) + '</strong></div></div>' + rowsHtml;
+      rankListEl.appendChild(wrap);
+      _duoWireTaps(wrap, media, isPerson);
+    }
+
+    // R61/R63: Vergleichs-Ansicht „Listen" — eigene und Freundes-Rangliste als zwei
+    // Spalten nebeneinander. Gemeinsame Titel bekommen eine goldene Rang-Nummer.
+    // R63: rendert in 20er-Blöcken mit „Mehr laden" — TMDB löst nur den sichtbaren
+    // Block auf, statt die ganze Liste vor dem ersten Malen.
+    const DUO_CHUNK = 20;
     async function renderRankingDuo(myRanked) {
       const media = rankMedia;
       const isPerson = media === "person";
@@ -17017,42 +17144,62 @@
       const token = ++_duoToken;
 
       // Freund-IDs sind synchron bekannt → gemeinsame Titel sofort markierbar
-      let fids = (profile.rankFull && Array.isArray(profile.rankFull[media])) ? profile.rankFull[media].map(String) : [];
-      if (!fids.length && media !== "person") {
-        fids = (profile.topRanked || []).filter(it => it.mediaType === media).map(it => String(it.id));
-      }
+      const fids = _cmpFriendIds(profile, media);
       const fSet  = new Set(fids);
       const mySet = new Set(myRanked.map(it => String(it.id)));
+      const fRows = _cmpFriendRowsBase(profile, media, fids);
+
+      const myRowHtml = (it, i) => _duoRowHtml(i + 1, it.id, isPerson ? it.photo : it.poster,
+        isPerson ? it.name : it.title, fSet.has(String(it.id)), isPerson);
+      const fRowHtml = r => _duoRowHtml(r.pos, r.id, r.poster, r.title, mySet.has(String(r.id)), isPerson);
 
       rankListEl.innerHTML = "";
+      const head = document.createElement("div");
+      head.className = "rank-duo-headbar";
+      head.innerHTML = '<div class="rank-duo-head">Du</div>' +
+        '<div class="rank-duo-head"><strong>@' + socialEsc(name) + '</strong></div>';
       const duo = document.createElement("div");
       duo.className = "rank-duo";
-      const myHtml = myRanked.length
-        ? myRanked.map((it, i) => _duoRowHtml(i + 1, it.id, isPerson ? it.photo : it.poster, isPerson ? it.name : it.title, fSet.has(String(it.id)), isPerson)).join("")
-        : '<div class="rank-duo-empty">Du hast hier noch nichts gerankt.</div>';
       duo.innerHTML =
-        '<div class="rank-duo-col"><div class="rank-duo-head">Du</div>' + myHtml + '</div>' +
-        '<div class="rank-duo-col" id="rank-duo-friend"><div class="rank-duo-head"><strong>@' + socialEsc(name) + '</strong></div>' +
-          '<div class="rank-duo-empty">Lade Rangliste …</div></div>';
+        '<div class="rank-duo-col" id="rank-duo-mine">' +
+          (myRanked.length ? "" : '<div class="rank-duo-empty">Du hast hier noch nichts gerankt.</div>') + '</div>' +
+        '<div class="rank-duo-col" id="rank-duo-friend">' +
+          (fRows.length ? '<div class="rank-duo-empty" id="rank-duo-wait">Lade Rangliste …</div>'
+                        : '<div class="rank-duo-empty">@' + socialEsc(name) + ' hat hier noch nichts gerankt.</div>') + '</div>';
+      const more = document.createElement("button");
+      more.type = "button";
+      more.className = "rank-duo-more";
+      more.textContent = "Mehr laden";
+      more.hidden = true;
+      rankListEl.appendChild(head);
       rankListEl.appendChild(duo);
-      // Tap → Detailseite bzw. Person (Delegation statt Listener pro Zeile)
-      duo.addEventListener("click", e => {
-        const row = e.target.closest(".rank-duo-row");
-        if (!row) return;
-        const rid = parseInt(row.dataset.id, 10);
-        if (!rid) return;
-        if (isPerson) openPerson(rid); else openDetail(media, rid);
-      });
+      rankListEl.appendChild(more);
+      _duoWireTaps(duo, media, isPerson);
 
-      const rows = await _cmpFriendRows(profile, media);
-      // Während des Ladens beendet, Kategorie gewechselt oder neu gerendert?
-      if (token !== _duoToken || !_cmpInline || rankMedia !== media) return;
-      const fcol = document.getElementById("rank-duo-friend");
-      if (!fcol) return;
-      fcol.innerHTML = '<div class="rank-duo-head"><strong>@' + socialEsc(name) + '</strong></div>' +
-        (rows.length
-          ? rows.map(r => _duoRowHtml(r.pos, r.id, r.poster, r.title, mySet.has(String(r.id)), isPerson)).join("")
-          : '<div class="rank-duo-empty">@' + socialEsc(name) + ' hat hier noch nichts gerankt.</div>');
+      const myCol = duo.querySelector("#rank-duo-mine");
+      const fCol  = duo.querySelector("#rank-duo-friend");
+      let shown = 0;
+      const appendChunk = async () => {
+        const from = shown, to = shown + DUO_CHUNK;
+        await _cmpResolveRows(fRows, from, to, media);
+        // Während des Ladens beendet, Kategorie/Ansicht gewechselt oder neu gerendert?
+        if (token !== _duoToken || !_cmpInline || rankMedia !== media) return false;
+        const wait = fCol.querySelector("#rank-duo-wait");
+        if (wait) wait.remove();
+        myCol.insertAdjacentHTML("beforeend", myRanked.slice(from, to).map(myRowHtml).join(""));
+        fCol.insertAdjacentHTML("beforeend", fRows.slice(from, to).map(fRowHtml).join(""));
+        shown = to;
+        more.hidden = shown >= myRanked.length && shown >= fRows.length;
+        return true;
+      };
+      more.addEventListener("click", async () => {
+        more.disabled = true;
+        more.textContent = "Lade …";
+        await appendChunk();
+        more.disabled = false;
+        more.textContent = "Mehr laden";
+      });
+      await appendChunk();
     }
 
     function closeRankCompare() {
@@ -17158,13 +17305,23 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R62";
+    const APP_VERSION = "R63";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R63": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Posts deiner Freunde wieder im Feed:</strong> Wer viel einträgt, aber selten postet, verlor seine Posts aus dem geteilten Profil — deshalb kamen bei dir keine Freunde-Posts an. Behoben. Damit es greift, muss dein Freund die App einmal neu laden.",
+          "<strong>Ranking-Vergleich zeigt jetzt SEINE Plätze:</strong> Die Standard-Ansicht ist deine Rangliste — und rechts neben jedem Titel steht, auf welchem Platz dein Freund ihn hat (oder „–“, wenn er ihn nicht gerankt hat). Diese Ansicht ist sofort da, ganz ohne Ladezeit.",
+          "<strong>Zwei-Listen-Ansicht bleibt als Option:</strong> Oben in der Vergleichs-Leiste schaltest du zwischen „Plätze“ und „Listen“ um — die App merkt sich deine Wahl.",
+          "<strong>Vergleich lädt nicht mehr ewig:</strong> Die Listen-Ansicht zeigt erst 20 Titel pro Seite und lädt weitere per „Mehr laden“ — statt vorher bis zu einer Minute auf alles zu warten.",
+          "<strong>Sauberer Kopf-Balken beim Scrollen:</strong> „Du“ und der Name deines Freundes kleben jetzt als EIN durchgehender Balken bündig oben — statt als zwei schwebende Kästchen mitten im Bild."
+        ]
+      },
       "R62": {
         title: "Was ist neu",
         notes: [
@@ -17928,9 +18085,12 @@
       // Freund selten postet), Ihr habt beide gesehen, Top Filme, Top Serien.
       // posted===undefined (alter Snapshot vor R35) zählt als Post, damit
       // Freundes-Profile mit altem Datenstand nicht leer wirken.
-      const allRecent = (profile.recentlyWatched || []).slice()
+      // R63: postOnly-Einträge (alte Posts jenseits des 20er-Fensters) zählen für
+      // „Letzte Posts", aber nicht für die „Zuletzt gesehen"-Reihe.
+      const allSnap = (profile.recentlyWatched || []).slice()
         .sort((a, b) => (b.watchedAt || 0) - (a.watchedAt || 0));
-      const watched = allRecent.filter(it => it.posted !== false);
+      const allRecent = allSnap.filter(it => !it.postOnly);
+      const watched = allSnap.filter(it => it.posted !== false);
       _fprofPosts = watched;
       const fpCard = (it, subHtml, extraAttr, ranked, rankNum) => {
         const img = it.posterPath
