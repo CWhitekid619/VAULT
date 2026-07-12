@@ -2404,6 +2404,12 @@
     /* R60: Sortieren + Genre-Filter über dem Bibliotheks-Grid */
     .flib-controls { display: flex; gap: 8px; margin: 8px 0 4px; }
     .flib-controls .modal-select { flex: 1; min-width: 0; padding: 9px 10px; font-size: 13px; }
+    /* R62: Neu/Gesehen/Watchlist-Filter-Chips (Freundes-Bibliothek) */
+    .flib-status-chips { display: flex; gap: 6px; margin: 2px 0 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .flib-status-chips::-webkit-scrollbar { display: none; }
+    .flib-chip { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-mute); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; flex: 0 0 auto; -webkit-tap-highlight-color: transparent; }
+    .flib-chip svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+    .flib-chip.active { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); background: color-mix(in srgb, var(--accent) 14%, var(--surface-2)); color: var(--accent); }
     .stat-card-link { cursor: pointer; }
     .stat-card-link:active { background: var(--surface-2); }
     .stat-more { font-size: 10px; font-weight: 600; color: var(--accent); margin-top: 2px; }
@@ -17152,13 +17158,20 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R61";
+    const APP_VERSION = "R62";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R62": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Neu/Gesehen/Watchlist-Filter in der Freundes-Bibliothek:</strong> Über dem Filme-/Serien-Grid eines Freundes sitzen jetzt drei antippbare Chips — „Neu für dich“, „Schon gesehen“ und „Watchlist“. Alle an = alles sichtbar; Chip austippen blendet die Gruppe aus. So findest du z. B. mit einem Tipp nur noch Titel, die du selbst noch nicht kennst.",
+          "<strong>Genre-Filter auch bei Freunden mit alter App-Version:</strong> Fehlen die Genre-Daten im Profil deines Freundes, ergänzt VAULT sie jetzt aus deiner eigenen Bibliothek — das Genre-Dropdown erscheint damit für alle Titel, die ihr beide kennt. Die volle Abdeckung kommt automatisch, sobald dein Freund die App einmal neu lädt."
+        ]
+      },
       "R61": {
         title: "Was ist neu",
         notes: [
@@ -17607,7 +17620,7 @@
     // R60: gemeinsamer Renderer für die Bibliotheks-Ansicht (eigene + Freund) —
     // mit Sortieren (Zuletzt gesehen / Bestbewertet / Titel / Jahr) und Genre-Filter.
     // items: { id, mediaType, title, posterPath, bucket, year, g[], _ord, score? }
-    function renderLibraryBody(content, items, mediaType, hint) {
+    function renderLibraryBody(content, items, mediaType, hint, withStatusFilter) {
       content.innerHTML = hint || "";
       const BUCKET_VAL = { great: 5, good: 4, watchable: 3, meh: 2, bad: 1 };
       const rateVal = it => (typeof it.score === "number" && it.score)
@@ -17625,6 +17638,24 @@
         '</select>' +
         (hasGenres ? '<select class="modal-select flib-genre" aria-label="Genre"><option value="">Alle Genres</option></select>' : '');
       content.appendChild(controls);
+      // R62: Status-Filter in der Freundes-Bibliothek — Neu/Gesehen/Watchlist als
+      // an-/austogglebare Chips (alle an = alles sichtbar). "Gesehen"/"Watchlist"
+      // beziehen sich auf DEINEN eigenen Stand, nicht den des Freundes.
+      const statusOn = { new: true, seen: true, wl: true };
+      const statusOf = it => {
+        const k = keyOf(mediaType, it.id);
+        return db.items[k] ? "seen" : (db.watchlist[k] ? "wl" : "new");
+      };
+      let statusBar = null;
+      if (withStatusFilter) {
+        statusBar = document.createElement("div");
+        statusBar.className = "flib-status-chips";
+        statusBar.innerHTML =
+          '<button class="flib-chip active" type="button" data-st="new">Neu für dich</button>' +
+          '<button class="flib-chip active" type="button" data-st="seen">' + '<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Schon gesehen</button>' +
+          '<button class="flib-chip active" type="button" data-st="wl">' + '<svg viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></svg>Watchlist</button>';
+        content.appendChild(statusBar);
+      }
       if (hasGenres) {
         const gsel = controls.querySelector(".flib-genre");
         // Genre-Namen kommen lazy von TMDB (ensureGenres) — Optionen nachfüllen sobald da
@@ -17658,6 +17689,7 @@
         const gid  = gsel ? (parseInt(gsel.value, 10) || null) : null;
         let list = items.slice();
         if (gid) list = list.filter(it => (it.g || []).indexOf(gid) !== -1);
+        if (statusBar) list = list.filter(it => statusOn[statusOf(it)]);   // R62
         if      (sort === "best")  list.sort((a, b) => rateVal(b) - rateVal(a));
         else if (sort === "title") list.sort((a, b) => (a.title || "").localeCompare(b.title || "", "de"));
         else if (sort === "year")  list.sort((a, b) => (b.year || 0) - (a.year || 0));
@@ -17708,6 +17740,13 @@
         setTimeout(maybeMore, 50);   // hohe Screens: sofort nachfüllen bis voll
       };
       controls.querySelectorAll("select").forEach(s => s.addEventListener("change", paint));
+      if (statusBar) statusBar.querySelectorAll(".flib-chip").forEach(ch =>
+        ch.addEventListener("click", () => {
+          const st = ch.dataset.st;
+          statusOn[st] = !statusOn[st];
+          ch.classList.toggle("active", statusOn[st]);
+          paint();
+        }));
       paint();
     }
     // R61: ein einziger Scroll-Listener auf der Bibliotheks-Ansicht — paint()
@@ -17753,12 +17792,23 @@
         content.innerHTML = '<div class="flib-empty">Noch keine ' + (mediaType === "tv" ? "Serien" : "Filme") + ' zu sehen.</div>';
         return;
       }
-      // Snapshot ist bereits "zuletzt gesehen zuerst" sortiert → Reihenfolge merken
-      const items = lib.map((it, i) => ({
-        id: it.id, mediaType, title: it.title || "", posterPath: it.posterPath || null,
-        bucket: it.bucket || null, year: it.year || null, g: it.g || [], _ord: i
-      }));
-      renderLibraryBody(content, items, mediaType, hint);
+      // Snapshot ist bereits "zuletzt gesehen zuerst" sortiert → Reihenfolge merken.
+      // R62: fehlende Genres (Alt-Snapshot vor R60 oder recentlyWatched-Fallback) aus
+      // der EIGENEN Bibliothek/Watchlist ergänzen — deckt zumindest gemeinsame Titel ab,
+      // damit das Genre-Dropdown wie bei der eigenen Bibliothek erscheint.
+      const items = lib.map((it, i) => {
+        let g = it.g || [];
+        if (!g.length) {
+          const key = keyOf(mediaType, it.id);
+          const own = db.items[key] || (db.watchlist || {})[key];
+          if (own && Array.isArray(own.genreIds)) g = own.genreIds.slice(0, 4);
+        }
+        return {
+          id: it.id, mediaType, title: it.title || "", posterPath: it.posterPath || null,
+          bucket: it.bucket || null, year: it.year || null, g, _ord: i
+        };
+      });
+      renderLibraryBody(content, items, mediaType, hint, true);   // R62: mit Neu/Gesehen/Watchlist-Filter
     }
 
     // R60: eigene Bibliothek — Tap auf die Filme-/Serien-Kachel im eigenen Profil.
