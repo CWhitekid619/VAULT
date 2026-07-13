@@ -15693,7 +15693,13 @@
       const results = await profilesP;
       // Offline liefert getProfile null — dann den gecachten Stand NICHT überschreiben.
       results.forEach(({ friend, profile }) => {
-        if (profile) { _feedProfiles[friend.uid] = profile; noteAvatar(friend.uid, profile.avatar); }
+        if (profile) {
+          _feedProfiles[friend.uid] = profile;
+          noteAvatar(friend.uid, profile.avatar);
+          // R63.1: Vergleichs-Cache gleich mitfüllen — der Ranking-Vergleich
+          // startet dann sofort, ohne auf den Profil-Read warten zu müssen.
+          _cmpCacheSave(friend.uid, friend.username || friend.uid, profile);
+        }
       });
       await postsP;
       paintFeed(host, accepted);
@@ -16975,20 +16981,127 @@
       renderComparePicker(accepted);
     }
 
+    // R63.1: Persistenter Vergleichs-Cache — der Firestore-Read des Freundes-Profils
+    // (inkl. 800er-Bibliothek seit R59) dauerte auf dem Handy bis zu einer Minute,
+    // und der Vergleich wartete darauf VOR dem ersten Malen. Jetzt wird sofort aus
+    // dem Cache gemalt (Feed-/Detail-Profile der Sitzung → localStorage), das frische
+    // Profil kommt im Hintergrund nach. Gespeichert wird nur, was der Vergleich
+    // braucht: rankFull + kompakter Titel-Lookup für die gerankten IDs.
+    const CMP_CACHE_KEY = "reel.cmpCache.v1";
+    function _loadCmpCacheAll() {
+      try {
+        const c = JSON.parse(localStorage.getItem(CMP_CACHE_KEY) || "{}");
+        return (c && typeof c === "object") ? c : {};
+      } catch (e) { return {}; }
+    }
+    function _cmpCacheGet(uid) {
+      const e = _loadCmpCacheAll()[uid];
+      return (e && e.rankFull) ? e : null;
+    }
+    function _cmpCacheSave(uid, username, profile) {
+      if (!uid || !profile || !profile.rankFull) return;   // Alt-Snapshot ohne rankFull → nichts Brauchbares
+      try {
+        const all = _loadCmpCacheAll();
+        const wanted = new Set();
+        ["movie", "tv"].forEach(m => ((profile.rankFull || {})[m] || []).forEach(id => wanted.add(m + ":" + id)));
+        const lib = [], seen = new Set();
+        const take = it => {
+          const mt = it.mediaType || "movie", k = mt + ":" + it.id;
+          if (wanted.has(k) && !seen.has(k) && it.title) {
+            seen.add(k);
+            lib.push({ id: it.id, mediaType: mt, title: it.title, posterPath: it.posterPath || null });
+          }
+        };
+        (profile.library || []).forEach(take);
+        (profile.topRanked || []).forEach(take);
+        (profile.recentlyWatched || []).forEach(take);
+        all[uid] = {
+          ts: Date.now(), username: username || "",
+          shareRanking: !(profile.privacy && profile.privacy.shareRanking === false),
+          rankFull: profile.rankFull || {},
+          topRanked: (profile.topRanked || []).map(it => ({ id: it.id, mediaType: it.mediaType, rank: it.rank })),
+          library: lib
+        };
+        localStorage.setItem(CMP_CACHE_KEY, JSON.stringify(all));
+      } catch (e) { /* Quota o.ä. — Cache ist optional */ }
+    }
+    // In der Duo-Ansicht per TMDB aufgelöste Titel in den Cache zurückschreiben,
+    // damit sie beim nächsten Vergleich sofort da sind.
+    function _cmpCacheNoteTitles(uid, media, rows) {
+      if (!uid || media === "person") return;
+      try {
+        const all = _loadCmpCacheAll();
+        const e = all[uid];
+        if (!e) return;
+        const have = new Set((e.library || []).map(it => (it.mediaType || "movie") + ":" + it.id));
+        let added = false;
+        rows.forEach(r => {
+          if (r.title && !have.has(media + ":" + r.id)) {
+            (e.library = e.library || []).push({ id: +r.id, mediaType: media, title: r.title, posterPath: r.poster || null });
+            added = true;
+          }
+        });
+        if (added) localStorage.setItem(CMP_CACHE_KEY, JSON.stringify(all));
+      } catch (e) { /* optional */ }
+    }
+
     async function applyInlineCompare(friendUid) {
       const friend = (_socialFriends || []).find(f => f.uid === friendUid);
       const fname  = (friend && friend.username) || "Freund";
       if (!rankCompareEl.hidden) closeRankCompare();   // Picker zu
-      showToast("Lade Vergleich mit @" + fname + " …");
-      let profile = null;
-      try { profile = await window.__vaultSocial.getProfile(friendUid); } catch (e) {}
-      if (!profile) { showToast("Profil nicht gefunden"); return; }
-      if (profile.privacy && profile.privacy.shareRanking === false) {
-        showToast("@" + fname + " teilt sein Ranking nicht"); return;
+      // R63.1: bestes vorhandenes Profil SOFORT nutzen — Feed-Profil der Sitzung,
+      // Detailseiten-Cache (R61) oder persistenter Vergleichs-Cache.
+      let profile = (_feedProfiles[friendUid] && _feedProfiles[friendUid].rankFull) ? _feedProfiles[friendUid] : null;
+      if (!profile) {
+        const hit = _fpSeenCache[friendUid];
+        if (hit && hit.p && hit.p.rankFull) profile = hit.p;
       }
-      _cmpInline = { uid: friendUid, name: fname, profile };
-      renderCmpBar();
-      renderRanking();
+      if (!profile) {
+        const c = _cmpCacheGet(friendUid);
+        if (c) profile = {
+          username: c.username, privacy: { shareRanking: c.shareRanking !== false },
+          rankFull: c.rankFull, topRanked: c.topRanked || [], library: c.library || [], recentlyWatched: []
+        };
+      }
+      if (profile) {
+        if (profile.privacy && profile.privacy.shareRanking === false) {
+          showToast("@" + fname + " teilt sein Ranking nicht"); return;
+        }
+        _cmpInline = { uid: friendUid, name: fname, profile };
+        renderCmpBar();
+        renderRanking();
+      } else {
+        showToast("Lade Vergleich mit @" + fname + " …");
+      }
+      // Frisches Profil im Hintergrund (bzw. Erst-Laden, wenn nichts gecacht war)
+      let fresh = null;
+      try { fresh = await window.__vaultSocial.getProfile(friendUid); } catch (e) {}
+      if (fresh) {
+        _fpSeenCache[friendUid] = { p: fresh, t: Date.now() };
+        _cmpCacheSave(friendUid, fname, fresh);
+      }
+      if (!profile) {
+        // Erst-Laden ohne Cache: Verhalten wie bisher
+        if (!fresh) { showToast("Profil nicht gefunden"); return; }
+        if (fresh.privacy && fresh.privacy.shareRanking === false) {
+          showToast("@" + fname + " teilt sein Ranking nicht"); return;
+        }
+        _cmpInline = { uid: friendUid, name: fname, profile: fresh };
+        renderCmpBar();
+        renderRanking();
+        return;
+      }
+      // Hintergrund-Refresh: nur neu malen, wenn sich das Ranking geändert hat
+      // (kein Flackern beim Scrollen) und der Vergleich noch derselbe ist.
+      if (!fresh || !_cmpInline || _cmpInline.uid !== friendUid) return;
+      if (fresh.privacy && fresh.privacy.shareRanking === false) {
+        showToast("@" + fname + " teilt sein Ranking nicht mehr");
+        clearInlineCompare();
+        return;
+      }
+      const changed = JSON.stringify(fresh.rankFull || {}) !== JSON.stringify(_cmpInline.profile.rankFull || {});
+      _cmpInline.profile = fresh;
+      if (changed) { renderCmpBar(); renderRanking(); }
     }
     function clearInlineCompare() {
       _cmpInline = null;
@@ -17186,6 +17299,8 @@
         if (token !== _duoToken || !_cmpInline || rankMedia !== media) return false;
         const wait = fCol.querySelector("#rank-duo-wait");
         if (wait) wait.remove();
+        // R63.1: frisch aufgelöste Titel in den Vergleichs-Cache zurückschreiben
+        _cmpCacheNoteTitles(_cmpInline.uid, media, fRows.slice(from, to));
         myCol.insertAdjacentHTML("beforeend", myRanked.slice(from, to).map(myRowHtml).join(""));
         fCol.insertAdjacentHTML("beforeend", fRows.slice(from, to).map(fRowHtml).join(""));
         shown = to;
@@ -17305,13 +17420,19 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R63";
+    const APP_VERSION = "R63.1";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R63.1": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Ranking-Vergleich öffnet sofort:</strong> Der Vergleich wartete vorm ersten Anzeigen auf das komplette Profil deines Freundes (inklusive seiner ganzen Bibliothek) — auf dem Handy bis zu einer Minute. Jetzt erscheint der Vergleich sofort aus dem Zwischenspeicher, und die frischen Daten werden im Hintergrund nachgezogen. Nur beim allerersten Vergleich mit einem Freund muss noch kurz geladen werden."
+        ]
+      },
       "R63": {
         title: "Was ist neu",
         notes: [
