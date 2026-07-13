@@ -1069,6 +1069,8 @@
       background: color-mix(in srgb, var(--accent) 12%, var(--surface));
       border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
       border-radius: 12px; padding: 10px 12px; font-size: 12.5px; font-weight: 600; color: var(--text-dim);
+      /* R63.3: liegt über der safe-top-Abdeckung des Vergleichs-Kopf-Balkens */
+      position: relative; z-index: 3;
     }
     #rank-cmp-bar[hidden] { display: none; }
     #rank-cmp-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1098,7 +1100,22 @@
       position: sticky; top: calc(-1 * var(--pad)); z-index: 2;
       display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: center;
       margin: 0 calc(-1 * var(--pad)) 4px; padding: 9px var(--pad);
-      background: var(--bg); border-bottom: 1px solid var(--border);
+      /* R63.3: Standard-Leisten-Optik wie die Tab-Bar (durchscheinende Surface + Blur)
+         statt hartem Schwarz — passt sich damit jedem Theme an. */
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+      backdrop-filter: saturate(140%) blur(16px);
+      -webkit-backdrop-filter: saturate(140%) blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    /* R63.3: iPhone — im Statusleisten-Bereich (safe-top) ÜBER dem klebenden Balken
+       scrollten die Zeilen sichtbar durch. Die Abdeckung hängt am Balken; im
+       Ruhezustand liegt sie UNTER dem #rank-cmp-bar (dessen z-index 3) und stört nicht. */
+    .rank-duo-headbar::before {
+      content: ""; position: absolute; left: 0; right: 0; bottom: 100%;
+      height: calc(var(--safe-top) + 1px);
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+      backdrop-filter: saturate(140%) blur(16px);
+      -webkit-backdrop-filter: saturate(140%) blur(16px);
     }
     .rank-duo-headbar.pos { display: flex; justify-content: space-between; }
     .rank-duo-row { display: flex; align-items: center; gap: 7px; padding: 5px 2px; border-bottom: 1px solid var(--border); cursor: pointer; min-width: 0; -webkit-tap-highlight-color: transparent; }
@@ -17451,13 +17468,19 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R63.2";
+    const APP_VERSION = "R63.3";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R63.3": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Vergleichs-Balken in App-Optik:</strong> Der klebende „Du / @Freund“-Balken im Ranking-Vergleich trägt jetzt die Standard-Leisten-Optik der App (durchscheinend mit Weichzeichner, wie die Tab-Leiste unten) statt hartem Schwarz — und über dem Balken scheint beim Scrollen nichts mehr durch, auch nicht im Bereich der iPhone-Statusleiste."
+        ]
+      },
       "R63.2": {
         title: "Was ist neu",
         notes: [
