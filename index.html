@@ -16772,6 +16772,18 @@
       _socialFriends = await window.__vaultSocial.getFriends(window.__vaultUser.uid);
       renderFriendRequests();
       renderFriendsList();
+      // R63.2: Freundes-Profile direkt im Hintergrund vorladen — der Ranking-
+      // Vergleich (und Detailseiten) warten dann nicht mehr auf den großen
+      // Profil-Read, der bei 1000-Filme-Bibliotheken Minuten dauern kann.
+      prefetchFriendProfiles();
+    }
+    function prefetchFriendProfiles() {
+      if (!window.__vaultUser || !window.__vaultSocial) return;
+      (_socialFriends || []).filter(f => f.status === "accepted").forEach(f => {
+        const hit = _fpSeenCache[f.uid];
+        if (hit && hit.p && Date.now() - hit.t < _FP_SEEN_TTL) return;   // frisch genug
+        _fetchFriendProfile(f.uid);
+      });
     }
 
     function renderFriendRequests() {
@@ -17044,6 +17056,27 @@
         if (added) localStorage.setItem(CMP_CACHE_KEY, JSON.stringify(all));
       } catch (e) { /* optional */ }
     }
+    // R63.2: Profil-Read mit Inflight-Dedupe — Prefetch (App-Start), Vergleich und
+    // wiederholte Taps teilen sich EINEN laufenden Read, statt das große Profil-
+    // Dokument (1000-Filme-Bibliothek!) mehrfach parallel zu laden.
+    const _cmpProfileInflight = {};
+    function _fetchFriendProfile(uid) {
+      if (_cmpProfileInflight[uid]) return _cmpProfileInflight[uid];
+      const p = (async () => {
+        let fresh = null;
+        try { fresh = await window.__vaultSocial.getProfile(uid); } catch (e) {}
+        if (fresh) {
+          _fpSeenCache[uid] = { p: fresh, t: Date.now() };
+          const f = (_socialFriends || []).find(x => x.uid === uid);
+          _cmpCacheSave(uid, (f && f.username) || "", fresh);
+          noteAvatar(uid, fresh.avatar);
+        }
+        delete _cmpProfileInflight[uid];
+        return fresh;
+      })();
+      _cmpProfileInflight[uid] = p;
+      return p;
+    }
 
     async function applyInlineCompare(friendUid) {
       const friend = (_socialFriends || []).find(f => f.uid === friendUid);
@@ -17063,43 +17096,32 @@
           rankFull: c.rankFull, topRanked: c.topRanked || [], library: c.library || [], recentlyWatched: []
         };
       }
-      if (profile) {
-        if (profile.privacy && profile.privacy.shareRanking === false) {
-          showToast("@" + fname + " teilt sein Ranking nicht"); return;
-        }
-        _cmpInline = { uid: friendUid, name: fname, profile };
-        renderCmpBar();
-        renderRanking();
-      } else {
-        showToast("Lade Vergleich mit @" + fname + " …");
+      // R63.2: Auch GANZ ohne Cache wird sofort gerendert — die eigene Liste steht,
+      // die Plätze des Freundes zeigen einen Lade-Zustand, bis das Profil da ist
+      // (dank Prefetch beim App-Start läuft der Read dann meist längst).
+      if (!profile) profile = { username: fname, privacy: {}, rankFull: {}, topRanked: [], library: [], recentlyWatched: [], _pending: true };
+      if (profile.privacy && profile.privacy.shareRanking === false) {
+        showToast("@" + fname + " teilt sein Ranking nicht"); return;
       }
-      // Frisches Profil im Hintergrund (bzw. Erst-Laden, wenn nichts gecacht war)
-      let fresh = null;
-      try { fresh = await window.__vaultSocial.getProfile(friendUid); } catch (e) {}
-      if (fresh) {
-        _fpSeenCache[friendUid] = { p: fresh, t: Date.now() };
-        _cmpCacheSave(friendUid, fname, fresh);
-      }
-      if (!profile) {
-        // Erst-Laden ohne Cache: Verhalten wie bisher
-        if (!fresh) { showToast("Profil nicht gefunden"); return; }
-        if (fresh.privacy && fresh.privacy.shareRanking === false) {
-          showToast("@" + fname + " teilt sein Ranking nicht"); return;
-        }
-        _cmpInline = { uid: friendUid, name: fname, profile: fresh };
-        renderCmpBar();
-        renderRanking();
+      _cmpInline = { uid: friendUid, name: fname, profile };
+      renderCmpBar();
+      renderRanking();
+      // Frisches Profil im Hintergrund — geteilter Read mit dem Prefetch
+      const fresh = await _fetchFriendProfile(friendUid);
+      if (!_cmpInline || _cmpInline.uid !== friendUid) return;
+      if (!fresh) {
+        // Offline: gecachter Stand bleibt stehen; ohne jeden Cache Vergleich beenden
+        if (profile._pending) { showToast("Profil nicht gefunden"); clearInlineCompare(); }
         return;
       }
-      // Hintergrund-Refresh: nur neu malen, wenn sich das Ranking geändert hat
-      // (kein Flackern beim Scrollen) und der Vergleich noch derselbe ist.
-      if (!fresh || !_cmpInline || _cmpInline.uid !== friendUid) return;
       if (fresh.privacy && fresh.privacy.shareRanking === false) {
-        showToast("@" + fname + " teilt sein Ranking nicht mehr");
+        showToast("@" + fname + " teilt sein Ranking nicht" + (profile._pending ? "" : " mehr"));
         clearInlineCompare();
         return;
       }
-      const changed = JSON.stringify(fresh.rankFull || {}) !== JSON.stringify(_cmpInline.profile.rankFull || {});
+      // Nur neu malen, wenn sich das Ranking geändert hat (kein Flackern beim Scrollen)
+      const changed = profile._pending ||
+        JSON.stringify(fresh.rankFull || {}) !== JSON.stringify(_cmpInline.profile.rankFull || {});
       _cmpInline.profile = fresh;
       if (changed) { renderCmpBar(); renderRanking(); }
     }
@@ -17228,19 +17250,25 @@
       rankListEl.innerHTML = "";
       const wrap = document.createElement("div");
       wrap.className = "rank-cmp-pos";
+      // R63.2: Profil noch unterwegs → Plätze zeigen „…" statt fälschlich „–"
+      const pending = !!_cmpInline.profile._pending;
       const rowsHtml = myRanked.length
         ? myRanked.map((it, i) => {
             const pos = fPos.get(String(it.id));
-            const chip = pos
-              ? '<span class="rank-fpos">Platz ' + pos + '</span>'
-              : '<span class="rank-fpos none">–</span>';
+            const chip = pending
+              ? '<span class="rank-fpos none">…</span>'
+              : (pos
+                ? '<span class="rank-fpos">Platz ' + pos + '</span>'
+                : '<span class="rank-fpos none">–</span>');
             return _duoRowHtml(i + 1, it.id, isPerson ? it.photo : it.poster,
               isPerson ? it.name : it.title, !!pos, isPerson, chip);
           }).join("")
         : '<div class="rank-duo-empty">Du hast hier noch nichts gerankt.</div>';
       wrap.innerHTML =
         '<div class="rank-duo-headbar pos"><div class="rank-duo-head">Du</div>' +
-        '<div class="rank-duo-head"><strong>@' + socialEsc(name) + '</strong></div></div>' + rowsHtml;
+        '<div class="rank-duo-head"><strong>@' + socialEsc(name) + '</strong></div></div>' +
+        (pending ? '<div class="rank-duo-empty">Lade Rangliste von @' + socialEsc(name) + ' …</div>' : '') +
+        rowsHtml;
       rankListEl.appendChild(wrap);
       _duoWireTaps(wrap, media, isPerson);
     }
@@ -17277,8 +17305,9 @@
         '<div class="rank-duo-col" id="rank-duo-mine">' +
           (myRanked.length ? "" : '<div class="rank-duo-empty">Du hast hier noch nichts gerankt.</div>') + '</div>' +
         '<div class="rank-duo-col" id="rank-duo-friend">' +
-          (fRows.length ? '<div class="rank-duo-empty" id="rank-duo-wait">Lade Rangliste …</div>'
-                        : '<div class="rank-duo-empty">@' + socialEsc(name) + ' hat hier noch nichts gerankt.</div>') + '</div>';
+          ((fRows.length || profile._pending)
+            ? '<div class="rank-duo-empty" id="rank-duo-wait">Lade Rangliste …</div>'
+            : '<div class="rank-duo-empty">@' + socialEsc(name) + ' hat hier noch nichts gerankt.</div>') + '</div>';
       const more = document.createElement("button");
       more.type = "button";
       more.className = "rank-duo-more";
@@ -17297,8 +17326,10 @@
         await _cmpResolveRows(fRows, from, to, media);
         // Während des Ladens beendet, Kategorie/Ansicht gewechselt oder neu gerendert?
         if (token !== _duoToken || !_cmpInline || rankMedia !== media) return false;
+        // Lade-Hinweis erst entfernen, wenn echte Zeilen kommen (bei _pending bleibt
+        // er stehen, bis das frische Profil den Vergleich neu rendert)
         const wait = fCol.querySelector("#rank-duo-wait");
-        if (wait) wait.remove();
+        if (wait && fRows.length) wait.remove();
         // R63.1: frisch aufgelöste Titel in den Vergleichs-Cache zurückschreiben
         _cmpCacheNoteTitles(_cmpInline.uid, media, fRows.slice(from, to));
         myCol.insertAdjacentHTML("beforeend", myRanked.slice(from, to).map(myRowHtml).join(""));
@@ -17420,13 +17451,19 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R63.1";
+    const APP_VERSION = "R63.2";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R63.2": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Ranking-Vergleich wartet nie mehr:</strong> Die Profile deiner Freunde werden jetzt schon beim App-Start im Hintergrund vorgeladen — beim Tippen auf „Vergleichen“ ist alles sofort da. Und selbst wenn das Profil noch unterwegs ist, öffnet sich der Vergleich augenblicklich: Deine Liste steht, die Plätze deines Freundes erscheinen, sobald sie geladen sind."
+        ]
+      },
       "R63.1": {
         title: "Was ist neu",
         notes: [
