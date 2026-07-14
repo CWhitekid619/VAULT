@@ -1739,15 +1739,14 @@
     }
     .wuerfel-btn-sm svg { width: 22px; height: 22px; stroke: #1a1206; fill: none; stroke-width: 1.7; }
     .wuerfel-btn-sm:active { filter: brightness(.92); }
-    /* R59: Trichter-Knopf neben Suche + Würfel — öffnet die Filter-Leiste */
-    .home-filter-btn {
-      flex: 0 0 49px; align-self: stretch; border-radius: 12px; cursor: pointer;
-      background: var(--surface-2); border: 1px solid var(--border);
-      display: flex; align-items: center; justify-content: center;
+    /* R65: Trichter-Knopf im Kopf des Kategorie-Grids — öffnet die Filter-Ansicht */
+    .genre-filter {
+      flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%;
+      background: var(--surface); border: 1px solid var(--border); color: var(--text-dim);
+      display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer;
     }
-    .home-filter-btn svg { width: 20px; height: 20px; stroke: var(--text-dim); fill: none; stroke-width: 1.7; stroke-linejoin: round; }
-    .home-filter-btn.on { border-color: var(--accent); }
-    .home-filter-btn.on svg { stroke: var(--accent); }
+    .genre-filter svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linejoin: round; }
+    .genre-filter:active { background: var(--surface-2); }
 
     /* Discover filter bar (A3) */
     .disc-filter-bar { margin-top: 12px; }
@@ -3141,12 +3140,10 @@
         <button id="disc-wuerfel-btn" class="wuerfel-btn-sm" type="button" aria-label="Würfeln" title="Würfeln">
           <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.3"/><circle cx="15" cy="15" r="1.3"/><circle cx="15" cy="9" r="1.3"/><circle cx="9" cy="15" r="1.3"/></svg>
         </button>
-        <button id="home-filter-btn" class="home-filter-btn" type="button" aria-label="Filter" title="Filter" aria-expanded="false">
-          <svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3"/></svg>
-        </button>
       </div>
 
-      <!-- R59: Filter-Leiste (Typ/Genre/Studio/Schauspieler/Regisseur/Jahr/Dauer/Bewertung) — hinter dem Trichter-Knopf -->
+      <!-- R59: Filter-Leiste (Typ/Genre/Studio/Schauspieler/Regisseur/Jahr/Dauer/Bewertung)
+           R65: der Trichter lebt jetzt im Kopf des Kategorie-Grids (Filme/Serien/TV Shows) -->
       <div id="disc-filter-bar" class="disc-filter-bar" hidden>
         <div class="dfb-row">
           <div class="filter-field">
@@ -3291,6 +3288,10 @@
             <option value="vote_average.desc">Bestbewertet</option>
             <option value="primary_release_date.desc">Neueste</option>
           </select>
+          <!-- R65: Filter-Trichter — öffnet die Filter-Ansicht mit vorgewähltem Typ der Kategorie -->
+          <button id="gb-filter-btn" class="genre-filter" type="button" aria-label="Filter" title="Filter">
+            <svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3"/></svg>
+          </button>
         </div>
         <div id="disc-genre-providers" class="genre-providers" hidden></div>
         <div id="disc-genre-grid" class="poster-grid"></div>
@@ -5083,7 +5084,13 @@
         dfv.hidden = true;
         const lh = document.getElementById("log-home");
         if (lh) lh.hidden = false;
+        if (typeof _homeSearchBar === "function") _homeSearchBar(true);   // R65: Suchzeile zurück
         _dfBackEntry = false;
+        // R65: Filter-Leiste zuklappen + Herkunfts-Flags zurücksetzen
+        const dfb = document.getElementById("disc-filter-bar");
+        if (dfb) dfb.hidden = true;
+        _dfFromGenre = false;
+        _genreBackEntry = false;   // geparkter genre-Eintrag verfällt mit dem Overlay-Abriss
         document.body.classList.remove("browse-open");
         closed = true;
       }
@@ -5277,11 +5284,13 @@
         closingHsoFromPop = false;
         return;
       }
-      // R59: Filter-Grid auf Home — Rechts-Swipe führt zurück zur Home-Übersicht
+      // R59: Filter-Grid — Rechts-Swipe führt zurück zur Herkunft
+      // (R65: kam der Filter aus dem Kategorie-Grid, geht es dorthin zurück)
       const dfPop = document.getElementById("disc-filtered");
       if (dfPop && !dfPop.hidden) {
         _dfBackEntry = false;   // History-Eintrag ist durch diesen popstate schon weg
-        closeFilteredBrowse(true);
+        if (_dfFromGenre) closeFilteredToGenre(true);
+        else closeFilteredBrowse(true);
         return;
       }
       // R57: Kategorie-/Genre-Grid auf Home — Rechts-Swipe führt zurück zur Home-Übersicht
@@ -5617,9 +5626,14 @@
       // R57: eine laufende Suche verdrängt das offene Kategorie-/Genre-Grid
       const gvSearch = document.getElementById("disc-genre-view");
       if (gvSearch && !gvSearch.hidden) { gvSearch.hidden = true; _genreBackEntry = false; _homeSearchBar(true); document.body.classList.remove("browse-open"); }
-      // R59: … und das offene Filter-Grid
+      // R59: … und das offene Filter-Grid (R65: samt Leiste + Herkunfts-Flags)
       const dfSearch = document.getElementById("disc-filtered");
-      if (dfSearch && !dfSearch.hidden) { dfSearch.hidden = true; _dfBackEntry = false; document.body.classList.remove("browse-open"); }
+      if (dfSearch && !dfSearch.hidden) {
+        dfSearch.hidden = true; _dfBackEntry = false; document.body.classList.remove("browse-open");
+        const dfbS = document.getElementById("disc-filter-bar");
+        if (dfbS) dfbS.hidden = true;
+        _dfFromGenre = false; _genreBackEntry = false;
+      }
 
       if (items === "error") {
         resultsEl.innerHTML = '<div class="results-empty">Suche fehlgeschlagen. Internet prüfen?</div>';
@@ -12121,10 +12135,11 @@
     }
     const discFilterBar = document.getElementById("disc-filter-bar");
     const discFiltered  = document.getElementById("disc-filtered");
-    // R59: Die Filter-Leiste lebt jetzt im Home-Tab hinter dem Trichter-Knopf;
-    // das gefilterte Grid verdrängt den Home-Inhalt (wie das Kategorie-Grid).
-    let _homeFilterOpen = false;
+    // R59: das gefilterte Grid verdrängt den Home-Inhalt (wie das Kategorie-Grid).
+    // R65: die Filter-Ansicht wird über den Trichter im Kategorie-Grid geöffnet;
+    // _dfFromGenre merkt sich das — "Zurück" führt dann dorthin, nicht auf Home.
     let _dfBackEntry = false;
+    let _dfFromGenre = false;
     function openFilteredBrowse() {
       const lh = document.getElementById("log-home");
       if (lh) lh.hidden = true;
@@ -12135,15 +12150,35 @@
     }
     function closeFilteredBrowse(showHome) {
       discFiltered.hidden = true;
+      discFilterBar.hidden = true;   // R65: Leiste gehört zur Filter-Ansicht
       if (showHome !== false) {
+        _dfFromGenre = false;
         const lh = document.getElementById("log-home");
         if (lh) lh.hidden = false;
+        _homeSearchBar(true);   // R65: falls die Filter-Ansicht aus dem Grid kam, Suchzeile zurückholen
         document.body.classList.remove("browse-open");
         if (_dfBackEntry) { _dfBackEntry = false; programmingGoingBack = true; history.back(); }
       } else if (_dfBackEntry) {
         // Ansicht wechselt direkt weiter (z. B. ins Genre-Grid) — History-Eintrag übergeben
-        _dfBackEntry = false; _genreBackEntry = true;
+        _dfBackEntry = false; _genreBackEntry = true; _dfFromGenre = false;
       }
+    }
+    // R65: Filter-Ansicht schließen und zurück ins Kategorie-Grid (Herkunft des Trichters).
+    // entryPopped=true wenn der dfilter-History-Eintrag schon per popstate weg ist.
+    function closeFilteredToGenre(entryPopped) {
+      _dfFromGenre = false;
+      discFilterBar.hidden = true;
+      discFiltered.hidden = true;
+      if (_dfBackEntry) {
+        _dfBackEntry = false;
+        if (!entryPopped) { programmingGoingBack = true; history.back(); }
+      }
+      discGenreView.hidden = false;   // der genre-History-Eintrag ist weiter geparkt
+      document.body.classList.add("browse-open");
+      discGenreView.scrollTop = 0;
+      const v = document.getElementById("view-log");
+      if (v) v.scrollTop = 0;
+      window.scrollTo(0, 0);
     }
     function showDiscBrowse() { discResults.hidden = true; discResults.innerHTML = ""; discGenreView.hidden = true; closeFilteredBrowse(true); discBrowse.hidden = false; }
     function showDiscResults() { discBrowse.hidden = true; discGenreView.hidden = true; discFiltered.hidden = true; discResults.hidden = false; }
@@ -12255,12 +12290,10 @@
     // R58: solange das Grid offen ist, verschwindet die Home-Suchleiste —
     // oben bleibt nur der schmale Kopf (Zurück-Icon + Titel + Sortierung).
     function _homeSearchBar(show) {
-      const sb = document.getElementById("home-top-row");   // R59: ganze Zeile (Suche + Würfel + Filter)
+      const sb = document.getElementById("home-top-row");   // R59: ganze Zeile (Suche + Würfel)
       if (sb) sb.hidden = !show;
-      // Filter-Leiste im Grid ebenfalls verstecken (gehört zur Suchzeile)
-      if (typeof discFilterBar !== "undefined" && discFilterBar) {
-        discFilterBar.hidden = show ? !_homeFilterOpen : true;
-      }
+      // R65: die Filter-Leiste hängt nicht mehr an der Suchzeile — sie gehört
+      // zur Filter-Ansicht und wird dort geöffnet/geschlossen.
     }
     function _openGenreView() {
       const lh = document.getElementById("log-home");
@@ -12280,6 +12313,8 @@
       gb = { id: id || null, name, media: media || "movie", sort: discGenreSort.value, page: 0, totalPages: 1, provider: null, url: null };
       document.getElementById("disc-genre-name").textContent = name;
       discGenreSort.hidden = false;
+      const gbf = document.getElementById("gb-filter-btn");
+      if (gbf) gbf.hidden = false;   // R65: Trichter nur im Discover-Modus
       _gbToken++; _gbLoading = false;
       discGenreGrid.innerHTML = "";
       _openGenreView();
@@ -12294,6 +12329,8 @@
              provider: null, url: def.url, region: !!def.region, mixed: !!def.mixed, noIndia: !!def.noIndia };
       document.getElementById("disc-genre-name").textContent = def.title;
       discGenreSort.hidden = true;
+      const gbfRow = document.getElementById("gb-filter-btn");
+      if (gbfRow) gbfRow.hidden = true;   // R65: Endpoint-Reihen kennen keinen Filter
       const provHost = document.getElementById("disc-genre-providers");
       if (provHost) { provHost.hidden = true; provHost.innerHTML = ""; }
       _gbToken++; _gbLoading = false;
@@ -12830,7 +12867,7 @@
       const mt = dfMedia.value;
       recoState = null; recoBuilding = false;
       buildRecos(mt || null);
-      if (!mt) { showDiscBrowse(); return; }
+      if (!mt) { if (_dfFromGenre) { closeFilteredToGenre(false); } else { showDiscBrowse(); } return; }   // R65
       await fillDfGenres();
       scheduleFilter();
     });
@@ -12838,21 +12875,27 @@
       dfAdvanced.hidden = !dfAdvanced.hidden;
       dfToggle.classList.toggle("on", !dfAdvanced.hidden);
     });
-    // R59: Trichter-Knopf neben der Home-Suche klappt die Filter-Leiste auf/zu;
-    // Zuklappen schließt auch ein offenes Filter-Grid.
-    (function wireHomeFilterBtn() {
-      const btn = document.getElementById("home-filter-btn");
+    // R65: Trichter im Kopf des Kategorie-Grids — öffnet die Filter-Ansicht
+    // (Leiste + Ergebnis-Grid) mit vorgewähltem Typ/Genre der aktuellen Kategorie.
+    (function wireGbFilterBtn() {
+      const btn = document.getElementById("gb-filter-btn");
       if (!btn) return;
-      btn.addEventListener("click", () => {
-        _homeFilterOpen = discFilterBar.hidden;
-        discFilterBar.hidden = !_homeFilterOpen;
-        btn.classList.toggle("on", _homeFilterOpen);
-        btn.setAttribute("aria-expanded", _homeFilterOpen ? "true" : "false");
-        if (_homeFilterOpen) fillDfGenres();
-        else if (!discFiltered.hidden) closeFilteredBrowse(true);
+      btn.addEventListener("click", async () => {
+        _dfFromGenre = true;
+        dfMedia.value = gb.media === "tv" ? "tv" : "movie";
+        await fillDfGenres();
+        // Einzel-Genre der aktuellen Ansicht übernehmen (Kategorien haben id=null,
+        // "TV Shows" eine ODER-Liste — dann bleibt "Alle")
+        const gid = gb.id != null ? String(gb.id) : "";
+        dfGenre.value = (/^\d+$/.test(gid) && [...dfGenre.options].some(o => o.value === gid)) ? gid : "";
+        discFilterBar.hidden = false;   // erst jetzt zeigen — sonst flackert sie überm Grid
+        applyFilterBrowse();
       });
     })();
-    document.getElementById("df-back").addEventListener("click", showDiscBrowse);
+    document.getElementById("df-back").addEventListener("click", () => {
+      if (_dfFromGenre) { closeFilteredToGenre(false); return; }   // R65: zurück ins Kategorie-Grid
+      showDiscBrowse();
+    });
     dfMore.addEventListener("click", () => { if (personFilterActive()) renderPersonSlice(); else loadFilterPage(); });
 
     // point 6: "Gesehene ausblenden" + R6-P8: "Watchlist ausblenden" toggles
@@ -17509,13 +17552,20 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R64";
+    const APP_VERSION = "R65";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R65": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Filter sitzt jetzt da, wo er hingehört:</strong> Der Trichter ist von der Home-Startseite verschwunden. Du findest ihn jetzt oben in der Kategorie-Ansicht — also nachdem du auf „Filme“, „Serien“ oder „TV Shows“ getippt hast. Er öffnet die Filter mit passend vorgewähltem Typ (und Genre, wenn du aus einem Genre kommst).",
+          "<strong>Zurück führt zurück:</strong> Aus der Filter-Ansicht landest du mit „Zurück“ oder dem Rechts-Wisch wieder in der Kategorie, aus der du kamst — nicht mehr auf der Startseite."
+        ]
+      },
       "R64": {
         title: "Was ist neu",
         notes: [
