@@ -893,6 +893,9 @@
     /* ---------- Ranking list ---------- */
     .rank-filters { display: flex; gap: 8px; margin-bottom: 14px; }
     .rank-filters .modal-select { flex: 1; margin-bottom: 0; }
+    /* R64: Serien-Kategorie-Chips (Anime & Zeichentrick / Sitcoms & Talkshows / normale Serien) */
+    .rank-cat-chips { display: flex; gap: 6px; margin: -4px 0 14px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .rank-cat-chips::-webkit-scrollbar { display: none; }
     .rank-list { display: flex; flex-direction: column; }
     .zone-label {
       display: flex; align-items: center; justify-content: space-between;
@@ -3347,6 +3350,14 @@
       <div class="rank-filters" id="rank-filters">
         <select id="rank-genre" class="modal-select"><option value="">Alle Genres</option></select>
         <select id="rank-tag" class="modal-select"><option value="">Alle Tags</option></select>
+      </div>
+
+      <!-- R64: nur bei Serien sichtbar — Kategorien getrennt ranken statt Ozark gegen Dragon Ball.
+           Alle Chips an = alles sichtbar; Chip austippen blendet die Kategorie aus. -->
+      <div class="rank-cat-chips" id="rank-cat-chips" hidden>
+        <button class="flib-chip active" type="button" data-cat="anime">Anime &amp; Zeichentrick</button>
+        <button class="flib-chip active" type="button" data-cat="show">Sitcoms &amp; Talkshows</button>
+        <button class="flib-chip active" type="button" data-cat="normal">Normale Serien</button>
       </div>
 
       <div class="rank-action-row">
@@ -7258,6 +7269,22 @@
     const rankTagSel   = document.getElementById("rank-tag");
     let rankMedia = "movie";
 
+    // R64: Serien-Kategorie-Filter — grobe Einteilung über TMDB-Genre-IDs, damit
+    // Animes/Zeichentrick, Sitcoms/Talkshows und "normale" Serien getrennt gerankt
+    // werden können. Session-State: welche Kategorien gerade AUSGEBLENDET sind.
+    const rankCatChips = document.getElementById("rank-cat-chips");
+    const rankCatsOff  = new Set();
+    // Genres, die eine Comedy-Serie von der Sitcom-Schublade ausschließen
+    // (Drama, Krimi, Mystery, Action&Adventure, Sci-Fi&Fantasy, War&Politics, Doku)
+    const RANK_CAT_HEAVY = new Set([18, 80, 9648, 10759, 10765, 10768, 99]);
+    function seriesCatOf(it) {
+      const g = it.genreIds || [];
+      if (g.includes(16)) return "anime";                                            // Animation
+      if (g.includes(10767) || g.includes(10764) || g.includes(10763)) return "show"; // Talk/Reality/News
+      if (g.includes(35) && !g.some(id => RANK_CAT_HEAVY.has(id))) return "show";     // reine Comedy = Sitcom
+      return "normal";
+    }
+
     // Populate the genre + tag filter dropdowns from what the user has actually logged (B2)
     async function populateRankFilters() {
       if (rankMedia === "person") {
@@ -7408,6 +7435,7 @@
       const isPerson    = rankMedia === "person";
       const genreFilter = (!isPerson && rankGenreSel.value) ? parseInt(rankGenreSel.value, 10) : null;
       const tagFilter   = (!isPerson && rankTagSel.value)   ? rankTagSel.value : null;
+      const catFilter   = rankMedia === "tv" && rankCatsOff.size > 0;   // R64
 
       let items;
       if (isPerson) {
@@ -7417,6 +7445,7 @@
         items = Object.values(db.items).filter(it => it.mediaType === rankMedia);
         if (genreFilter) items = items.filter(it => (it.genreIds || []).includes(genreFilter));
         if (tagFilter)   items = items.filter(it => (getMeta(keyOf(it.mediaType, it.id)).tags || []).includes(tagFilter));
+        if (catFilter)   items = items.filter(it => !rankCatsOff.has(seriesCatOf(it)));
         items.forEach(ensureScore);
       }
 
@@ -7444,7 +7473,7 @@
         empty.className = "results-empty";
         if (isPerson) {
           empty.textContent = "Noch keine Personen im Ranking. Füge Schauspieler oder Regisseure über ihre Detailseite hinzu.";
-        } else if (genreFilter || tagFilter) {
+        } else if (genreFilter || tagFilter || catFilter) {
           empty.textContent = "Keine Treffer für diesen Filter.";
         } else {
           empty.textContent = rankMedia === "movie" ? "Noch keine Filme eingetragen." : "Noch keine Serien eingetragen.";
@@ -7771,10 +7800,20 @@
       const isPerson = rankMedia === "person";
       const rankFiltersEl = document.getElementById("rank-filters");
       if (rankFiltersEl) rankFiltersEl.hidden = isPerson;
+      if (rankCatChips) rankCatChips.hidden = rankMedia !== "tv";   // R64
       populateRankFilters().then(renderRanking);
     });
     rankGenreSel.addEventListener("change", renderRanking);
     rankTagSel.addEventListener("change", renderRanking);
+    // R64: Kategorie-Chip antippen = Kategorie aus-/einblenden
+    if (rankCatChips) rankCatChips.addEventListener("click", e => {
+      const chip = e.target.closest(".flib-chip");
+      if (!chip) return;
+      const on = !chip.classList.contains("active");
+      chip.classList.toggle("active", on);
+      if (on) rankCatsOff.delete(chip.dataset.cat); else rankCatsOff.add(chip.dataset.cat);
+      renderRanking();
+    });
 
     // R28-#19: always-visible in-list search wiring. Typing jumps live to the best match
     // (highlight = feedback); Enter announces the exact rank via toast.
@@ -7861,6 +7900,8 @@
       const genreF  = parseInt((document.getElementById("df-duel-genre") || {}).value || "0", 10) || 0;
       if (bucketF) arr = arr.filter(it => deriveBucket(it.score) === bucketF);
       if (genreF)  arr = arr.filter(it => (it.genreIds || []).includes(genreF));
+      // R64: aktive Kategorie-Chips gelten auch fürs Duell — kein Ozark gegen Dragon Ball
+      if (rankMedia === "tv" && rankCatsOff.size > 0) arr = arr.filter(it => !rankCatsOff.has(seriesCatOf(it)));
       return arr;
     }
 
@@ -17468,13 +17509,20 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R63.3";
+    const APP_VERSION = "R64";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R64": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Serien-Kategorien im Ranking:</strong> Über der Serien-Rangliste sitzen jetzt drei antippbare Chips — „Anime & Zeichentrick“, „Sitcoms & Talkshows“ und „Normale Serien“. Alle an = alles sichtbar; Chip austippen blendet die Kategorie aus. So rankst du z. B. nur noch Animes untereinander, statt Ozark mit Dragon Ball zu vergleichen.",
+          "<strong>Gilt auch fürs Duell:</strong> Sind Kategorien ausgeblendet, treten im Duell nur noch Serien aus den sichtbaren Kategorien gegeneinander an."
+        ]
+      },
       "R63.3": {
         title: "Was ist neu",
         notes: [
