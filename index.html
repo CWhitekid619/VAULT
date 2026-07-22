@@ -1579,6 +1579,18 @@
     .friendpick-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; max-height: 50vh; overflow-y: auto; }
     .friendpick-item { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 10px 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
     .friendpick-item:active { background: var(--surface); }
+    /* R67: Mehrfachauswahl im Freund-Picker */
+    .friendpick-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .friendpick-check { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; color: transparent; border: 1.5px solid var(--border); }
+    .friendpick-item.selected { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--surface-2)); }
+    .friendpick-item.selected .friendpick-check { background: var(--accent); border-color: var(--accent); color: #1a1206; }
+    /* R67: Mitglieder-Chips einer gemeinsamen Liste (Einstellungen) */
+    .share-member-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .share-member-chip { display: inline-flex; align-items: center; gap: 8px; padding: 5px 6px 5px 6px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); }
+    .share-member-chip .friend-avatar { width: 24px; height: 24px; font-size: 11px; flex: 0 0 auto; }
+    .share-member-name { font-size: 13px; font-weight: 600; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .share-member-remove { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%; border: none; background: var(--surface-2); color: var(--text-mute); font-size: 12px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .share-member-remove:active { background: var(--danger, #ef4444); color: #fff; }
 
     /* "Already watched" checkmark badge on collection cards (point 13a) */
     .seen-badge {
@@ -4183,10 +4195,11 @@
 
   <!-- ============ R13-#6: friend picker for collaborative lists ============ -->
   <div id="friendpick-backdrop" class="sheet-backdrop" hidden>
-    <div class="sheet" role="dialog" aria-modal="true" aria-label="Freund auswählen">
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="Freunde auswählen">
       <div class="sheet-handle"></div>
-      <div class="sheet-section-label">Mit Freund teilen</div>
+      <div class="sheet-section-label" id="friendpick-title">Mit Freunden teilen</div>
       <div id="friendpick-list" class="friendpick-list"></div>
+      <button id="friendpick-confirm" class="sheet-btn-primary" type="button" disabled>Teilen</button>
       <button id="friendpick-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
     </div>
   </div>
@@ -4750,9 +4763,12 @@
           });
         } catch (e) { /* sharing already succeeded; history is non-critical */ }
       },
-      async createSharedList(creatorUid, friendUid, listName, items) {
+      async createSharedList(creatorUid, friendUids, listName, items) {
+        // R67: friendUids darf ein Array (Mehrfach-Teilen) ODER eine einzelne UID sein.
+        const others = (Array.isArray(friendUids) ? friendUids : [friendUids]).filter(u => u && u !== creatorUid);
+        const members = [creatorUid, ...others];
         const ref = await addDoc(collection(firestore, "sharedLists"), {
-          name: listName, createdBy: creatorUid, members: [creatorUid, friendUid], createdAt: serverTimestamp()
+          name: listName, createdBy: creatorUid, members, createdAt: serverTimestamp()
         });
         if (items && Object.keys(items).length) {
           const batch = writeBatch(firestore);
@@ -4792,6 +4808,24 @@
       // R13-#6 phase 2: leave a shared list (drop self from members; the last
       // member out deletes the doc).
       async leaveSharedList(listId, uid) {
+        const ref = doc(firestore, "sharedLists", listId);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) return;
+        const members = (snap.data().members || []).filter(u => u !== uid);
+        if (members.length) await updateDoc(ref, { members });
+        else await deleteDoc(ref);
+      },
+      // R67: weitere Mitglieder zu einer bestehenden gemeinsamen Liste hinzufügen.
+      async addMembersToSharedList(listId, uids) {
+        const ref = doc(firestore, "sharedLists", listId);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) return;
+        const cur = snap.data().members || [];
+        const add = (Array.isArray(uids) ? uids : [uids]).filter(u => u && !cur.includes(u));
+        if (add.length) await updateDoc(ref, { members: [...cur, ...add] });
+      },
+      // R67: ein Mitglied (i. d. R. ein anderes) aus einer gemeinsamen Liste entfernen.
+      async removeMemberFromSharedList(listId, uid) {
         const ref = doc(firestore, "sharedLists", listId);
         const snap = await getDoc(ref);
         if (!snap.exists()) return;
@@ -7117,6 +7151,11 @@
       qrItem = null;
       _qrPendingBucket = null;
       document.body.style.overflow = "";
+      // R67: aufgeschobenes Match-Popup jetzt nachholen (Bewertung ist durch).
+      if (_deferredMatch) {
+        const d = _deferredMatch; _deferredMatch = null;
+        setTimeout(() => { try { showMatchPopup(d.item, d.names); } catch (e) {} }, 80);
+      }
     }
     // Tap outside the sheet → close
     qrBackdrop.addEventListener("click", e => { if (e.target === qrBackdrop) closeQuickRate(); });
@@ -7575,10 +7614,15 @@
 
         let pressTimer = null, longFired = false;
         const startPress = () => {
+          // R67: Personen kennen keinen Long-Press (kein Quick-Rate) — Timer NICHT
+          // armen, sonst schluckt ein bedächtiger Desktop-Klick (>500 ms gehalten)
+          // die Navigation und die Filmografie öffnet sich nie. Auf dem Handy sind
+          // Taps kurz, daher fiel es nur in der Browser-Version auf.
+          if (isPerson) return;
           longFired = false;
           pressTimer = setTimeout(() => {
             longFired = true;
-            if (!isPerson) openQuickRate({ media_type: it.mediaType, id: it.id, title: it.title, name: it.title, poster_path: it.poster });
+            openQuickRate({ media_type: it.mediaType, id: it.id, title: it.title, name: it.title, poster_path: it.poster });
           }, 500);
         };
         const cancelPress = () => clearTimeout(pressTimer);
@@ -10650,15 +10694,36 @@
       const modes = isShared ? SHARE_MODES.filter(m => m.id !== "private") : SHARE_MODES;
       const hasFriends = (typeof _socialFriends !== "undefined") && _socialFriends.some(f => f.status === "accepted");
 
-      // "Gemeinsame Liste" section: invite a friend, or show current sharing state.
+      // "Gemeinsame Liste" section: invite friends, or manage current sharing state.
       let collabHtml = "";
       if (isShared) {
+        // R67: alle Mitglieder (außer mir selbst) als Chips mit Entfernen-Knopf,
+        // plus „Freund hinzufügen" und „Freigabe beenden".
+        const myUid = window.__vaultUser ? window.__vaultUser.uid : null;
+        const memberUids = (list.members || []).filter(u => u && u !== myUid);
+        const chips = memberUids.map(uid => {
+          const nm = sharedMemberName(uid, list);
+          return '<div class="share-member-chip">' +
+              '<div class="friend-avatar">' + avatarHtml(uid, nm) + '</div>' +
+              '<span class="share-member-name">@' + socialEsc(nm) + '</span>' +
+              '<button class="share-member-remove" type="button" data-remove-uid="' + socialEsc(uid) + '" data-remove-name="' + socialEsc(nm) + '" aria-label="Entfernen">✕</button>' +
+            '</div>';
+        }).join("");
+        const subText = memberUids.length > 1
+          ? "Geteilt mit " + memberUids.length + " Freunden — alle können Titel hinzufügen und entfernen."
+          : "Geteilt mit einem Freund — beide können Titel hinzufügen und entfernen.";
         collabHtml =
           '<div class="list-set-card col" style="margin-top:10px">' +
             '<div class="set-row-text">' +
               '<span class="set-row-label">Gemeinsame Liste</span>' +
-              '<span class="set-row-sub">Geteilt mit: <strong>@' + socialEsc(list.sharedWithName || "Freund") + '</strong> — beide können Titel hinzufügen und entfernen.</span>' +
+              '<span class="set-row-sub">' + subText + '</span>' +
             '</div>' +
+            (chips ? '<div class="share-member-list">' + chips + '</div>' : '') +
+            (hasFriends ?
+              '<button class="list-share-friend-btn" id="list-add-member" type="button">' +
+                '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
+                ' Freund hinzufügen' +
+              '</button>' : '') +
             '<button class="list-unshare-btn" id="list-unshare" type="button">Freigabe beenden</button>' +
           '</div>';
       } else if (hasFriends) {
@@ -10666,11 +10731,11 @@
           '<div class="list-set-card col" style="margin-top:10px">' +
             '<div class="set-row-text">' +
               '<span class="set-row-label">Gemeinsame Liste</span>' +
-              '<span class="set-row-sub">Teile diese Liste mit einem Freund — ihr könnt sie gemeinsam bearbeiten.</span>' +
+              '<span class="set-row-sub">Teile diese Liste mit einem oder mehreren Freunden — ihr könnt sie gemeinsam bearbeiten.</span>' +
             '</div>' +
             '<button class="list-share-friend-btn" id="list-share-friend" type="button">' +
               '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' +
-              ' Mit Freund teilen' +
+              ' Mit Freunden teilen' +
             '</button>' +
           '</div>';
       }
@@ -10709,60 +10774,156 @@
         });
       });
       const shareFriendBtn = host.querySelector("#list-share-friend");
-      if (shareFriendBtn) shareFriendBtn.addEventListener("click", () => openFriendPicker(currentListId));
+      if (shareFriendBtn) shareFriendBtn.addEventListener("click", () => openFriendPicker(currentListId, "create"));
+      const addMemberBtn = host.querySelector("#list-add-member");
+      if (addMemberBtn) addMemberBtn.addEventListener("click", () => openFriendPicker(currentListId, "add"));
+      host.querySelectorAll(".share-member-remove").forEach(b => {
+        b.addEventListener("click", () => removeMemberFromShared(currentListId, b.dataset.removeUid, b.dataset.removeName));
+      });
       const unshareBtn = host.querySelector("#list-unshare");
       if (unshareBtn) unshareBtn.addEventListener("click", () => stopSharing(currentListId));
     }
 
-    // ---------- Collaborative lists (R13-#6, phase 1) ----------
+    // R67: Anzeigename eines Mitglieds — bevorzugt gespeicherte memberNames, dann
+    // aktuelle Freundesliste, dann das Legacy-Einzelfeld, sonst „Freund".
+    function sharedMemberName(uid, list) {
+      if (list && list.memberNames && list.memberNames[uid]) return list.memberNames[uid];
+      const fr = (typeof _socialFriends !== "undefined") ? _socialFriends.find(f => f.uid === uid) : null;
+      if (fr && fr.username) return fr.username;
+      if (list && list.sharedWith === uid && list.sharedWithName) return list.sharedWithName;
+      return "Freund";
+    }
+
+    // ---------- Collaborative lists (R13-#6, phase 1; R67: Mehrfach-Teilen) ----------
     let _pickListId = null;
-    function openFriendPicker(listId) {
-      const friends = (typeof _socialFriends !== "undefined") ? _socialFriends.filter(f => f.status === "accepted") : [];
-      if (!friends.length) { showToast("Noch keine Freunde"); return; }
+    let _pickMode = "create";     // "create" (neue Freigabe) | "add" (Mitglieder ergänzen)
+    let _pickSel = new Map();      // uid -> name (Mehrfachauswahl)
+    function openFriendPicker(listId, mode) {
+      _pickMode = mode || "create";
+      const list = db.lists[listId];
+      let friends = (typeof _socialFriends !== "undefined") ? _socialFriends.filter(f => f.status === "accepted") : [];
+      // Beim Ergänzen: bereits beteiligte Mitglieder ausblenden.
+      if (_pickMode === "add" && list && list.members) friends = friends.filter(f => !list.members.includes(f.uid));
+      if (!friends.length) { showToast(_pickMode === "add" ? "Alle Freunde sind schon dabei" : "Noch keine Freunde"); return; }
       _pickListId = listId;
+      _pickSel = new Map();
+      const titleEl = document.getElementById("friendpick-title");
+      if (titleEl) titleEl.textContent = _pickMode === "add" ? "Freunde hinzufügen" : "Mit Freunden teilen";
       const listEl = document.getElementById("friendpick-list");
       listEl.innerHTML = friends.map(f =>
         '<button class="friendpick-item" type="button" data-uid="' + socialEsc(f.uid) + '" data-name="' + socialEsc(f.username || f.uid) + '">' +
           '<div class="friend-avatar" style="width:36px;height:36px;font-size:13px">' + avatarHtml(f.uid, f.username || f.uid) + '</div>' +
-          '<span>' + socialEsc(f.username || f.uid) + '</span>' +
+          '<span class="friendpick-name">' + socialEsc(f.username || f.uid) + '</span>' +
+          '<span class="friendpick-check" aria-hidden="true">✓</span>' +
         '</button>').join("");
       listEl.querySelectorAll(".friendpick-item").forEach(btn => {
         btn.addEventListener("click", () => {
-          closeFriendPicker();
-          convertListToShared(_pickListId, { uid: btn.dataset.uid, username: btn.dataset.name });
+          const uid = btn.dataset.uid;
+          if (_pickSel.has(uid)) _pickSel.delete(uid); else _pickSel.set(uid, btn.dataset.name);
+          btn.classList.toggle("selected", _pickSel.has(uid));
+          _updateFriendpickConfirm();
         });
       });
+      _updateFriendpickConfirm();
       document.getElementById("friendpick-backdrop").hidden = false;
       document.body.style.overflow = "hidden";
+    }
+    function _updateFriendpickConfirm() {
+      const btn = document.getElementById("friendpick-confirm");
+      if (!btn) return;
+      const n = _pickSel.size;
+      btn.disabled = n === 0;
+      const suffix = n > 1 ? " (" + n + ")" : "";
+      btn.textContent = (_pickMode === "add" ? "Hinzufügen" : "Teilen") + suffix;
     }
     function closeFriendPicker() {
       document.getElementById("friendpick-backdrop").hidden = true;
       document.body.style.overflow = "";
     }
 
-    async function convertListToShared(listId, friend) {
+    async function convertListToShared(listId, friends) {
       const list = db.lists[listId];
       if (!list || !window.__vaultUser || !window.__vaultSocial) { showToast("Teilen nicht möglich"); return; }
       if (list.shared) { showToast("Bereits geteilt"); return; }
+      const arr = (Array.isArray(friends) ? friends : [friends]).filter(f => f && f.uid);
+      if (!arr.length) return;
       const myUid  = window.__vaultUser.uid;
       const myName = (_myProfile && _myProfile.username) || (window.__vaultUser.email || "");
       showToast("Liste wird geteilt …");
       let sharedId = null;
-      try { sharedId = await window.__vaultSocial.createSharedList(myUid, friend.uid, list.name, list.items || {}); }
+      try { sharedId = await window.__vaultSocial.createSharedList(myUid, arr.map(f => f.uid), list.name, list.items || {}); }
       catch (e) { showToast("Teilen fehlgeschlagen"); return; }
       list.shared = true;
       list.sharedId = sharedId;
-      list.members = [myUid, friend.uid];
-      list.sharedWith = friend.uid;
-      list.sharedWithName = friend.username || "";
+      list.members = [myUid, ...arr.map(f => f.uid)];
+      list.sharedWith = arr[0].uid;               // Legacy-Einzelfeld (Abwärtskompatibilität)
+      list.sharedWithName = arr[0].username || "";
+      list.memberNames = list.memberNames || {};
+      arr.forEach(f => { list.memberNames[f.uid] = f.username || ""; });
       if (listShareMode(listId) === "private") list.shareMode = "friends";  // shared ≥ "Nur Freunde"
       saveDB();
-      try { await window.__vaultSocial.sendSharedListNotif(friend.uid, myUid, myName, sharedId, list.name, "", "list_shared"); } catch (e) {}
+      for (const f of arr) {
+        try { await window.__vaultSocial.sendSharedListNotif(f.uid, myUid, myName, sharedId, list.name, "", "list_shared"); } catch (e) {}
+      }
       // R27-#9: a shared list becomes a feed activity
       if (typeof addFeedPost === "function") {
         addFeedPost({ type: "shared_list", listName: list.name || "", listCount: Object.keys(list.items || {}).length });
       }
-      showToast("Geteilt mit " + (friend.username || "Freund"));
+      showToast(arr.length > 1 ? "Geteilt mit " + arr.length + " Freunden" : "Geteilt mit " + (arr[0].username || "Freund"));
+      renderListSettings();
+      renderListsCards();
+    }
+
+    // R67: weitere Freunde zu einer bereits geteilten Liste hinzufügen.
+    async function addMembersToShared(listId, friends) {
+      const list = db.lists[listId];
+      if (!list || !list.shared || !list.sharedId || !window.__vaultUser || !window.__vaultSocial) { showToast("Nicht möglich"); return; }
+      const arr = (Array.isArray(friends) ? friends : [friends]).filter(f => f && f.uid && !(list.members || []).includes(f.uid));
+      if (!arr.length) return;
+      const myUid  = window.__vaultUser.uid;
+      const myName = (_myProfile && _myProfile.username) || (window.__vaultUser.email || "");
+      showToast("Wird hinzugefügt …");
+      try { await window.__vaultSocial.addMembersToSharedList(list.sharedId, arr.map(f => f.uid)); }
+      catch (e) { showToast("Hinzufügen fehlgeschlagen"); return; }
+      list.members = [...(list.members || []), ...arr.map(f => f.uid)];
+      list.memberNames = list.memberNames || {};
+      arr.forEach(f => { list.memberNames[f.uid] = f.username || ""; });
+      saveDB();
+      for (const f of arr) {
+        try { await window.__vaultSocial.sendSharedListNotif(f.uid, myUid, myName, list.sharedId, list.name, "", "list_shared"); } catch (e) {}
+      }
+      showToast(arr.length > 1 ? arr.length + " Freunde hinzugefügt" : (arr[0].username || "Freund") + " hinzugefügt");
+      renderListSettings();
+      renderListsCards();
+    }
+
+    // R67: ein Mitglied aus einer geteilten Liste entfernen. Bliebe danach nur noch ein
+    // Mitglied übrig, ist es keine gemeinsame Liste mehr → komplett Freigabe beenden.
+    async function removeMemberFromShared(listId, uid, name) {
+      const list = db.lists[listId];
+      if (!list || !list.shared || !list.sharedId || !window.__vaultUser) return;
+      const myUid = window.__vaultUser.uid;
+      const others = (list.members || []).filter(u => u !== myUid);
+      if (others.length <= 1) { stopSharing(listId); return; }
+      showToast("Wird entfernt …");
+      try {
+        if (window.__vaultSocial.removeMemberFromSharedList) await window.__vaultSocial.removeMemberFromSharedList(list.sharedId, uid);
+        else await window.__vaultSocial.leaveSharedList(list.sharedId, uid);
+      } catch (e) { showToast("Entfernen fehlgeschlagen"); return; }
+      list.members = (list.members || []).filter(u => u !== uid);
+      if (list.memberNames) delete list.memberNames[uid];
+      if (list.sharedWith === uid) {
+        const next = (list.members || []).find(u => u !== myUid) || null;
+        list.sharedWith = next;
+        list.sharedWithName = (next && sharedMemberName(next, list)) || "";
+      }
+      saveDB();
+      // Betroffenen benachrichtigen (best effort).
+      try {
+        const myName = (_myProfile && _myProfile.username) || (window.__vaultUser.email || "");
+        window.__vaultSocial.sendSharedListNotif(uid, myUid, myName, list.sharedId, list.name, "", "list_unshared");
+      } catch (e) {}
+      showToast((name || "Freund") + " entfernt");
       renderListSettings();
       renderListsCards();
     }
@@ -10844,6 +11005,13 @@
         const fr = (typeof _socialFriends !== "undefined") ? _socialFriends.find(f => f.uid === otherUid) : null;
         l.shared = true; l.members = sl.members || []; l.sharedWith = otherUid;
         l.sharedWithName = (fr && fr.username) || l.sharedWithName || "";
+        // R67: Namen aller Mitglieder aus der Freundesliste nachziehen (für die Chips).
+        l.memberNames = l.memberNames || {};
+        (sl.members || []).forEach(u => {
+          if (u === myUid) return;
+          const f = (typeof _socialFriends !== "undefined") ? _socialFriends.find(x => x.uid === u) : null;
+          if (f && f.username) l.memberNames[u] = f.username;
+        });
         if (sl.name && l.name !== sl.name) { l.name = sl.name; changed = true; }
         try { const full = await window.__vaultSocial.getSharedList(sl.id); if (full && full.items) { l.items = full.items; changed = true; } } catch (e) {}
       }
@@ -10851,6 +11019,14 @@
     }
 
     document.getElementById("friendpick-cancel").addEventListener("click", closeFriendPicker);
+    document.getElementById("friendpick-confirm").addEventListener("click", () => {
+      if (!_pickSel.size) return;
+      const friends = [..._pickSel.entries()].map(([uid, name]) => ({ uid, username: name }));
+      const listId = _pickListId, mode = _pickMode;
+      closeFriendPicker();
+      if (mode === "add") addMembersToShared(listId, friends);
+      else convertListToShared(listId, friends);
+    });
     document.getElementById("friendpick-backdrop").addEventListener("click", e => { if (e.target === e.currentTarget) closeFriendPicker(); });
 
     document.getElementById("list-back").addEventListener("click", showListsOverview);
@@ -15189,7 +15365,14 @@
         }).catch(() => {})));
       } catch (e) { /* notifying the other side is a nicety; never break the watch flow */ }
     }
+    let _deferredMatch = null;   // R67: Match-Popup, das auf das Schließen der Bewertung wartet
     function showMatchPopup(item, names) {
+      // R67: Solange das Bewerten-Sheet offen ist, das „… hat das auch gesehen"-Popup
+      // NICHT darüberlegen (z-Index 205 > 170) — sonst verdeckt es die Bewertung und
+      // der Nutzer musste erst „zurück". Zwischenspeichern und nach dem Schließen der
+      // Bewertung nachholen (siehe closeQuickRate).
+      const qb = document.getElementById("qr-backdrop");
+      if (qb && !qb.hidden) { _deferredMatch = { item, names }; return; }
       const pop = document.getElementById("match-popup");
       if (!pop) return;
       const posterEl = document.getElementById("match-poster");
@@ -17560,13 +17743,22 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R66";
+    const APP_VERSION = "R67";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R67": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Gemeinsame Listen mit mehreren teilen:</strong> Du kannst eine Liste jetzt gleich mit mehreren Freunden auf einmal teilen — im Teilen-Dialog einfach mehrere antippen.",
+          "<strong>Gemeinsame Liste bearbeiten:</strong> Bei einer bereits geteilten Liste siehst du jetzt alle Beteiligten und kannst jederzeit einzelne Freunde entfernen (✕) oder über „Freund hinzufügen“ neue dazuholen — ohne die Freigabe komplett beenden zu müssen.",
+          "<strong>Schauspieler-Details im Browser:</strong> Ein Tipp auf einen Schauspieler in der Rangliste öffnet jetzt auch am Computer zuverlässig die Filmografie (ein etwas längerer Klick wurde vorher verschluckt).",
+          "<strong>Bewertung wird nicht mehr übersprungen:</strong> Markierst du einen Titel als gesehen, den ein Freund schon kennt, legt sich die „… hat das auch gesehen“-Meldung nicht mehr über die Bewertung — sie erscheint erst danach."
+        ]
+      },
       "R66": {
         title: "Was ist neu",
         notes: [
