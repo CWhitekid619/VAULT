@@ -692,6 +692,9 @@
       display: flex; align-items: flex-end;
       animation: fade-in .18s ease;
     }
+    /* R68: Bestätigungs-Dialog muss über offenen Sheets (z170) und dem Match-Popup (z205) liegen. */
+    .confirm-backdrop { z-index: 210; }
+    .sheet-btn-primary.is-danger { background: #e5484d; color: #fff; }
     .sheet {
       width: 100%;
       background: var(--surface);
@@ -4225,6 +4228,17 @@
     </div>
   </div>
 
+  <!-- R68: generischer Ja/Abbrechen-Dialog (z.B. „gesehen" rückgängig machen) -->
+  <div id="confirm-backdrop" class="sheet-backdrop confirm-backdrop" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+      <div class="sheet-handle"></div>
+      <div class="sheet-section-label" id="confirm-title">Sicher?</div>
+      <p class="migrate-text" id="confirm-body"></p>
+      <button id="confirm-ok" class="sheet-btn-primary" type="button">Ja</button>
+      <button id="confirm-cancel" class="sheet-btn-cancel" type="button">Abbrechen</button>
+    </div>
+  </div>
+
   <!-- ============ WÜRFEL (random picker with filters) ============ -->
   <div id="wuerfel-backdrop" class="sheet-backdrop" hidden>
     <div class="sheet" role="dialog" aria-modal="true" aria-label="Würfeln">
@@ -7262,8 +7276,20 @@
     document.getElementById("sheet-watched-btn").addEventListener("click", () => {
       if (!sheetItem) return;
       const r = sheetItem;
+      const key = keyOf(r.media_type, r.id);
+      // R68: Ist der Titel schon gesehen, macht der graue „Watched ✓"-Knopf jetzt
+      // rückgängig (mit kurzer Nachfrage) — man muss dafür nicht mehr in die Details.
+      if (db.items[key]) {
+        confirmUnwatch(key, () => {
+          closeSheet();
+          refreshResults();
+          refreshDetailStatus();
+          if (document.body.dataset.tab === "ranking") renderRanking();
+        });
+        return;
+      }
       closeSheet();
-      if (!db.items[keyOf(r.media_type, r.id)]) logWatched(r);   // neu → als gesehen markieren
+      logWatched(r);                 // neu → als gesehen markieren
       openQuickRate(r);
     });
     // R48: Teilen geht auch VOR dem Schauen — ohne gespeicherten Datensatz wird ein
@@ -8877,11 +8903,8 @@
       // wire up dynamic bits
       document.getElementById("detail-log").addEventListener("click", () => {
         const key = keyOf(mediaType, data.id);
-        if (db.items[key]) {            // already watched → un-watch (B3 toggle)
-          unwatchItem(key);
-          showToast("Nicht mehr als gesehen markiert");
-          refreshDetailStatus();
-          refreshResults();
+        if (db.items[key]) {            // already watched → un-watch (B3 toggle) — R68: mit Nachfrage
+          confirmUnwatch(key, () => { refreshDetailStatus(); refreshResults(); });
         } else {
           logWatched(r);                // not watched → mark watched immediately as "Ungerankt" (P3)
           applyStudioTags(key, data.production_companies);   // N1: auto-tag studios on log
@@ -8972,6 +8995,58 @@
       delete db.items[key];
       heroItemCount = -1;
       saveDB();
+    }
+
+    // R68: kleiner Ja/Abbrechen-Dialog. onConfirm läuft nur bei „Ja".
+    let _confirmCb = null;
+    function confirmAction(opts) {
+      opts = opts || {};
+      const bd = document.getElementById("confirm-backdrop");
+      if (!bd) { if (opts.onConfirm) { try { opts.onConfirm(); } catch (e) {} } return; }  // Fallback
+      document.getElementById("confirm-title").textContent = opts.title || "Sicher?";
+      document.getElementById("confirm-body").textContent  = opts.body || "";
+      const ok = document.getElementById("confirm-ok");
+      const cancel = document.getElementById("confirm-cancel");
+      ok.textContent = opts.confirmLabel || "Ja";
+      cancel.textContent = opts.cancelLabel || "Abbrechen";
+      ok.classList.toggle("is-danger", !!opts.danger);
+      _confirmCb = (typeof opts.onConfirm === "function") ? opts.onConfirm : null;
+      bd.hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+    function closeConfirm() {
+      const bd = document.getElementById("confirm-backdrop");
+      if (bd) bd.hidden = true;
+      _confirmCb = null;
+      // Scroll-Lock nur freigeben, wenn kein anderes Sheet mehr offen ist.
+      if (document.querySelectorAll(".sheet-backdrop:not([hidden])").length === 0) document.body.style.overflow = "";
+    }
+    (function wireConfirm() {
+      const bd = document.getElementById("confirm-backdrop");
+      if (!bd) return;
+      document.getElementById("confirm-ok").addEventListener("click", () => {
+        const cb = _confirmCb; _confirmCb = null; closeConfirm();
+        if (cb) { try { cb(); } catch (e) {} }
+      });
+      document.getElementById("confirm-cancel").addEventListener("click", closeConfirm);
+      bd.addEventListener("click", (e) => { if (e.target === bd) closeConfirm(); });
+    })();
+
+    // R68: „gesehen" rückgängig — überall mit einer kurzen Nachfrage, weil der Titel
+    // damit aus Statistiken, Rangliste, Empfehlungen und geteilter Aktivität rausfällt.
+    function confirmUnwatch(key, after) {
+      confirmAction({
+        title: "Nicht mehr als gesehen?",
+        body: "Die Bewertung wird entfernt und der Titel verschwindet aus deinen Statistiken, deiner Rangliste, den Empfehlungen und geteilten Beiträgen. Notizen und der Serien-Fortschritt bleiben erhalten.",
+        confirmLabel: "Ja, rückgängig",
+        cancelLabel: "Abbrechen",
+        danger: true,
+        onConfirm: () => {
+          unwatchItem(key);
+          showToast("Nicht mehr als gesehen markiert");
+          if (typeof after === "function") { try { after(); } catch (e) {} }
+        }
+      });
     }
 
     // R61: Freund-Profile werden pro Sitzung kurz gecacht — Detailseite UND
@@ -11942,14 +12017,14 @@
       watch.addEventListener("click", e => {
         e.stopPropagation();
         if (db.items[key]) {                     // second press → unwatch (true toggle, point 2)
-          unwatchItem(key);
-          showToast("Nicht mehr als gesehen markiert");
+          // R68: kurze Nachfrage vor dem Rückgängigmachen (verhindert versehentliches Entfernen).
+          confirmUnwatch(key, () => { setWatch(); setWl(); });
         } else {
           const rr = itemToR(item, mediaType);
           logWatched(rr);                        // watched immediately (Ungerankt)
           openQuickRate(rr);                     // offer a fast rating (points 5 + 8)
+          setWatch(); setWl();                   // logWatched also clears the watchlist entry
         }
-        setWatch(); setWl();                     // logWatched also clears the watchlist entry
       });
 
       wrap.appendChild(wl); wrap.appendChild(watch);
@@ -17792,7 +17867,8 @@
       "R68": {
         title: "Was ist neu",
         notes: [
-          "<strong>Kein Zurücksetzen mehr:</strong> Wenn du einen Film oder eine Serie als gesehen markiert (und gepostet) hast und die App gleich danach weggewischt hast, konnte die Änderung beim nächsten Öffnen verschwinden — der Titel war wieder weg und die „neues Update“-Meldung tauchte erneut auf. Das ist behoben: Änderungen werden beim Verlassen der App sofort in die Cloud gesichert, und ein noch nicht hochgeladener Stand wird beim nächsten Start nicht mehr von einem älteren Cloud-Stand überschrieben."
+          "<strong>Kein Zurücksetzen mehr:</strong> Wenn du einen Film oder eine Serie als gesehen markiert (und gepostet) hast und die App gleich danach weggewischt hast, konnte die Änderung beim nächsten Öffnen verschwinden — der Titel war wieder weg und die „neues Update“-Meldung tauchte erneut auf. Das ist behoben: Änderungen werden beim Verlassen der App sofort in die Cloud gesichert, und ein noch nicht hochgeladener Stand wird beim nächsten Start nicht mehr von einem älteren Cloud-Stand überschrieben.",
+          "<strong>„Gesehen“ direkt rückgängig machen:</strong> Ein Tipp auf den grauen „Watched ✓“-Knopf macht die Markierung jetzt sofort rückgängig — du musst dafür nicht mehr in die Details. Vorher kommt eine kurze Sicherheitsabfrage, weil der Titel damit aus Statistiken, Rangliste, Empfehlungen und geteilten Beiträgen verschwindet."
         ]
       },
       "R67": {
