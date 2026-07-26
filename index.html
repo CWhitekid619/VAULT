@@ -5370,6 +5370,11 @@
     // db.items[key]     = watched/ranked record (key = "movie:123" / "tv:456")
     // db.watchlist[key] = titles the user wants to watch
     const DB_KEY = "reel.db.v1";
+    // R68: „noch nicht in die Cloud hochgeladen"-Merker. Gesetzt sobald eine lokale
+    // Änderung auf den Cloud-Push wartet, gelöscht wenn der Push wirklich durch ist.
+    // Überlebt einen App-Neustart → verhindert, dass ein veralteter Cloud-Stand beim
+    // nächsten Öffnen frische, noch nicht hochgeladene Änderungen überschreibt.
+    const CLOUD_DIRTY_KEY = "reel.cloudDirty.v1";
 
     // Tag database — seeded defaults; user can add more (B1)
     const DEFAULT_TAGS = ["Christlich", "Marvel", "Star Wars", "Herr der Ringe", "Disney", "Pixar", "Anime", "Klassiker"];
@@ -5457,8 +5462,15 @@
       // No-op when logged out or Firebase is unavailable.
       if (typeof queueCloudSync === "function") queueCloudSync();
     }
-    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushDB(); });
-    window.addEventListener("pagehide", flushDB);
+    // R68: beim Wegwischen/Verlassen der App NICHT nur lokal sichern, sondern auch den
+    // fälligen Cloud-Push sofort auslösen (statt auf den 2s-Debounce zu warten) — sonst
+    // geht „gesehen + gepostet" verloren, wenn die App vorher weggewischt wird.
+    function flushOnHide() {
+      flushDB();
+      if (typeof flushCloudSync === "function") { try { flushCloudSync(); } catch (e) {} }
+    }
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushOnHide(); });
+    window.addEventListener("pagehide", flushOnHide);
 
     // R2/R4: cloud-sync state lives here (not in the controller block far below)
     // so saveDB() — which runs during early init, e.g. the trackedSeries reset
@@ -14164,6 +14176,9 @@
       // decided whether to upload existing local data (R4) → don't push either way.
       if (suppressPush || awaitingMigration || !cloudReady()) return;
       syncDirty = true;
+      // R68: persistenten Merker setzen, damit ein App-Neustart vor dem Push nicht
+      // dazu führt, dass „Firestore wins" die noch nicht hochgeladene Änderung killt.
+      try { localStorage.setItem(CLOUD_DIRTY_KEY, "1"); } catch (e) {}
       setCloudStatus("saving");
       clearTimeout(syncTimer);
       syncTimer = setTimeout(flushCloudSync, CLOUD_DEBOUNCE_MS);
@@ -14176,6 +14191,9 @@
       try {
         await window.__vaultDB.save(window.__vaultUser.uid, db);
         setCloudStatus("ok");
+        // R68: Push ist durch. Nur wenn währenddessen keine neue Änderung reinkam,
+        // gilt alles als hochgeladen → Merker löschen (sonst räumt der Re-Flush ihn ab).
+        if (!syncDirty) { try { localStorage.removeItem(CLOUD_DIRTY_KEY); } catch (e) {} }
         // R12-E: publish the shareable-lists snapshot so friends can view them.
         if (window.__vaultSocial && window.__vaultSocial.saveUserLists) {
           window.__vaultSocial.saveUserLists(window.__vaultUser.uid, buildShareableListsSnapshot()).catch(() => {});
@@ -14205,6 +14223,24 @@
         return;
       }
       if (remote && typeof remote === "object") {
+        // R68: Hatte die vorige Sitzung noch nicht hochgeladene Änderungen (Merker
+        // gesetzt, z.B. „gesehen"+Post und App zu schnell weggewischt), dann darf der
+        // — möglicherweise veraltete — Cloud-Stand den lokalen NICHT überschreiben.
+        // Stattdessen den lokalen Stand behalten und nach oben pushen.
+        let localDirty = false;
+        try { localDirty = localStorage.getItem(CLOUD_DIRTY_KEY) === "1"; } catch (e) {}
+        if (localDirty && hasLocalData()) {
+          suppressPush = true;
+          try { db = loadDB(); } catch (e) { /* keep current db */ }
+          suppressPush = false;
+          setCloudStatus("saving");
+          flushCloudSync();          // lokalen Stand hochladen; löst den Merker bei Erfolg
+          rerenderCurrent();
+          if (window.__vaultSocial && window.__vaultSocial.saveProfile) {
+            try { window.__vaultSocial.saveProfile(user.uid, buildProfileSnapshot()).catch(() => {}); } catch (e) {}
+          }
+          return;
+        }
         // Firestore wins: overwrite local cache, then re-normalize through loadDB
         // so any missing fields get their defaults / migrations applied.
         suppressPush = true;
@@ -14244,6 +14280,9 @@
       } else {
         clearTimeout(syncTimer);
         syncDirty = false;
+        // R68: Merker beim Abmelden räumen, damit er nicht auf ein anderes Konto
+        // durchschlägt (sonst würde dessen Cloud-Stand fälschlich als „veraltet" gelten).
+        try { localStorage.removeItem(CLOUD_DIRTY_KEY); } catch (e) {}
         setCloudStatus("idle");
       }
     });
@@ -17743,13 +17782,19 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R67";
+    const APP_VERSION = "R68";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R68": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Kein Zurücksetzen mehr:</strong> Wenn du einen Film oder eine Serie als gesehen markiert (und gepostet) hast und die App gleich danach weggewischt hast, konnte die Änderung beim nächsten Öffnen verschwinden — der Titel war wieder weg und die „neues Update“-Meldung tauchte erneut auf. Das ist behoben: Änderungen werden beim Verlassen der App sofort in die Cloud gesichert, und ein noch nicht hochgeladener Stand wird beim nächsten Start nicht mehr von einem älteren Cloud-Stand überschrieben."
+        ]
+      },
       "R67": {
         title: "Was ist neu",
         notes: [
