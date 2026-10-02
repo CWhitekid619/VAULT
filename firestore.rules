@@ -1,0 +1,104 @@
+rules_version = '2';
+
+// =============================================================================
+// VAULT — Firestore-Sicherheitsregeln (Entwurf, Stand R69 / 2026-10-02)
+//
+// Aus dem Client-Code (index.html) abgeleitetes Datenmodell. VOR dem Deploy im
+// Firebase-Rules-Simulator testen (Konsole → Firestore → Regeln → "Simulator"):
+// mindestens Login + Freund-Profil-lesen, Freundschaftsanfrage, Post + Kommentar,
+// gemeinsame Liste bearbeiten. Deploy: Firebase-Konsole → Firestore → Regeln →
+// einfügen → "Veröffentlichen". (Oder Firebase-CLI: `firebase deploy --only firestore:rules`.)
+//
+// WICHTIGSTER SCHUTZ: /users/{uid}/data/main (die komplette private Bibliothek)
+// ist strikt nur für den Eigentümer les- und schreibbar. Falls die Datenbank
+// aktuell im "Testmodus" (allow read/write: if true) läuft, kann JEDER Angemeldete
+// derzeit fremde private Daten lesen — diese Regeln beheben das.
+//
+// BEWUSSTER KOMPROMISS: Der Profil-Snapshot /users/{uid} (Statistiken, zuletzt
+// gesehen, bis zu 800 Bibliothek-Titel) ist für jeden ANGEMELDETEN Nutzer lesbar,
+// nicht nur für bestätigte Freunde — eine freundschafts-genaue Prüfung in Regeln
+// wäre aufwändig und fehleranfällig. Wirklich Privates liegt in data/main (s. o.).
+// Wer das enger will: Profil-Lesen zusätzlich an eine Freundes-Kante knüpfen.
+// =============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn()   { return request.auth != null; }
+    function isUser(uid)  { return request.auth != null && request.auth.uid == uid; }
+
+    // ---- Nutzer-Dokument ------------------------------------------------------
+    match /users/{uid} {
+      // Profil-Snapshot: jeder Angemeldete darf lesen (Freunde-Profile),
+      // nur der Eigentümer darf schreiben.
+      allow read:  if signedIn();
+      allow write: if isUser(uid);
+
+      // Private Gesamt-Datenbank (payload + rev) — NUR der Eigentümer.
+      match /data/{docId} {
+        allow read, write: if isUser(uid);
+      }
+
+      // Freundes-Kanten: Eigentümer darf alles; der jeweilige Freund darf SEINE
+      // eigene Kante anlegen/aktualisieren (Freundschaftsanfrage/-annahme,
+      // Namens-Denormalisierung über renameUser). Lesen nur der Eigentümer.
+      match /friends/{friendId} {
+        allow read:  if isUser(uid);
+        allow write: if isUser(uid) || isUser(friendId);
+      }
+
+      // Benachrichtigungen: Eigentümer liest/ändert/löscht; jeder Angemeldete
+      // darf eine anlegen (Freundschaftsanfrage, Annahme, Empfehlung).
+      match /notifications/{notifId} {
+        allow read, update, delete: if isUser(uid);
+        allow create:               if signedIn();
+      }
+
+      // Einzel-Empfehlungen (sharedItems): Eigentümer voll; Anlegen durch
+      // jeden Angemeldeten (jemand empfiehlt dir einen Titel).
+      match /sharedItems/{itemId} {
+        allow read, update, delete: if isUser(uid);
+        allow create:               if signedIn();
+      }
+    }
+
+    // ---- Öffentliche Listen-Schnappschüsse (userLists) ------------------------
+    match /userLists/{uid} {
+      allow read:  if signedIn();
+      allow write: if isUser(uid);
+    }
+
+    // ---- Gemeinsame (kollaborative) Listen ------------------------------------
+    match /sharedLists/{listId} {
+      // Lesen/Ändern/Löschen nur für Mitglieder (members = Array von UIDs).
+      allow read:          if signedIn() && request.auth.uid in resource.data.members;
+      allow update, delete: if signedIn() && request.auth.uid in resource.data.members;
+      // Anlegen: der Ersteller muss selbst Mitglied der neuen Liste sein.
+      allow create:        if signedIn() && request.auth.uid in request.resource.data.members;
+
+      match /items/{itemId} {
+        // Einträge: nur Mitglieder der übergeordneten Liste.
+        allow read, write: if signedIn()
+          && request.auth.uid in get(/databases/$(database)/documents/sharedLists/$(listId)).data.members;
+      }
+    }
+
+    // ---- Feed-Posts -----------------------------------------------------------
+    match /posts/{postId} {
+      allow read:           if signedIn();
+      allow create:         if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
+
+      match /comments/{commentId} {
+        allow read:           if signedIn();
+        allow create:         if signedIn() && request.resource.data.userId == request.auth.uid;
+        allow update, delete: if signedIn() && resource.data.userId == request.auth.uid;
+      }
+    }
+
+    // Alles andere standardmäßig verbieten (kein offener Zugriff).
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

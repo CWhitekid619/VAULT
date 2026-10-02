@@ -4472,7 +4472,8 @@
     import {
       getFirestore, doc, getDoc, setDoc, serverTimestamp,
       collection, addDoc, getDocs, updateDoc, deleteDoc,
-      query, where, orderBy, limit, onSnapshot, writeBatch, startAfter, getCountFromServer
+      query, where, orderBy, limit, onSnapshot, writeBatch, startAfter, getCountFromServer,
+      runTransaction
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -4560,24 +4561,44 @@
     // Document limit is 1 MB — fine for a personal library, flagged in the report.
     window.__vaultDB = {
       available: !!firestore,
+      _lastRev: 0,                 // R69: rev of the last load/save — the session's sync baseline
       docRef(uid) { return doc(firestore, "users", uid, "data", "main"); },
       async load(uid) {
         if (!firestore) throw new Error("Cloud-Speicher nicht verfügbar.");
         const snap = await getDoc(this.docRef(uid));
-        if (!snap.exists()) return null;
+        if (!snap.exists()) { this._lastRev = 0; return null; }
         const d = snap.data();
+        this._lastRev = (d && typeof d.rev === "number") ? d.rev : 0;   // R69
         if (d && typeof d.payload === "string") {
           try { return JSON.parse(d.payload); } catch (e) { return null; }
         }
         return null;
       },
-      async save(uid, dataObj) {
+      // R69: konfliktsicheres Speichern per Transaktion. opts.baseRev = rev, den diese
+      // Sitzung zuletzt gesehen hat. Hat ein anderes Gerät inzwischen geschrieben
+      // (remoteRev > baseRev), wird NICHT überschrieben, sondern {conflict, remote}
+      // zurückgegeben, damit der Aufrufer additiv zusammenführen und erneut speichern kann.
+      // opts.payloadStr erlaubt es, den bereits erzeugten JSON-String wiederzuverwenden.
+      async save(uid, dataObj, opts) {
         if (!firestore) throw new Error("Cloud-Speicher nicht verfügbar.");
-        await setDoc(this.docRef(uid), {
-          payload: JSON.stringify(dataObj),
-          updatedAt: serverTimestamp(),
-          v: 1
-        }, { merge: true });
+        opts = opts || {};
+        const payload = (typeof opts.payloadStr === "string") ? opts.payloadStr : JSON.stringify(dataObj);
+        const ref = this.docRef(uid);
+        const res = await runTransaction(firestore, async (tx) => {
+          const snap = await tx.get(ref);
+          const remoteRev = (snap.exists() && typeof snap.data().rev === "number") ? snap.data().rev : 0;
+          if (typeof opts.baseRev === "number" && remoteRev > opts.baseRev) {
+            let remote = null;
+            const dd = snap.data();
+            if (dd && typeof dd.payload === "string") { try { remote = JSON.parse(dd.payload); } catch (e) {} }
+            return { conflict: true, remote, remoteRev };
+          }
+          const nextRev = remoteRev + 1;
+          tx.set(ref, { payload, updatedAt: serverTimestamp(), rev: nextRev, v: 1 }, { merge: true });
+          return { conflict: false, rev: nextRev };
+        });
+        if (!res.conflict) this._lastRev = res.rev;
+        return res;
       }
     };
 
@@ -5496,6 +5517,54 @@
     let syncDirty         = false;
     let suppressPush      = false;     // true while applying remote data, so it doesn't echo back
     let awaitingMigration = false;     // R4: true while the first-login migration prompt is open
+
+    // ===== R69: Sync-Robustheit (Konflikt-Schutz, Größen-Warnung, Upload-Sparen) =====
+    let _cloudBaseRev   = 0;           // #2: rev, den diese Sitzung zuletzt synchronisiert hat
+    let _lastProfileHash = null;       // #3: Hash des zuletzt hochgeladenen Profil-Snapshots
+    let _lastListsHash   = null;       // #3: Hash der zuletzt hochgeladenen geteilten Listen
+    let _cloudSizeLevel  = 0;          // #1: 0 ok · 1 (>800KB) gewarnt · 2 (>950KB) dringend gewarnt
+    const CLOUD_WARN_BYTES = 800 * 1024;
+    const CLOUD_CRIT_BYTES = 950 * 1024;   // Firestore-Hard-Limit = 1 MB (1.048.576 Bytes)
+    // Billiger, stabiler String-Hash (djb2) — nur zum Erkennen von Änderungen, nicht kryptografisch.
+    function _cheapHash(str) {
+      let h = 5381;
+      for (let i = 0; i < str.length; i++) h = (((h << 5) + h) + str.charCodeAt(i)) | 0;
+      return h.toString(36);
+    }
+    // UTF-8-Bytelänge (Firestore zählt Bytes, nicht Zeichen).
+    function _utf8Bytes(str) {
+      try { return new TextEncoder().encode(str).length; } catch (e) { return str.length; }
+    }
+    // #1: Vor dem Speichern prüfen, ob die Bibliothek an Firestores 1-MB-Grenze stößt,
+    // und den Nutzer rechtzeitig warnen (einmal je Schwelle pro Sitzung, kein Spam).
+    function _warnCloudSize(bytes) {
+      const kb = Math.round(bytes / 1024);
+      if (bytes >= CLOUD_CRIT_BYTES && _cloudSizeLevel < 2) {
+        _cloudSizeLevel = 2;
+        showToast("⚠️ Deine Bibliothek ist fast am Cloud-Limit (" + kb + " KB von 1024 KB). Bald kann nichts mehr synchronisiert werden — bitte melden.");
+      } else if (bytes >= CLOUD_WARN_BYTES && _cloudSizeLevel < 1) {
+        _cloudSizeLevel = 1;
+        showToast("Hinweis: Deine Bibliothek wird groß (" + kb + " KB). Die Cloud-Speicherung hat ein Limit von 1024 KB.");
+      }
+    }
+    // #2: Konflikt-Zusammenführung. Ein anderes Gerät hat zwischenzeitlich gespeichert —
+    // dessen Einträge, die hier fehlen, additiv übernehmen (lokale Werte gewinnen bei
+    // Kollision). So gehen parallele Neuzugänge NIE verloren. (Löschungen werden bewusst
+    // nicht propagiert — lieber ein wiederauftauchender Titel als verlorene Einträge.)
+    function _mergeCloudInto(remote) {
+      if (!remote || typeof remote !== "object") return;
+      const mapKeys = ["items","watchlist","lists","meta","epRatings","epMeta","progress",
+        "trackedSeries","people","blocklist","hiddenSeries","recentlyWatchedExcluded",
+        "matchSeen","autoTaggedKeys","milestonePosted","recoSnoozed","recoExcludeLists","recoExcludeTags"];
+      mapKeys.forEach(k => {
+        const rem = remote[k];
+        if (rem && typeof rem === "object" && !Array.isArray(rem)) {
+          if (!db[k] || typeof db[k] !== "object") db[k] = {};
+          for (const id in rem) { if (!(id in db[k])) db[k][id] = rem[id]; }   // nur fehlende übernehmen
+        }
+      });
+      saveDB();   // zusammengeführten Stand lokal sichern (markiert erneut dirty → Re-Push)
+    }
 
     // One-time reset (R8 follow-up): earlier builds flagged every series as tracked
     // via the old hiddenSeries logic. "Tracken" is now strictly opt-in, so wipe any
@@ -14264,19 +14333,48 @@
       syncInFlight = true;
       syncDirty = false;
       try {
-        await window.__vaultDB.save(window.__vaultUser.uid, db);
+        // #1: Payload einmal erzeugen, Bytegröße prüfen und ggf. vor dem 1-MB-Limit warnen.
+        const payloadStr = JSON.stringify(db);
+        _warnCloudSize(_utf8Bytes(payloadStr));
+        // #2: konfliktsicher speichern (Transaktion mit rev-Abgleich).
+        const res = await window.__vaultDB.save(window.__vaultUser.uid, db, {
+          payloadStr, baseRev: _cloudBaseRev
+        });
+        if (res && res.conflict) {
+          // Ein anderes Gerät hat zwischenzeitlich gespeichert → dessen Neuzugänge
+          // additiv übernehmen und erneut speichern (verhindert gegenseitiges Löschen).
+          _cloudBaseRev = res.remoteRev;        // wir kennen jetzt den neueren Stand
+          suppressPush = true;
+          try { _mergeCloudInto(res.remote); } catch (e) {}
+          suppressPush = false;
+          syncDirty = true;                      // der finally-Zweig re-flusht → schreibt den Merge hoch
+          setCloudStatus("saving");
+          return;
+        }
+        if (res && typeof res.rev === "number") _cloudBaseRev = res.rev;
         setCloudStatus("ok");
         // R68: Push ist durch. Nur wenn währenddessen keine neue Änderung reinkam,
         // gilt alles als hochgeladen → Merker löschen (sonst räumt der Re-Flush ihn ab).
         if (!syncDirty) { try { localStorage.removeItem(CLOUD_DIRTY_KEY); } catch (e) {} }
-        // R12-E: publish the shareable-lists snapshot so friends can view them.
+        // R12-E / R69-#3: geteilte Listen nur hochladen, wenn sie sich geändert haben.
         if (window.__vaultSocial && window.__vaultSocial.saveUserLists) {
-          window.__vaultSocial.saveUserLists(window.__vaultUser.uid, buildShareableListsSnapshot()).catch(() => {});
+          const listsSnap = buildShareableListsSnapshot();
+          const listsHash = _cheapHash(JSON.stringify(listsSnap));
+          if (listsHash !== _lastListsHash) {
+            window.__vaultSocial.saveUserLists(window.__vaultUser.uid, listsSnap)
+              .then(() => { _lastListsHash = listsHash; }).catch(() => {});
+          }
         }
-        // R15-#4: publish the profile snapshot (stats / recently watched / top ranked)
-        // into users/{uid} so friend profiles can render it. Merged, best-effort.
+        // R15-#4 / R69-#3: Profil-Snapshot nur hochladen, wenn er sich geändert hat
+        // (ohne den volatilen Zeitstempel zu vergleichen) — spart bei jeder Kleinigkeit
+        // den Upload der ganzen Bibliothek.
         if (window.__vaultSocial && window.__vaultSocial.saveProfile) {
-          window.__vaultSocial.saveProfile(window.__vaultUser.uid, buildProfileSnapshot()).catch(() => {});
+          const snap = buildProfileSnapshot();
+          const snapHash = _cheapHash(JSON.stringify(Object.assign({}, snap, { profileUpdatedAt: 0 })));
+          if (snapHash !== _lastProfileHash) {
+            window.__vaultSocial.saveProfile(window.__vaultUser.uid, snap)
+              .then(() => { _lastProfileHash = snapHash; }).catch(() => {});
+          }
         }
       } catch (e) {
         setCloudStatus("offline");       // keep local; next save retries
@@ -14290,6 +14388,9 @@
     async function loadFromCloud(user) {
       if (!window.__vaultDB || !window.__vaultDB.available) return;
       setCloudStatus("loading");
+      // R69: frischer Login → Profil/Listen-Hashes zurücksetzen, damit sie einmal
+      // neu veröffentlicht werden; Größen-Warnung pro Login neu bewerten.
+      _lastProfileHash = null; _lastListsHash = null; _cloudSizeLevel = 0;
       let remote = null;
       try {
         remote = await window.__vaultDB.load(user.uid);
@@ -14297,6 +14398,8 @@
         setCloudStatus("offline");        // stay on local data; saves will retry
         return;
       }
+      // R69-#2: rev, den wir gerade geladen haben, als Sitzungs-Basis merken.
+      _cloudBaseRev = (window.__vaultDB && typeof window.__vaultDB._lastRev === "number") ? window.__vaultDB._lastRev : 0;
       if (remote && typeof remote === "object") {
         // R68: Hatte die vorige Sitzung noch nicht hochgeladene Änderungen (Merker
         // gesetzt, z.B. „gesehen"+Post und App zu schnell weggewischt), dann darf der
@@ -14358,6 +14461,9 @@
         // R68: Merker beim Abmelden räumen, damit er nicht auf ein anderes Konto
         // durchschlägt (sonst würde dessen Cloud-Stand fälschlich als „veraltet" gelten).
         try { localStorage.removeItem(CLOUD_DIRTY_KEY); } catch (e) {}
+        // R69: Sync-Basis + Upload-Hashes beim Abmelden zurücksetzen (nächstes Konto frisch).
+        _cloudBaseRev = 0; _lastProfileHash = null; _lastListsHash = null; _cloudSizeLevel = 0;
+        if (window.__vaultDB) window.__vaultDB._lastRev = 0;
         setCloudStatus("idle");
       }
     });
@@ -17857,13 +17963,21 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R68";
+    const APP_VERSION = "R69";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R69": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Zuverlässigere Cloud-Speicherung:</strong> Nutzt du die App auf zwei Geräten, gehen gleichzeitig eingetragene Titel nicht mehr verloren — beide Stände werden jetzt sauber zusammengeführt statt gegenseitig überschrieben.",
+          "<strong>Weniger Datenverbrauch:</strong> Beim Eintragen wird nur noch hochgeladen, was sich wirklich geändert hat, statt jedes Mal die komplette Bibliothek. Das spart mobiles Datenvolumen und macht die App flotter.",
+          "<strong>Frühwarnung fürs Speicher-Limit:</strong> Falls deine Bibliothek irgendwann sehr groß wird, bekommst du rechtzeitig einen Hinweis — bevor die Cloud-Speicherung an ihre Grenze stößt."
+        ]
+      },
       "R68": {
         title: "Was ist neu",
         notes: [
