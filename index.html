@@ -82,6 +82,14 @@
       animation: fade-in .22s ease;
     }
     .view.active { display: block; }
+    /* R71: Fix für den „verrutschten Touch" auf dem Handy. Öffnet ein Modal (Sheet,
+       Detail, Overlay), sperrt der Code den Body-Scroll via inline overflow:hidden.
+       Auf iOS verhindert das aber NICHT, dass der Haupt-Tab darunter per Touch doch
+       mitscrollt (Scroll-Chaining durch den vollflächigen Backdrop). Danach stimmen
+       sichtbare Position und Touch-Trefferfläche nicht mehr überein → man drückt
+       unten, aktiviert wird weiter oben. Lösung: den Hintergrund-Tab einfrieren,
+       solange ein Modal offen ist. Greift nur bei gesetztem Body-Lock. */
+    body[style*="overflow: hidden"] .view.active { overflow: hidden !important; touch-action: none; }
 
     @keyframes fade-in {
       from { opacity: 0; transform: translateY(6px); }
@@ -18011,13 +18019,19 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R70";
+    const APP_VERSION = "R71";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R71": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Verrutschter Touch behoben:</strong> Nach dem Schließen eines Fensters (z. B. Serie tracken → zurück zu Home) konnte es auf dem Handy passieren, dass Tipper weiter oben als gedrückt landeten. Der Hintergrund wird jetzt sauber eingefroren, solange ein Fenster offen ist — Tipper treffen wieder genau dort, wo du drückst."
+        ]
+      },
       "R70": {
         title: "Was ist neu",
         notes: [
