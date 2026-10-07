@@ -1178,6 +1178,13 @@
       padding: calc(var(--safe-top) + 12px) 16px calc(var(--safe-bottom) + 16px);
       animation: fade-in .2s ease;
     }
+    /* R70: inner panel hält den Inhalt — ein Klick auf #duel selbst (der Rand/
+       abgedunkelte Hintergrund am Desktop) liegt also NEBEN dem Panel und schließt. */
+    .duel-panel {
+      flex: 1; min-height: 0; width: 100%;
+      display: flex; flex-direction: column;
+      background: var(--bg);
+    }
     .duel-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
     .duel-q { font-size: 19px; font-weight: 700; letter-spacing: -.01em; }
     /* R19-#6 Part C: active-spotlight indicator inside the duel */
@@ -1310,7 +1317,10 @@
     .duel-spot-btn:active { transform: scale(.92); }
 
     @media (min-width: 600px) {
-      .duel { max-width: 780px; margin: 0 auto; }
+      /* R70: #duel wird zum vollbreiten, abgedunkelten Hintergrund; das Panel ist
+         die zentrierte 780px-Karte. Klick daneben (auf #duel) schließt das Duell. */
+      .duel { align-items: center; background: color-mix(in srgb, #000 62%, transparent); }
+      .duel-panel { max-width: 780px; margin: 0 auto; }
       .duel-card { max-height: 52vh; }
     }
 
@@ -3696,6 +3706,7 @@
 
   <!-- ============ DUEL MODE ============ -->
   <div id="duel" class="duel" hidden>
+    <div class="duel-panel">
     <div class="duel-top">
       <span class="duel-q">Welcher war besser?</span>
       <button id="duel-close" class="duel-close" type="button" aria-label="Schließen">
@@ -3750,6 +3761,7 @@
       <svg viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M4 9h11a5 5 0 0 1 0 10h-1"/></svg>
       Rückgängig
     </button>
+    </div>
   </div>
 
   <!-- ============ NOTIFICATION CENTER ============ -->
@@ -5121,6 +5133,10 @@
     // the tap, so they never reach here. Returns true if anything was closed.
     function closeAllNavOverlays() {
       let closed = false;
+      // R70: Das Duell ist ein Vollbild-Modal. Tippt man unten auf einen Tab (z. B.
+      // Home), während das Duell offen ist, soll es sich mitschließen — sonst bleibt
+      // das Duell-Fenster über dem gewechselten Tab hängen.
+      if (typeof duelEl !== "undefined" && duelEl && !duelEl.hidden) { closeDuel(); closed = true; }
       const detail = document.getElementById("detail");
       if (detail && !detail.hidden) { duelDetailReturn = false; _closeDetailFull(); closed = true; }
       const hso = document.getElementById("hso-overlay");
@@ -8442,6 +8458,9 @@
 
     document.getElementById("duel-start").addEventListener("click", openDuel);
     document.getElementById("duel-close").addEventListener("click", () => closeDuel());
+    // R70: Klick NEBEN das Panel (auf den abgedunkelten Rand/Hintergrund) schließt das
+    // Duell — e.target ist dann #duel selbst, nicht das Panel oder eine Karte darin.
+    duelEl.addEventListener("click", e => { if (e.target === duelEl) closeDuel(); });
     document.getElementById("duel-skip").addEventListener("click", () => {
       const next = pickPair();
       if (next) showDuelPair(next); else closeDuel("Duell abgeschlossen!");
@@ -13418,7 +13437,17 @@
           (headExtra || '') + '</div>' +
           '<div class="hscroll">' + cardsHtml + '</div></div>'
         : '';
-      const starsOf = it => it.bucket && FEED_STAR[it.bucket] ? "★".repeat(FEED_STAR[it.bucket]) : "";
+      // R70: Bei Serien hat der Durchschnitt der bewerteten Folgen Vorrang — hast du
+      // einzelne Folgen bewertet, zeigt die Serie deren gerundeten Schnitt als Sterne
+      // (auch wenn eine eigene Serien-Bewertung gespeichert ist). Ohne bewertete Folgen
+      // bzw. bei Filmen bleibt es bei der eigenen Bewertung.
+      const starsOf = it => {
+        if ((it.mediaType || "movie") === "tv") {
+          const avg = seriesAvgEpRating((it.mediaType || "movie") + ":" + it.id);
+          if (avg) return "★".repeat(Math.round(avg));
+        }
+        return it.bucket && FEED_STAR[it.bucket] ? "★".repeat(FEED_STAR[it.bucket]) : "";
+      };
       const openCard = (it, sub, ranked, rankNum) =>
         card(it.poster, dispTitleOf ? dispTitleOf(it) : (it.title || ""), sub,
           'data-open="' + (it.mediaType || "movie") + ':' + it.id + '"', ranked, rankNum);
@@ -17982,13 +18011,20 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R69.2";
+    const APP_VERSION = "R70";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R70": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Duell schließt leichter:</strong> Tippst du am Rand neben das Duell-Fenster, schließt es sich jetzt. Und wechselst du unten den Tab (z. B. auf Home), bleibt das Duell nicht mehr offen im Hintergrund hängen.",
+          "<strong>Serien-Sterne aus Folgen:</strong> Hast du einzelne Folgen bewertet, zeigt die Serie unter „Zuletzt gesehen“ jetzt den Durchschnitt deiner Folgen-Bewertungen als Sterne — auch wenn du die Serie selbst nie bewertet hast."
+        ]
+      },
       "R69.2": {
         title: "Kleine Korrektur",
         notes: [
