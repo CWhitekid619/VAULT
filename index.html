@@ -14160,6 +14160,11 @@
       setAuthMode(mode || "login");
       authBackdrop.hidden = false;
       document.body.style.overflow = "hidden";
+      // R69.2: Als lokale Datei (file://) blockiert Firebase die Anmeldung. Klaren
+      // Hinweis im Formular zeigen, statt den Nutzer ins Leere laufen zu lassen.
+      if (location.protocol === "file:") {
+        authShowError("Die App ist als lokale Datei geöffnet — hier ist keine Anmeldung möglich. Bitte über die Web-Adresse öffnen: cwhitekid619.github.io/VAULT");
+      }
       setTimeout(() => authEmail.focus(), 60);
     }
     function closeAuth() {
@@ -17977,13 +17982,19 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R69.1";
+    const APP_VERSION = "R69.2";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R69.2": {
+        title: "Kleine Korrektur",
+        notes: [
+          "<strong>Klarer Hinweis beim Anmelden:</strong> Wird die App versehentlich als lokale Datei geöffnet, erscheint beim Anmelden jetzt ein Hinweis mit der richtigen Web-Adresse — statt dass die Anmeldung einfach fehlschlägt."
+        ]
+      },
       "R69.1": {
         title: "Kleine Korrektur",
         notes: [
