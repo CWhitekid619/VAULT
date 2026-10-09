@@ -968,16 +968,15 @@
       color: var(--text); font-size: 14px; min-width: 0;
     }
     .rank-search-clear { background: none; border: none; color: var(--text-mute); font-size: 20px; cursor: pointer; line-height: 1; padding: 0 2px; }
-    /* R72: „Duellieren"-Knopf im Suchfeld (nur sichtbar, wenn ein Treffer markiert ist) */
+    /* R72/R73: Duell-Icon im Suchfeld (nur Icon, sichtbar sobald ein Treffer markiert ist) */
     .rank-search-duel {
-      display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto;
+      display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+      width: 30px; height: 30px; padding: 0;
       background: var(--accent); color: #1a1205; border: none;
-      border-radius: 8px; padding: 6px 10px; cursor: pointer;
-      font-family: inherit; font-size: 12px; font-weight: 700; white-space: nowrap;
-      -webkit-tap-highlight-color: transparent;
+      border-radius: 8px; cursor: pointer; -webkit-tap-highlight-color: transparent;
     }
     .rank-search-duel.hidden { display: none; }
-    .rank-search-duel svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+    .rank-search-duel svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
     .rank-search-duel:active { opacity: .85; }
     /* R26-#EXTRA-2: "more details" gold link inside the episode-rating sheet */
     .ep-more-link {
@@ -1041,6 +1040,15 @@
     .rank-arrow:active { background: var(--surface); }
     .rank-arrow:disabled { opacity: .3; cursor: default; }
     .rank-arrow svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+    /* R73: Duell-Icon direkt auf jeder Ranglisten-Zeile → Titel sofort ins Duell pinnen */
+    .rank-duel-btn {
+      flex: 0 0 auto; width: 32px; height: 32px; padding: 0; cursor: pointer;
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; color: var(--accent);
+      margin-left: 2px; -webkit-tap-highlight-color: transparent;
+    }
+    .rank-duel-btn:active { background: var(--surface); }
+    .rank-duel-btn svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
     /* R19-#6 Part D: subtle rating/ranking consistency banner */
     .rank-consistency {
       display: flex; align-items: center; gap: 10px; margin: 2px 0 12px;
@@ -3390,9 +3398,8 @@
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input id="rank-search-input" type="text" placeholder="Titel suchen → springt zum Platz …" autocomplete="off" />
         <!-- R72: gefundenen Titel direkt ins Duell pinnen -->
-        <button id="rank-search-duel" class="rank-search-duel hidden" type="button" aria-label="Diesen Titel duellieren">
+        <button id="rank-search-duel" class="rank-search-duel hidden" type="button" aria-label="Diesen Titel duellieren" title="Ins Duell">
           <svg viewBox="0 0 24 24"><polyline points="8 7 4 11 8 15"/><polyline points="16 9 20 13 16 17"/><line x1="5" y1="11" x2="19" y2="13"/></svg>
-          <span class="rsd-label">Duellieren</span>
         </button>
         <button id="rank-search-clear" class="rank-search-clear" type="button" aria-label="Leeren">&times;</button>
       </div>
@@ -7765,6 +7772,18 @@
         }
         row.appendChild(bodyEl);
 
+        // R73: Duell-Icon pro Zeile — pinnt diesen Titel direkt ins Duell (Spotlight)
+        // und öffnet es. Auf JEDER Zeile (auch ungerankt), damit man den gesuchten/
+        // angesprungenen Titel ohne Umweg über die Suchleiste duellieren kann.
+        const duelCell = document.createElement("button");
+        duelCell.className = "rank-duel-btn"; duelCell.type = "button";
+        duelCell.setAttribute("aria-label", "Duellieren");
+        duelCell.title = "Ins Duell";
+        duelCell.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="8 7 4 11 8 15"/><polyline points="16 9 20 13 16 17"/><line x1="5" y1="11" x2="19" y2="13"/></svg>';
+        duelCell.addEventListener("click", e => { e.stopPropagation(); startPinnedDuel(it.id); });
+        ["mousedown", "touchstart"].forEach(ev => duelCell.addEventListener(ev, e => e.stopPropagation(), { passive: true }));
+        row.appendChild(duelCell);
+
         // R10-P3: slim up/down arrows for manual reordering (ranked rows only)
         if (reorder) {
           const arrows = document.createElement("div"); arrows.className = "rank-arrows";
@@ -7995,9 +8014,7 @@
       const duelBtn = document.getElementById("rank-search-duel");
       if (duelBtn) {
         duelBtn.classList.remove("hidden");
-        const lbl = duelBtn.querySelector(".rsd-label");
-        if (lbl) lbl.textContent = (hit.dataset.title || "").length > 22
-          ? "Duellieren" : ((hit.dataset.title || "Titel") + " duellieren");
+        duelBtn.title = (hit.dataset.title || "Titel") + " ins Duell";   // R73: nur Icon, Titel im Tooltip
       }
       if (announce) {
         const rankNum = (hit.querySelector(".rank-num")?.textContent || "").trim();
@@ -18110,13 +18127,20 @@
     // ===== Patch notes: a one-time "what's new" modal shown after each new version =====
     // Bump APP_VERSION and add a PATCH_NOTES entry whenever a release ships; every user
     // then sees the notes once (marked seen only when they tap "Verstanden").
-    const APP_VERSION = "R72";
+    const APP_VERSION = "R73";
     // R38-#4: Service Worker — App-Shell offline + TMDB-Bild-Cache über Reloads.
     // index.html bleibt network-first, damit neue R-Versionen sofort ankommen.
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
     const PATCH_NOTES = {
+      "R73": {
+        title: "Was ist neu",
+        notes: [
+          "<strong>Duell-Knopf direkt in der Liste:</strong> Jede Zeile im Ranking hat jetzt ein kleines Duell-Symbol. Ein Tipp darauf schickt genau diesen Titel sofort ins Duell — ganz ohne Umweg über die Suche.",
+          "<strong>Suchfeld aufgeräumt:</strong> Der Duell-Knopf im Suchfeld zeigt jetzt nur noch das Symbol statt des langen Texts."
+        ]
+      },
       "R72": {
         title: "Was ist neu",
         notes: [
